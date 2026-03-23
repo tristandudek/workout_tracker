@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>IRON LOG — Workout Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d0f;--bg2:#141416;--bg3:#1a1a1e;--bg4:#222228;
+  --fg:#f0f0f0;--fg2:#999;--fg3:#555;
+  --accent:#b8f53a;--accent2:#a0d832;--red:#ff3b3b;--red2:#cc2a2a;
+  --font-display:'Barlow Condensed',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --radius:3px;--radius2:6px;
+}
+html{font-size:15px;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:var(--font-body);color:var(--fg);background:var(--bg);
+  min-height:100vh;overflow-x:hidden;
+  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='60' height='60' fill='%230d0d0f'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='0.02'/%3E%3Crect x='30' y='30' width='1' height='1' fill='%23ffffff' opacity='0.015'/%3E%3C/svg%3E");
+}
+a{color:var(--accent);text-decoration:none}
+input,textarea,select,button{font-family:inherit;font-size:inherit}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+#app{max-width:900px;margin:0 auto;padding:0 16px 100px;position:relative}
+.view{display:none;animation:fadeUp .25s ease}
+.view.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+h1{font-size:2.4rem;line-height:1}
+h2{font-size:1.6rem;line-height:1.1}
+h3{font-size:1.15rem}
+.mono{font-family:var(--font-mono)}
+.accent{color:var(--accent)}
+.fg2{color:var(--fg2)}
+.fg3{color:var(--fg3)}
+.small{font-size:.78rem}
+.xs{font-size:.68rem}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 24px;font-family:var(--font-display);font-weight:700;
+  font-size:1rem;text-transform:uppercase;letter-spacing:.06em;
+  border:none;cursor:pointer;transition:all .12s;background:var(--bg3);
+  color:var(--fg);border:1px solid var(--bg4);
+}
+.btn:hover{background:var(--bg4)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-danger{border-color:var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-sm{padding:8px 14px;font-size:.82rem}
+.btn-block{width:100%;justify-content:center}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--fg2)}
+.btn-ghost:hover{color:var(--fg);background:var(--bg3)}
+
+/* Inputs */
+.input{
+  width:100%;padding:10px 12px;background:var(--bg);
+  border:1px solid var(--bg4);color:var(--fg);font-size:.9rem;
+  transition:border-color .15s;
+}
+.input:focus{outline:none;border-color:var(--accent)}
+.input::placeholder{color:var(--fg3)}
+textarea.input{resize:vertical;min-height:60px}
+select.input{appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--bg4);padding:14px;margin-bottom:8px;transition:border-color .15s}
+.card:hover{border-color:var(--fg3)}
+
+/* Chips */
+.chip{
+  display:inline-flex;align-items:center;padding:5px 12px;
+  font-size:.75rem;font-weight:600;border:1px solid var(--bg4);
+  background:var(--bg3);color:var(--fg2);cursor:pointer;
+  text-transform:uppercase;letter-spacing:.04em;transition:all .12s;
+  font-family:var(--font-display);user-select:none;
+}
+.chip:hover{border-color:var(--fg3);color:var(--fg)}
+.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(184,245,58,.08)}
+
+/* Modal */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  display:none;align-items:flex-start;justify-content:center;
+  padding:40px 16px;overflow-y:auto;animation:fadeIn .15s;
+}
+.modal-backdrop.open{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  background:var(--bg2);border:1px solid var(--bg4);width:100%;
+  max-width:600px;max-height:85vh;overflow-y:auto;animation:slideUp .2s ease;
+}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px;border-bottom:1px solid var(--bg4);position:sticky;top:0;
+  background:var(--bg2);z-index:2;
+}
+.modal-header h2{font-size:1.2rem}
+.modal-close{
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  background:none;border:none;color:var(--fg2);cursor:pointer;font-size:1.2rem;
+}
+.modal-close:hover{color:var(--fg)}
+.modal-body{padding:16px}
+.modal-footer{padding:16px;border-top:1px solid var(--bg4);display:flex;gap:8px;justify-content:flex-end}
+
+/* Tags */
+.tag{
+  display:inline-block;padding:2px 8px;font-size:.65rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;
+  font-family:var(--font-display);border:1px solid;
+}
+.tag-muscle{border-color:var(--accent);color:var(--accent)}
+.tag-equip{border-color:var(--fg3);color:var(--fg2)}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--accent);color:#000;padding:10px 24px;
+  font-family:var(--font-display);font-weight:700;font-size:.9rem;
+  text-transform:uppercase;letter-spacing:.04em;z-index:2000;
+  transition:transform .3s ease;white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Exercise Grid */
+.ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.ex-card{
+  background:var(--bg2);border:1px solid var(--bg4);padding:12px;
+  cursor:pointer;transition:all .15s;display:flex;gap:10px;align-items:center;
+}
+.ex-card:hover{border-color:var(--accent);background:var(--bg3)}
+.ex-card .thumb{width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.ex-card .thumb svg{width:44px;height:44px}
+.ex-card .info{flex:1;min-width:0}
+.ex-card .info .name{font-family:var(--font-display);font-weight:700;font-size:.92rem;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
+
+/* Stats Strip */
+.stats-strip{display:flex;gap:1px;background:var(--bg4);border:1px solid var(--bg4);margin:16px 0}
+.stat-box{flex:1;background:var(--bg2);padding:14px 12px;text-align:center}
+.stat-box .val{font-family:var(--font-display);font-weight:900;font-size:1.6rem;color:var(--accent)}
+.stat-box .lbl{font-size:.68rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;font-family:var(--font-display)}
+
+/* Workout Card */
+.wo-card{
+  background:var(--bg2);border:1px solid var(--bg4);padding:14px;
+  margin-bottom:8px;display:flex;align-items:center;gap:12px;
+  transition:border-color .15s;
+}
+.wo-card:hover{border-color:var(--fg3)}
+.wo-card .wo-info{flex:1}
+.wo-card .wo-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:1rem}
+.wo-card .wo-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
+.wo-card .wo-actions{display:flex;gap:6px}
+
+/* Active Workout */
+.aw-header{
+  position:sticky;top:0;z-index:100;background:var(--bg);
+  border-bottom:1px solid var(--bg4);padding:12px 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.aw-timer{font-family:var(--font-mono);font-size:1.3rem;font-weight:500;color:var(--accent)}
+.aw-exercise{background:var(--bg2);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden}
+.aw-exercise.completed{opacity:.6}
+.aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
+.aw-ex-header{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  cursor:pointer;border-bottom:1px solid var(--bg4);
+}
+.aw-ex-header .drag{cursor:grab;color:var(--fg3);font-size:1rem;user-select:none}
+.aw-ex-header .ex-title{flex:1;font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.95rem}
+.aw-ex-header .target{font-size:.75rem;color:var(--fg2);font-family:var(--font-mono)}
+.aw-ex-body{padding:10px 14px}
+.set-table{width:100%;border-collapse:collapse}
+.set-table th{
+  font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;
+  font-family:var(--font-display);font-weight:600;padding:4px 6px;text-align:center;
+  border-bottom:1px solid var(--bg4);
+}
+.set-table th:first-child{text-align:left;width:36px}
+.set-table td{padding:5px 4px;text-align:center;vertical-align:middle}
+.set-table td:first-child{text-align:left;font-family:var(--font-mono);font-size:.82rem;color:var(--fg2)}
+.set-table .prev{font-size:.75rem;color:var(--fg3);font-family:var(--font-mono)}
+.set-table input[type="number"]{
+  width:64px;padding:6px 4px;background:var(--bg);border:1px solid var(--bg4);
+  color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.85rem;
+  -moz-appearance:textfield;
+}
+.set-table input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
+.set-table input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.set-check{
+  width:28px;height:28px;background:var(--bg);border:2px solid var(--bg4);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:transparent;font-size:.9rem;transition:all .15s;
+}
+.set-check.done{background:var(--accent);border-color:var(--accent);color:#000}
+.set-check:hover{border-color:var(--fg3)}
+
+/* PR Badge */
+.pr-badge{
+  display:inline-block;padding:1px 6px;font-size:.6rem;font-weight:800;
+  background:var(--accent);color:#000;font-family:var(--font-display);
+  letter-spacing:.06em;margin-left:6px;animation:prPop .3s ease;
+}
+@keyframes prPop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+/* Nav Bar */
+.nav{
+  position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
+  border-top:1px solid var(--bg4);display:flex;z-index:500;
+}
+.nav-btn{
+  flex:1;padding:10px 0 8px;background:none;border:none;color:var(--fg3);
+  cursor:pointer;text-align:center;transition:color .15s;
+  font-family:var(--font-display);font-size:.7rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;
+}
+.nav-btn.active{color:var(--accent)}
+.nav-btn .nav-icon{font-size:1.2rem;display:block;margin-bottom:2px}
+
+/* Misc */
+.divider{height:1px;background:var(--bg4);margin:16px 0}
+.flex{display:flex;align-items:center}
+.gap-sm{gap:6px}
+.gap-md{gap:12px}
+.gap-lg{gap:20px}
+.between{justify-content:space-between}
+.wrap{flex-wrap:wrap}
+.grow{flex:1}
+.mt-sm{margin-top:8px}.mt-md{margin-top:16px}.mt-lg{margin-top:24px}
+.mb-sm{margin-bottom:8px}.mb-md{margin-bottom:16px}
+.p-md{padding:16px}
+.text-center{text-align:center}
+.hidden{display:none!important}
+
+/* Filter bar */
+.filter-bar{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap .input{padding-left:36px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg3);font-size:.9rem;pointer-events:none}
+
+/* History Item */
+.hist-item{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:1px solid var(--bg4);font-size:.82rem;
+}
+.hist-item:last-child{border:none}
+
+/* Recent workout cards */
+.recent-card{
+  background:var(--bg2);border:1px solid var(--bg4);padding:12px;
+  margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;
+}
+.recent-card .rc-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.9rem}
+.recent-card .rc-meta{font-size:.72rem;color:var(--fg2);margin-top:2px}
+.recent-card .rc-dur{font-family:var(--font-mono);font-size:.8rem;color:var(--accent)}
+
+/* Unit toggle */
+.unit-toggle{
+  display:inline-flex;border:1px solid var(--bg4);font-size:.7rem;
+  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
+}
+.unit-toggle span{padding:4px 10px;cursor:pointer;transition:all .12s}
+.unit-toggle span.active{background:var(--accent);color:#000}
+
+/* Finish Summary */
+.finish-stat{
+  text-align:center;padding:12px;border:1px solid var(--bg4);
+  background:var(--bg3);flex:1;
+}
+.finish-stat .val{font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--accent)}
+.finish-stat .lbl{font-size:.7rem;color:var(--fg2);text-transform:uppercase;margin-top:2px;font-family:var(--font-display)}
+
+@media(max-width:500px){
+  .ex-grid{grid-template-columns:1fr}
+  .stats-strip{flex-wrap:wrap}
+  .stat-box{min-width:33%}
+  h1{font-size:1.9rem}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ============================================================
+     HOME VIEW
+     ============================================================ -->
+<div class="view" id="view-home" data-view="home">
+  <div class="mt-lg text-center">
+    <h1 style="font-size:3rem;font-weight:900;letter-spacing:.08em">IRON<span class="accent">LOG</span></h1>
+    <p class="fg3 small" style="letter-spacing:.15em;margin-top:4px;font-family:var(--font-display);text-transform:uppercase">Track. Lift. Dominate.</p>
+  </div>
+  <div class="mt-lg">
+    <button class="btn btn-primary btn-block" style="padding:18px;font-size:1.15rem" onclick="startWorkoutFlow()">&#9654; START WORKOUT</button>
+  </div>
+  <div class="flex gap-sm mt-md">
+    <button class="btn btn-block grow" onclick="nav('workouts')">MY WORKOUTS</button>
+    <button class="btn btn-block grow" onclick="nav('database')">EXERCISE DB</button>
+  </div>
+  <div id="home-stats" class="stats-strip"></div>
+  <h3 class="fg2 mt-md mb-sm" style="font-size:.85rem">Recent Workouts</h3>
+  <div id="home-recent"></div>
+</div>
+
+<!-- ============================================================
+     DATABASE VIEW
+     ============================================================ -->
+<div class="view" id="view-database" data-view="database">
+  <div class="flex between mb-md mt-md">
+    <h2>Exercise Database</h2>
+    <button class="btn btn-sm" onclick="openAddCustomExercise()">+ Custom</button>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input class="input" id="db-search" placeholder="Search exercises..." oninput="renderDatabase()">
+  </div>
+  <div class="filter-bar" id="db-muscle-filters"></div>
+  <div class="filter-bar" id="db-equip-filters"></div>
+  <div class="ex-grid" id="db-grid"></div>
+</div>
+
+<!-- ============================================================
+     MY WORKOUTS VIEW
+     ============================================================ -->
+<div class="view" id="view-workouts" data-view="workouts">
+  <div class="flex between mb-md mt-md">
+    <h2>My Workouts</h2>
+    <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
+  </div>
+  <div id="workouts-list"></div>
+  <div id="workouts-empty" class="text-center mt-lg hidden">
+    <p class="fg3">No saved workouts yet.</p>
+    <button class="btn btn-primary mt-md" onclick="openCreateWorkout()">Create Your First Workout</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     CREATE/EDIT WORKOUT VIEW
+     ============================================================ -->
+<div class="view" id="view-create" data-view="create">
+  <div class="flex between mb-md mt-md">
+    <h2 id="create-title">Create Workout</h2>
+  </div>
+  <input class="input mb-md" id="create-name" placeholder="Workout name (e.g., Push Day A)">
+  <div id="create-exercises"></div>
+  <button class="btn btn-block mt-sm" onclick="openExercisePicker('create')">+ Add Exercise</button>
+  <div class="flex gap-sm mt-md">
+    <button class="btn btn-primary grow" id="create-save-btn" onclick="saveWorkoutTemplate()">Save Workout</button>
+    <button class="btn grow" onclick="nav('workouts')">Cancel</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     ACTIVE WORKOUT VIEW
+     ============================================================ -->
+<div class="view" id="view-active" data-view="active">
+  <div class="aw-header">
+    <div>
+      <div id="aw-name" style="font-family:var(--font-display);font-weight:800;text-transform:uppercase;font-size:1.1rem"></div>
+      <div class="aw-timer" id="aw-timer">0:00</div>
+    </div>
+    <div class="flex gap-sm">
+      <div class="unit-toggle" id="unit-toggle">
+        <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
+        <span data-unit="kg" onclick="setUnit('kg')">KG</span>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="finishWorkout()">Finish</button>
+    </div>
+  </div>
+  <div id="aw-exercises" class="mt-sm"></div>
+  <button class="btn btn-block mt-sm" onclick="openExercisePicker('active')">+ Add Exercise</button>
+</div>
+
+<!-- ============================================================
+     HISTORY VIEW
+     ============================================================ -->
+<div class="view" id="view-history" data-view="history">
+  <h2 class="mt-md mb-md">Workout History</h2>
+  <div id="history-list"></div>
+</div>
+
+</div><!-- /app -->
+
+<!-- NAV BAR -->
+<nav class="nav" id="main-nav">
+  <button class="nav-btn active" data-nav="home" onclick="nav('home')"><span class="nav-icon">&#9776;</span>Home</button>
+  <button class="nav-btn" data-nav="database" onclick="nav('database')"><span class="nav-icon">&#128218;</span>Database</button>
+  <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon">&#128203;</span>Workouts</button>
+  <button class="nav-btn" data-nav="history" onclick="nav('history')"><span class="nav-icon">&#128200;</span>History</button>
+</nav>
+
+<!-- MODAL CONTAINER -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* =============================================================
+   EXERCISE DATABASE — SEED DATA
+   ============================================================= */
+function generateExerciseDB(){
+
+// SVG diagram generators — simple stick figure cartoons for each movement pattern
+const SVG={
+  press:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="20" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="30" x2="60" y2="70" stroke="${c}" stroke-width="2"/><line x1="60" y1="45" x2="35" y2="25" stroke="${c}" stroke-width="2"/><line x1="60" y1="45" x2="85" y2="25" stroke="${c}" stroke-width="2"/><line x1="25" y1="22" x2="95" y2="22" stroke="${c}" stroke-width="3" stroke-linecap="round"/><line x1="60" y1="70" x2="45" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="75" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
+  bench:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="62" width="90" height="6" fill="${c}" opacity="0.3"/><circle cx="55" cy="52" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="60" x2="55" y2="82" stroke="${c}" stroke-width="2"/><line x1="55" y1="68" x2="35" y2="48" stroke="${c}" stroke-width="2"/><line x1="55" y1="68" x2="75" y2="48" stroke="${c}" stroke-width="2"/><line x1="25" y1="45" x2="85" y2="45" stroke="${c}" stroke-width="3" stroke-linecap="round"/><line x1="55" y1="82" x2="40" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="82" x2="70" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
+  squat:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="22" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="32" x2="60" y2="62" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="45" y2="55" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="75" y2="55" stroke="${c}" stroke-width="2"/><line x1="60" y1="62" x2="40" y2="85" stroke="${c}" stroke-width="2"/><line x1="40" y1="85" x2="35" y2="110" stroke="${c}" stroke-width="2"/><line x1="60" y1="62" x2="80" y2="85" stroke="${c}" stroke-width="2"/><line x1="80" y1="85" x2="85" y2="110" stroke="${c}" stroke-width="2"/><line x1="30" y1="18" x2="90" y2="18" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
+  deadlift:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="30" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="60" y2="70" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="40" y2="85" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="80" y2="85" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="42" y2="92" stroke="${c}" stroke-width="2"/><line x1="42" y1="92" x2="38" y2="110" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="78" y2="92" stroke="${c}" stroke-width="2"/><line x1="78" y1="92" x2="82" y2="110" stroke="${c}" stroke-width="2"/><line x1="30" y1="88" x2="90" y2="88" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
+  row:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="70" cy="28" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="65" y1="36" x2="50" y2="68" stroke="${c}" stroke-width="2"/><line x1="55" y1="52" x2="35" y2="70" stroke="${c}" stroke-width="2"/><line x1="55" y1="52" x2="75" y2="60" stroke="${c}" stroke-width="2"/><line x1="50" y1="68" x2="35" y2="100" stroke="${c}" stroke-width="2"/><line x1="50" y1="68" x2="65" y2="100" stroke="${c}" stroke-width="2"/><line x1="25" y1="72" x2="85" y2="72" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
+  curl:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="68" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="45" y2="55" stroke="${c}" stroke-width="2"/><line x1="45" y1="55" x2="48" y2="38" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="75" y2="42" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="72" y2="100" stroke="${c}" stroke-width="2"/><rect x="42" y="32" width="8" height="4" fill="${c}" opacity="0.5"/></svg>`,
+  fly:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="34" x2="60" y2="72" stroke="${c}" stroke-width="2"/><path d="M60 48 Q30 35 25 55" fill="none" stroke="${c}" stroke-width="2"/><path d="M60 48 Q90 35 95 55" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="72" x2="48" y2="105" stroke="${c}" stroke-width="2"/><line x1="60" y1="72" x2="72" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
+  lunge:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="27" x2="55" y2="62" stroke="${c}" stroke-width="2"/><line x1="55" y1="40" x2="40" y2="50" stroke="${c}" stroke-width="2"/><line x1="55" y1="40" x2="70" y2="50" stroke="${c}" stroke-width="2"/><line x1="55" y1="62" x2="35" y2="85" stroke="${c}" stroke-width="2"/><line x1="35" y1="85" x2="30" y2="110" stroke="${c}" stroke-width="2"/><line x1="55" y1="62" x2="80" y2="80" stroke="${c}" stroke-width="2"/><line x1="80" y1="80" x2="90" y2="110" stroke="${c}" stroke-width="2"/></svg>`,
+  pullup:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><line x1="20" y1="12" x2="100" y2="12" stroke="${c}" stroke-width="3"/><circle cx="60" cy="30" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="39" x2="60" y2="78" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="42" y2="15" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="78" y2="15" stroke="${c}" stroke-width="2"/><line x1="60" y1="78" x2="48" y2="108" stroke="${c}" stroke-width="2"/><line x1="60" y1="78" x2="72" y2="108" stroke="${c}" stroke-width="2"/></svg>`,
+  plank:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="90" cy="52" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="82" y1="55" x2="25" y2="62" stroke="${c}" stroke-width="2"/><line x1="75" y1="58" x2="70" y2="75" stroke="${c}" stroke-width="2"/><line x1="70" y1="75" x2="65" y2="60" stroke="${c}" stroke-width="2"/><line x1="25" y1="62" x2="20" y2="88" stroke="${c}" stroke-width="2"/><line x1="25" y1="62" x2="35" y2="88" stroke="${c}" stroke-width="2"/><line x1="85" y1="58" x2="90" y2="80" stroke="${c}" stroke-width="2"/><line x1="90" y1="80" x2="92" y2="88" stroke="${c}" stroke-width="2"/></svg>`,
+  swing:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="22" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="31" x2="58" y2="65" stroke="${c}" stroke-width="2"/><line x1="58" y1="48" x2="40" y2="42" stroke="${c}" stroke-width="2"/><line x1="40" y1="42" x2="35" y2="30" stroke="${c}" stroke-width="2"/><line x1="58" y1="48" x2="76" y2="42" stroke="${c}" stroke-width="2"/><line x1="76" y1="42" x2="80" y2="30" stroke="${c}" stroke-width="2"/><rect x="32" y="24" width="10" height="10" rx="2" fill="none" stroke="${c}" stroke-width="1.5"/><line x1="58" y1="65" x2="42" y2="100" stroke="${c}" stroke-width="2"/><line x1="58" y1="65" x2="74" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
+  cable:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="8" width="8" height="100" fill="${c}" opacity="0.15" stroke="${c}" stroke-width="1"/><circle cx="65" cy="25" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="65" y1="34" x2="65" y2="72" stroke="${c}" stroke-width="2"/><line x1="65" y1="48" x2="45" y2="38" stroke="${c}" stroke-width="2"/><line x1="45" y1="38" x2="18" y2="30" stroke="${c}" stroke-width="1.5" stroke-dasharray="3,2"/><line x1="65" y1="48" x2="80" y2="55" stroke="${c}" stroke-width="2"/><line x1="65" y1="72" x2="52" y2="105" stroke="${c}" stroke-width="2"/><line x1="65" y1="72" x2="78" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
+  machine:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="15" width="90" height="90" rx="2" fill="none" stroke="${c}" stroke-width="1" opacity="0.2"/><circle cx="60" cy="35" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="44" x2="60" y2="75" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="40" y2="48" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="80" y2="48" stroke="${c}" stroke-width="2"/><line x1="60" y1="75" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="75" x2="72" y2="100" stroke="${c}" stroke-width="2"/><rect x="30" y="92" width="60" height="6" fill="${c}" opacity="0.15"/></svg>`,
+  carry:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="16" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="25" x2="60" y2="65" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="38" y2="60" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="82" y2="60" stroke="${c}" stroke-width="2"/><rect x="30" y="58" width="10" height="12" fill="none" stroke="${c}" stroke-width="1.5"/><rect x="80" y="58" width="10" height="12" fill="none" stroke="${c}" stroke-width="1.5"/><line x1="60" y1="65" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="65" x2="72" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
+  crunch:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="72" cy="38" r="9" fill="none" stroke="${c}" stroke-width="2"/><path d="M68 46 Q55 70 40 72" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="45" y2="42" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="65" y2="42" stroke="${c}" stroke-width="2"/><line x1="40" y1="72" x2="25" y2="95" stroke="${c}" stroke-width="2"/><line x1="25" y1="95" x2="30" y2="105" stroke="${c}" stroke-width="2"/><line x1="40" y1="72" x2="55" y2="90" stroke="${c}" stroke-width="2"/><line x1="55" y1="90" x2="60" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
+  jump:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="58" stroke="${c}" stroke-width="2"/><line x1="60" y1="38" x2="42" y2="30" stroke="${c}" stroke-width="2"/><line x1="60" y1="38" x2="78" y2="30" stroke="${c}" stroke-width="2"/><line x1="60" y1="58" x2="45" y2="82" stroke="${c}" stroke-width="2"/><line x1="45" y1="82" x2="42" y2="98" stroke="${c}" stroke-width="2"/><line x1="60" y1="58" x2="75" y2="82" stroke="${c}" stroke-width="2"/><line x1="75" y1="82" x2="78" y2="98" stroke="${c}" stroke-width="2"/><path d="M30 15 Q60 0 90 15" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="3,2"/></svg>`,
+  lateral:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="68" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="28" y2="35" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="92" y2="35" stroke="${c}" stroke-width="2"/><rect x="22" y="32" width="8" height="5" fill="${c}" opacity="0.4"/><rect x="90" y="32" width="8" height="5" fill="${c}" opacity="0.4"/><line x1="60" y1="68" x2="48" y2="105" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="72" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
+  extension:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="70" width="60" height="8" fill="${c}" opacity="0.15"/><circle cx="55" cy="50" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="55" y2="75" stroke="${c}" stroke-width="2"/><line x1="55" y1="65" x2="38" y2="78" stroke="${c}" stroke-width="2"/><line x1="38" y1="78" x2="32" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="65" x2="72" y2="78" stroke="${c}" stroke-width="2"/><line x1="72" y1="78" x2="78" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="75" x2="55" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
+};
+
+const diag={
+  barbell_press:SVG.press(),barbell_bench:SVG.bench(),barbell_squat:SVG.squat(),
+  barbell_deadlift:SVG.deadlift(),barbell_row:SVG.row(),barbell_curl:SVG.curl(),
+  barbell_lunge:SVG.lunge(),
+  db_press:SVG.press(),db_bench:SVG.bench(),db_curl:SVG.curl(),db_fly:SVG.fly(),
+  db_row:SVG.row(),db_lateral:SVG.lateral(),db_lunge:SVG.lunge(),db_squat:SVG.squat(),
+  kb_swing:SVG.swing(),kb_press:SVG.press(),kb_squat:SVG.squat(),kb_carry:SVG.carry(),
+  cable_pull:SVG.cable(),cable_push:SVG.cable(),
+  machine_press:SVG.machine(),machine_ext:SVG.extension(),machine_curl:SVG.machine(),
+  smith_press:SVG.press(),smith_squat:SVG.squat(),
+  bw_pull:SVG.pullup(),bw_push:SVG.press(),bw_plank:SVG.plank(),bw_squat:SVG.squat(),
+  bw_crunch:SVG.crunch(),bw_lunge:SVG.lunge(),bw_dip:SVG.bench(),
+  jump_rope:SVG.jump(),
+  band_pull:SVG.cable(),band_push:SVG.press(),
+};
+
+// Exercise definitions — condensed format: [name, muscles[], equipment, instructions, diagramKey]
+const raw=[
+// ===== BARBELL =====
+["Barbell Back Squat",["quads","glutes","hamstrings","core"],"barbell","Stand with barbell on upper back. Bend knees and hips to lower until thighs are parallel. Drive through heels to stand.","barbell_squat"],
+["Barbell Front Squat",["quads","glutes","core"],"barbell","Hold barbell in front rack position across front delts. Squat deep keeping torso upright. Drive up through heels.","barbell_squat"],
+["Barbell Deadlift",["hamstrings","glutes","back","core"],"barbell","Stand over barbell with mid-foot under bar. Hinge at hips, grip bar, drive through floor extending hips and knees together.","barbell_deadlift"],
+["Sumo Deadlift",["hamstrings","glutes","quads","back"],"barbell","Take a wide stance with toes pointed out. Grip bar between legs. Drive through floor extending hips.","barbell_deadlift"],
+["Romanian Deadlift",["hamstrings","glutes","back"],"barbell","Hold barbell at hip height. Push hips back maintaining slight knee bend. Lower bar along thighs until hamstring stretch. Return to start.","barbell_deadlift"],
+["Barbell Bench Press",["chest","triceps","shoulders"],"barbell","Lie on bench, grip bar slightly wider than shoulders. Lower to chest, press up to lockout. Keep shoulder blades retracted.","barbell_bench"],
+["Incline Barbell Bench Press",["chest","shoulders","triceps"],"barbell","Set bench to 30-45 degrees. Lower bar to upper chest, press to lockout. Emphasizes upper chest.","barbell_bench"],
+["Decline Barbell Bench Press",["chest","triceps"],"barbell","Set bench to slight decline. Lower bar to lower chest, press to lockout. Emphasizes lower chest.","barbell_bench"],
+["Close-Grip Bench Press",["triceps","chest"],"barbell","Grip bar at shoulder width or narrower. Lower to chest, press to lockout. Emphasizes triceps.","barbell_bench"],
+["Barbell Overhead Press",["shoulders","triceps","core"],"barbell","Stand with barbell at shoulder height. Press overhead to lockout. Keep core tight, avoid excessive lean.","barbell_press"],
+["Push Press",["shoulders","triceps","quads"],"barbell","Start with bar at shoulders. Dip knees slightly then drive bar overhead using leg momentum. Lock out arms.","barbell_press"],
+["Barbell Row",["back","biceps","rear_delts"],"barbell","Hinge forward at hips, grip bar. Pull bar to lower chest/upper abdomen. Squeeze shoulder blades. Lower with control.","barbell_row"],
+["Pendlay Row",["back","biceps","rear_delts"],"barbell","From dead stop on floor, explosively row bar to lower chest. Keep torso parallel to floor. Return bar to floor each rep.","barbell_row"],
+["Barbell Curl",["biceps","forearms"],"barbell","Stand with bar at arms length, palms up. Curl bar to shoulders keeping elbows pinned. Lower with control.","barbell_curl"],
+["Barbell Skull Crusher",["triceps"],"barbell","Lie on bench, hold bar above chest with arms extended. Lower bar to forehead by bending elbows. Extend back up.","barbell_bench"],
+["Barbell Lunge",["quads","glutes","hamstrings"],"barbell","Bar on upper back, step forward into lunge. Lower back knee toward floor. Push off front foot to return.","barbell_lunge"],
+["Barbell Good Morning",["hamstrings","glutes","back"],"barbell","Bar on upper back, push hips back hinging at waist. Keep slight knee bend. Return to upright.","barbell_deadlift"],
+["Zercher Squat",["quads","glutes","core","biceps"],"barbell","Hold barbell in crook of elbows. Squat deep keeping torso upright. Drive up through heels.","barbell_squat"],
+["Barbell Hack Squat",["quads","glutes"],"barbell","Hold barbell behind legs. Squat down keeping bar close to body. Stand up through heels.","barbell_squat"],
+["Barbell Hip Thrust",["glutes","hamstrings"],"barbell","Upper back on bench, barbell over hips. Drive hips up squeezing glutes at top. Lower with control.","barbell_deadlift"],
+["Barbell Shrug",["traps"],"barbell","Hold barbell at arms length. Shrug shoulders straight up toward ears. Hold at top, lower slowly.","barbell_curl"],
+["Barbell Upright Row",["shoulders","traps"],"barbell","Hold bar with narrow grip at waist. Pull straight up along body to chin level. Lead with elbows.","barbell_curl"],
+["Barbell Reverse Curl",["forearms","biceps"],"barbell","Grip bar with palms down. Curl to shoulders keeping elbows pinned. Lower with control.","barbell_curl"],
+["Barbell Wrist Curl",["forearms"],"barbell","Sit with forearms on thighs, palms up, bar hanging over knees. Curl wrists up. Lower slowly.","barbell_curl"],
+["Floor Press",["chest","triceps"],"barbell","Lie on floor, press barbell from chest to lockout. Elbows touch floor at bottom. Good for lockout strength.","barbell_bench"],
+["Meadows Row",["back","lats","rear_delts"],"barbell","Stand perpendicular to landmine. Row end of bar to hip with single arm. Keep elbow tight to body.","barbell_row"],
+["Landmine Press",["shoulders","chest","triceps"],"barbell","Hold end of barbell at shoulder with one hand. Press at an angle. Great for shoulder-friendly pressing.","barbell_press"],
+["Landmine Row",["back","biceps"],"barbell","Straddle barbell. Row end of bar to chest with both hands. Squeeze back at top.","barbell_row"],
+["Barbell Calf Raise",["calves"],"barbell","Bar on back, stand on edge of platform. Rise up on toes, lower heels below platform. Full range of motion.","barbell_squat"],
+["Barbell Pullover",["lats","chest"],"barbell","Lie on bench, hold bar above chest. Lower bar behind head in arc. Pull back over chest.","barbell_bench"],
+["Snatch-Grip Deadlift",["back","hamstrings","traps"],"barbell","Wide grip deadlift. Increases range of motion and upper back demand. Stand tall at top.","barbell_deadlift"],
+["Deficit Deadlift",["hamstrings","glutes","back"],"barbell","Stand on 2-4 inch platform. Deadlift with increased range of motion from deficit.","barbell_deadlift"],
+["Pause Squat",["quads","glutes","core"],"barbell","Back squat with 2-3 second pause at bottom. Eliminates stretch reflex. Build strength out of hole.","barbell_squat"],
+["Barbell Thruster",["quads","shoulders","full_body"],"barbell","Front squat into overhead press in one fluid movement. Use leg drive to press bar overhead.","barbell_press"],
+["Barbell Power Clean",["full_body","traps","shoulders"],"barbell","Explosive pull from floor to front rack position. Triple extension of ankles, knees, hips.","barbell_deadlift"],
+["Hang Clean",["full_body","traps"],"barbell","Start at hip height. Explosive hip extension to pull bar to front rack. Catch in quarter squat.","barbell_deadlift"],
+["Barbell Snatch",["full_body","shoulders","back"],"barbell","Explosive wide-grip pull from floor to overhead in one movement. Full body power exercise.","barbell_press"],
+// ===== DUMBBELL =====
+["Dumbbell Bench Press",["chest","triceps","shoulders"],"dumbbell","Lie on bench with dumbbells at chest level. Press to lockout. Greater range of motion than barbell.","db_bench"],
+["Incline Dumbbell Press",["chest","shoulders","triceps"],"dumbbell","Bench at 30-45 degrees. Press dumbbells from chest to lockout. Targets upper chest.","db_bench"],
+["Decline Dumbbell Press",["chest","triceps"],"dumbbell","Bench at slight decline. Press dumbbells from chest to lockout. Targets lower chest.","db_bench"],
+["Dumbbell Fly",["chest"],"dumbbell","Lie on bench, arms extended above chest. Open arms wide in arc, slight bend in elbows. Squeeze chest to return.","db_fly"],
+["Incline Dumbbell Fly",["chest","shoulders"],"dumbbell","Bench at 30-45 degrees. Perform fly motion. Targets upper chest with full stretch.","db_fly"],
+["Dumbbell Row",["back","biceps"],"dumbbell","One hand and knee on bench. Row dumbbell to hip, squeezing shoulder blade. Lower with control.","db_row"],
+["Dumbbell Shoulder Press",["shoulders","triceps"],"dumbbell","Seated or standing, press dumbbells from shoulders to overhead lockout. Control the negative.","db_press"],
+["Arnold Press",["shoulders","triceps"],"dumbbell","Start palms facing you at chest. Rotate and press overhead finishing with palms forward. Reverse to lower.","db_press"],
+["Dumbbell Lateral Raise",["shoulders"],"dumbbell","Stand with dumbbells at sides. Raise arms out to sides until parallel with floor. Lower slowly.","db_lateral"],
+["Dumbbell Front Raise",["shoulders"],"dumbbell","Stand with dumbbells at thighs. Raise one or both arms forward to shoulder height. Lower slowly.","db_lateral"],
+["Dumbbell Rear Delt Fly",["rear_delts","back"],"dumbbell","Bent over, arms hanging down. Raise dumbbells out to sides squeezing rear delts. Lower slowly.","db_fly"],
+["Dumbbell Curl",["biceps"],"dumbbell","Stand with dumbbells at sides, palms up. Curl to shoulders alternating or together. Lower with control.","db_curl"],
+["Hammer Curl",["biceps","forearms"],"dumbbell","Curl with palms facing each other (neutral grip). Targets brachialis and forearms. Control the weight.","db_curl"],
+["Incline Dumbbell Curl",["biceps"],"dumbbell","Sit on incline bench, arms hanging straight down. Curl dumbbells up. Greater stretch on biceps.","db_curl"],
+["Concentration Curl",["biceps"],"dumbbell","Seated, elbow braced on inner thigh. Curl dumbbell to shoulder with strict form. Peak contraction focus.","db_curl"],
+["Dumbbell Tricep Kickback",["triceps"],"dumbbell","Bent over, upper arm parallel to floor. Extend forearm back squeezing triceps. Lower slowly.","db_row"],
+["Dumbbell Overhead Tricep Extension",["triceps"],"dumbbell","Hold one dumbbell overhead with both hands. Lower behind head by bending elbows. Extend back up.","db_press"],
+["Dumbbell Lunge",["quads","glutes","hamstrings"],"dumbbell","Hold dumbbells at sides. Step forward into lunge, lower back knee. Push off to return.","db_lunge"],
+["Dumbbell Walking Lunge",["quads","glutes","hamstrings"],"dumbbell","Hold dumbbells at sides. Alternate lunging forward continuously walking. Maintain upright torso.","db_lunge"],
+["Dumbbell Bulgarian Split Squat",["quads","glutes"],"dumbbell","Rear foot elevated on bench. Lower into single-leg squat. Drive up through front heel.","db_lunge"],
+["Dumbbell Goblet Squat",["quads","glutes","core"],"dumbbell","Hold dumbbell at chest. Squat deep keeping torso upright. Drive up through heels.","db_squat"],
+["Dumbbell Romanian Deadlift",["hamstrings","glutes"],"dumbbell","Hold dumbbells at thighs. Push hips back, lower along legs. Maintain slight knee bend. Return to start.","db_row"],
+["Dumbbell Shrug",["traps"],"dumbbell","Hold dumbbells at sides. Shrug shoulders up toward ears. Hold briefly at top, lower slowly.","db_curl"],
+["Dumbbell Pullover",["lats","chest"],"dumbbell","Lie across bench, hold dumbbell above chest. Lower behind head in arc. Pull back over chest.","db_bench"],
+["Dumbbell Step-Up",["quads","glutes"],"dumbbell","Hold dumbbells, step onto box/bench. Drive through heel to stand tall. Step down with control.","db_lunge"],
+["Dumbbell Calf Raise",["calves"],"dumbbell","Hold dumbbells at sides, stand on edge. Rise on toes, lower heels below for full stretch.","db_squat"],
+["Dumbbell Reverse Fly",["rear_delts","back"],"dumbbell","Seated or bent over. Raise dumbbells out to sides with slight elbow bend. Squeeze shoulder blades.","db_fly"],
+["Dumbbell Floor Press",["chest","triceps"],"dumbbell","Lie on floor, press dumbbells. Elbows rest on floor at bottom. Good for tricep emphasis.","db_bench"],
+["Dumbbell Squeeze Press",["chest","triceps"],"dumbbell","Press dumbbells together throughout the press. Squeeze inward constantly. Intense chest contraction.","db_bench"],
+["Single-Arm Dumbbell Row",["back","biceps","core"],"dumbbell","Hand on bench, row with opposite arm. Pull to hip keeping elbow close. Anti-rotation core work.","db_row"],
+["Dumbbell Chest-Supported Row",["back","rear_delts"],"dumbbell","Lie face down on incline bench. Row dumbbells toward hips. Eliminates momentum.","db_row"],
+["Dumbbell Zottman Curl",["biceps","forearms"],"dumbbell","Curl up with palms up, rotate to palms down at top, lower with palms down. Hits all forearm muscles.","db_curl"],
+["Dumbbell Wrist Curl",["forearms"],"dumbbell","Forearms on thighs, palms up. Curl wrists upward. Lower slowly for forearm development.","db_curl"],
+["Dumbbell Side Bend",["obliques"],"dumbbell","Hold dumbbell in one hand. Bend sideways toward that side, return upright. Work both sides evenly.","db_curl"],
+["Renegade Row",["back","core","triceps"],"dumbbell","Push-up position on dumbbells. Row one dumbbell while stabilizing with the other. Alternate sides.","db_row"],
+["Dumbbell Snatch",["full_body","shoulders"],"dumbbell","Explosive single-arm pull from floor to overhead in one motion. Full body power movement.","db_press"],
+["Dumbbell Clean and Press",["full_body","shoulders"],"dumbbell","Clean dumbbell to shoulder then press overhead. Combine pulling and pressing power.","db_press"],
+["Dumbbell Thrusters",["quads","shoulders","full_body"],"dumbbell","Hold at shoulders, squat, then press overhead using leg drive on the way up.","db_press"],
+// ===== KETTLEBELL =====
+["Kettlebell Swing",["glutes","hamstrings","core","full_body"],"kettlebell","Hinge at hips, swing KB between legs. Drive hips forward to swing KB to chest height. Control the descent.","kb_swing"],
+["Kettlebell Goblet Squat",["quads","glutes","core"],"kettlebell","Hold KB at chest by horns. Squat deep keeping elbows inside knees. Drive up through heels.","kb_squat"],
+["Kettlebell Turkish Get-Up",["full_body","shoulders","core"],"kettlebell","Start lying down, KB in one hand extended. Stand up in controlled stages. Reverse to lie back down.","kb_press"],
+["Kettlebell Clean",["full_body","forearms"],"kettlebell","Swing KB between legs then pull to rack position at shoulder. Smooth transition, don't bang wrist.","kb_swing"],
+["Kettlebell Snatch",["full_body","shoulders"],"kettlebell","Explosive single-arm pull from between legs to overhead lockout. Requires hip drive and timing.","kb_press"],
+["Kettlebell Press",["shoulders","triceps"],"kettlebell","From rack position, press KB overhead to lockout. Keep core tight. Lower with control.","kb_press"],
+["Kettlebell Windmill",["obliques","shoulders","hamstrings"],"kettlebell","KB locked out overhead. Hinge at hip pushing opposite hip out. Lower hand to floor. Stand back up.","kb_press"],
+["Kettlebell Farmer Carry",["forearms","traps","core"],"kettlebell","Hold heavy KBs at sides. Walk with tall posture and tight core. Grip and loaded carry endurance.","kb_carry"],
+["Kettlebell Halo",["shoulders","core"],"kettlebell","Hold KB upside down at chest. Circle it around head in controlled arc. Reverse direction each set.","kb_press"],
+["Kettlebell Figure Eight",["core","full_body"],"kettlebell","Pass KB between and around legs in figure-eight pattern. Maintain squat position throughout.","kb_swing"],
+["Kettlebell Sumo Deadlift",["glutes","hamstrings","quads"],"kettlebell","Wide stance, KB between feet. Hinge and grip KB, stand tall squeezing glutes. Lower with control.","kb_squat"],
+["Kettlebell Row",["back","biceps"],"kettlebell","Hinge forward, row KB to hip. Keep elbow close to body. Squeeze back at top.","kb_swing"],
+["Kettlebell Lunge",["quads","glutes"],"kettlebell","Hold KB in goblet or rack position. Lunge forward, lowering back knee. Return to standing.","kb_squat"],
+["Kettlebell Thruster",["quads","shoulders","full_body"],"kettlebell","Goblet squat into press. Use leg drive to help press KB overhead.","kb_press"],
+["Kettlebell Single-Leg Deadlift",["hamstrings","glutes","core"],"kettlebell","Hold KB in one hand, hinge on opposite leg. Extend free leg behind. Return to standing.","kb_swing"],
+["Kettlebell Floor Press",["chest","triceps"],"kettlebell","Lie on floor, press KB from chest to lockout. Elbow touches floor at bottom.","kb_press"],
+["Kettlebell Racked Carry",["core","shoulders"],"kettlebell","Hold KB in rack position at shoulder. Walk maintaining upright posture. Challenges core stability.","kb_carry"],
+["Kettlebell Bottoms-Up Press",["shoulders","forearms","core"],"kettlebell","Hold KB upside down at shoulder. Press overhead maintaining balance. Extreme grip and stability demand.","kb_press"],
+["Kettlebell Swing (Single Arm)",["glutes","hamstrings","core"],"kettlebell","Single arm version of KB swing. Anti-rotation challenge. Alternate hands at top or between sets.","kb_swing"],
+["Kettlebell High Pull",["full_body","shoulders","traps"],"kettlebell","Explosive swing with elbow pull. KB comes to shoulder height with elbow high. Power movement.","kb_swing"],
+// ===== CABLE =====
+["Cable Crossover",["chest"],"cable","Set pulleys high, step forward. Bring handles together in front of chest in hugging motion. Squeeze chest.","cable_push"],
+["Low Cable Crossover",["chest"],"cable","Set pulleys low. Bring handles up and together in front of chest. Targets upper chest.","cable_push"],
+["Cable Row (Seated)",["back","biceps"],"cable","Sit at cable row station. Pull handle to torso squeezing shoulder blades. Control the return.","cable_pull"],
+["Lat Pulldown",["lats","biceps"],"cable","Wide grip on lat bar. Pull to upper chest squeezing lats. Control the weight back up.","cable_pull"],
+["Close-Grip Lat Pulldown",["lats","biceps"],"cable","Narrow grip pulldown. Pull to upper chest. Greater bicep involvement and lat stretch.","cable_pull"],
+["Straight-Arm Pulldown",["lats"],"cable","Stand facing high cable. Arms straight, pull bar down to thighs. Isolates lats without bicep help.","cable_pull"],
+["Cable Curl",["biceps"],"cable","Low cable, curl handle to shoulders. Constant tension throughout range. Control eccentric.","cable_pull"],
+["Cable Hammer Curl",["biceps","forearms"],"cable","Use rope attachment. Curl with neutral grip. Constant cable tension throughout.","cable_pull"],
+["Tricep Pushdown",["triceps"],"cable","High cable, push bar/rope down extending arms. Keep elbows pinned at sides. Squeeze at bottom.","cable_push"],
+["Overhead Tricep Extension (Cable)",["triceps"],"cable","Face away from high cable. Hold rope overhead. Extend arms forward and up. Stretch at bottom.","cable_push"],
+["Face Pull",["rear_delts","traps","shoulders"],"cable","High cable with rope. Pull toward face separating hands. Squeeze rear delts and external rotators.","cable_pull"],
+["Cable Fly",["chest"],"cable","Set cables at chest height. Arms wide, bring handles together in arc. Constant tension on chest.","cable_push"],
+["Cable Lateral Raise",["shoulders"],"cable","Low cable behind or beside you. Raise arm to side until parallel. Constant tension through range.","cable_push"],
+["Cable Front Raise",["shoulders"],"cable","Low cable, raise handle forward to shoulder height. Control the negative.","cable_push"],
+["Cable Pull-Through",["glutes","hamstrings"],"cable","Face away from low cable, rope between legs. Hinge at hips then drive through to stand tall.","cable_pull"],
+["Cable Crunch",["abs","core"],"cable","Kneel below high cable with rope behind head. Crunch down curling torso. Focus on ab contraction.","cable_pull"],
+["Cable Woodchop",["obliques","core"],"cable","High to low diagonal pulling motion. Rotate torso with control. Work both sides.","cable_pull"],
+["Cable Reverse Fly",["rear_delts"],"cable","Cross cables at chest height. Pull handles outward in reverse fly motion. Squeeze rear delts.","cable_push"],
+["Cable Kickback",["triceps"],"cable","Low cable, hinge forward. Extend arm back squeezing tricep at lockout.","cable_push"],
+["Cable Upright Row",["shoulders","traps"],"cable","Low cable, pull straight up along body. Lead with elbows to shoulder height.","cable_pull"],
+["Cable External Rotation",["shoulders"],"cable","Elbow at side, rotate forearm outward against cable resistance. Key for shoulder health.","cable_pull"],
+["Cable Pallof Press",["core","obliques"],"cable","Stand perpendicular to cable at chest height. Press handle straight out. Resist rotation.","cable_push"],
+["Cable Hip Abduction",["glutes","hip_flexors"],"cable","Low cable on ankle. Stand sideways, lift leg outward against resistance. Targets outer hip.","cable_pull"],
+["Cable Hip Adduction",["hip_flexors"],"cable","Low cable on ankle. Stand sideways, pull leg inward across body against resistance.","cable_pull"],
+// ===== MACHINE =====
+["Leg Press",["quads","glutes","hamstrings"],"machine","Sit in leg press, feet shoulder width on platform. Press out extending legs. Lower with control.","machine_press"],
+["Leg Extension",["quads"],"machine","Sit in machine, pad on shins. Extend legs to straight. Squeeze quads at top. Lower slowly.","machine_ext"],
+["Leg Curl (Lying)",["hamstrings"],"machine","Lie face down, pad behind ankles. Curl heels toward glutes. Squeeze hamstrings. Lower slowly.","machine_curl"],
+["Leg Curl (Seated)",["hamstrings"],"machine","Sit in machine, pad behind ankles. Curl legs under. Squeeze hamstrings at bottom.","machine_curl"],
+["Hack Squat Machine",["quads","glutes"],"machine","Back against pad, shoulders under pads. Squat down and drive up. Emphasis on quads.","machine_press"],
+["Chest Press Machine",["chest","triceps"],"machine","Sit in machine, press handles forward to lockout. Guided path reduces stabilizer demand.","machine_press"],
+["Pec Deck",["chest"],"machine","Sit in machine, arms against pads. Bring pads together squeezing chest. Controlled return.","machine_press"],
+["Machine Row",["back","biceps"],"machine","Sit in machine, pull handles toward torso. Squeeze shoulder blades together. Control return.","machine_curl"],
+["Machine Shoulder Press",["shoulders","triceps"],"machine","Sit in machine, press handles overhead. Guided path for safe shoulder pressing.","machine_press"],
+["Lat Pulldown Machine",["lats","biceps"],"machine","Sit in machine, pull handles down squeezing lats. Smooth controlled motion.","machine_curl"],
+["Calf Raise Machine (Standing)",["calves"],"machine","Shoulders under pads, rise up on toes. Full range — stretch at bottom, squeeze at top.","machine_press"],
+["Calf Raise Machine (Seated)",["calves"],"machine","Sit with pads on knees. Rise up on toes. Targets soleus muscle. Full range of motion.","machine_ext"],
+["Hip Abductor Machine",["glutes"],"machine","Sit in machine, push legs outward against pads. Squeeze outer glutes.","machine_ext"],
+["Hip Adductor Machine",["hip_flexors"],"machine","Sit in machine, squeeze legs inward against pads. Targets inner thigh muscles.","machine_ext"],
+["Cable Row Machine",["back","biceps"],"machine","Sit at machine, pull handles to torso. Neutral or pronated grip. Squeeze back.","machine_curl"],
+["Reverse Pec Deck",["rear_delts"],"machine","Face the machine, pull handles backward in arc. Squeeze rear delts together.","machine_curl"],
+["Smith Machine Bench Press",["chest","triceps"],"smith_machine","Barbell on guided rails. Lie on bench, press bar up. Lower to chest with control.","smith_press"],
+["Smith Machine Squat",["quads","glutes"],"smith_machine","Bar on guided rails on upper back. Squat with feet slightly forward. Press up.","smith_squat"],
+["Smith Machine Overhead Press",["shoulders","triceps"],"smith_machine","Seated under smith bar. Press overhead on guided rails. Safe for heavy shoulder work.","smith_press"],
+["Smith Machine Romanian Deadlift",["hamstrings","glutes"],"smith_machine","Hold smith bar at hips. Hinge back keeping bar on rails along thighs.","smith_squat"],
+["Smith Machine Shrug",["traps"],"smith_machine","Hold smith bar at thighs. Shrug shoulders up. Guided path allows heavy loads.","smith_press"],
+["Smith Machine Calf Raise",["calves"],"smith_machine","Bar on back, stand on platform edge. Rise on toes, lower heels. Heavy guided calf work.","smith_squat"],
+["Smith Machine Incline Press",["chest","shoulders"],"smith_machine","Incline bench under smith. Press bar up on guided rails. Upper chest focus.","smith_press"],
+["Smith Machine Close-Grip Bench",["triceps","chest"],"smith_machine","Narrow grip on smith bar. Press from chest to lockout. Tricep emphasis.","smith_press"],
+["Smith Machine Split Squat",["quads","glutes"],"smith_machine","Bar on back, one foot forward. Squat on guided rails. Single leg focus.","smith_squat"],
+["Smith Machine Hip Thrust",["glutes"],"smith_machine","Back on bench, bar over hips on rails. Drive hips up squeezing glutes.","smith_squat"],
+["Pendulum Squat",["quads","glutes"],"machine","Shoulders under pads on pendulum machine. Squat deep. Constant tension on quads.","machine_press"],
+["Belt Squat",["quads","glutes"],"machine","Weight hangs from belt at hips. Squat without spinal loading. Pure leg drive.","machine_press"],
+["Chest Supported T-Bar Row",["back","lats"],"machine","Lie chest-down on pad. Row T-bar handles to chest. No momentum possible.","machine_curl"],
+["Assisted Pull-Up Machine",["lats","biceps"],"machine","Kneel on pad with counterweight. Perform pull-up with assistance. Build toward unassisted.","machine_curl"],
+["Glute Drive Machine",["glutes"],"machine","Sit in machine, pad against hips. Drive hips forward squeezing glutes at lockout.","machine_press"],
+// ===== BODYWEIGHT =====
+["Pull-Up",["lats","biceps","back"],"bodyweight","Hang from bar with overhand grip. Pull chin above bar. Lower with full control. Full dead hang at bottom.","bw_pull"],
+["Chin-Up",["biceps","lats","back"],"bodyweight","Hang with underhand grip. Pull chin above bar. Emphasizes biceps more than pull-ups.","bw_pull"],
+["Push-Up",["chest","triceps","shoulders","core"],"bodyweight","Hands shoulder width, body straight. Lower chest to floor. Push back up to lockout. Core tight throughout.","bw_push"],
+["Diamond Push-Up",["triceps","chest"],"bodyweight","Hands together forming diamond shape. Push-up with narrow hand position. Intense tricep focus.","bw_push"],
+["Wide Push-Up",["chest","shoulders"],"bodyweight","Hands wider than shoulder width. Push-up emphasizing chest stretch and contraction.","bw_push"],
+["Decline Push-Up",["chest","shoulders"],"bodyweight","Feet elevated on bench or box. Push-up at decline angle. Targets upper chest.","bw_push"],
+["Pike Push-Up",["shoulders","triceps"],"bodyweight","Hips high in inverted V position. Lower head toward floor. Mimics overhead press angle.","bw_push"],
+["Handstand Push-Up",["shoulders","triceps","core"],"bodyweight","Kick up to handstand against wall. Lower head to floor. Press back up. Advanced shoulder exercise.","bw_push"],
+["Dip",["triceps","chest","shoulders"],"bodyweight","Support on parallel bars. Lower by bending elbows until upper arms parallel. Press back up.","bw_dip"],
+["Pistol Squat",["quads","glutes","core"],"bodyweight","Single leg squat with other leg extended forward. Full depth. Stand back up on one leg.","bw_squat"],
+["Bodyweight Squat",["quads","glutes"],"bodyweight","Feet shoulder width. Squat to parallel or below. Drive through heels. Arms forward for balance.","bw_squat"],
+["Jump Squat",["quads","glutes","calves"],"bodyweight","Squat down then explode upward into a jump. Land softly and immediately descend into next rep.","bw_squat"],
+["Nordic Curl",["hamstrings"],"bodyweight","Kneel with feet anchored. Slowly lower torso forward fighting gravity with hamstrings. Push off floor to return.","bw_lunge"],
+["Glute Bridge",["glutes","hamstrings"],"bodyweight","Lie on back, feet flat. Drive hips up squeezing glutes at top. Lower with control.","bw_crunch"],
+["Single-Leg Glute Bridge",["glutes","hamstrings"],"bodyweight","One foot flat, other leg extended. Bridge up on single leg. Maximum glute activation.","bw_crunch"],
+["Hip Thrust (Bodyweight)",["glutes","hamstrings"],"bodyweight","Upper back on bench, drive hips up. Squeeze glutes at top. Control the descent.","bw_crunch"],
+["Plank",["core","abs"],"bodyweight","Forearms and toes on floor. Hold body in straight line. Squeeze abs and glutes. Don't sag or pike.","bw_plank"],
+["Side Plank",["obliques","core"],"bodyweight","Lie on side, forearm and feet stacked. Lift hips creating straight line. Hold with control.","bw_plank"],
+["V-Up",["abs","core"],"bodyweight","Lie flat. Simultaneously lift legs and torso to touch toes at top. Lower with control.","bw_crunch"],
+["Hanging Leg Raise",["abs","hip_flexors"],"bodyweight","Hang from bar. Raise legs to parallel or higher. Control the swing. Lower slowly.","bw_pull"],
+["Hanging Knee Raise",["abs","hip_flexors"],"bodyweight","Hang from bar. Bring knees to chest. Squeeze abs at top. Lower with control.","bw_pull"],
+["Dragon Flag",["core","abs"],"bodyweight","Lie on bench, grip behind head. Raise entire body to vertical using only shoulders as pivot. Lower slowly.","bw_plank"],
+["L-Sit",["abs","hip_flexors","triceps"],"bodyweight","Support on bars or floor. Hold legs straight out parallel to floor. Intense core and hip flexor hold.","bw_plank"],
+["Muscle-Up",["lats","chest","triceps"],"bodyweight","Explosive pull-up transitioning above the bar into a dip. Full pull-to-push movement.","bw_pull"],
+["Inverted Row",["back","biceps"],"bodyweight","Hang under bar with feet on floor. Row chest to bar. Easier than pull-up, great for building up.","bw_pull"],
+["Archer Push-Up",["chest","triceps"],"bodyweight","Wide push-up shifting weight to one arm while other extends out straight. Alternate sides.","bw_push"],
+["Ring Dip",["chest","triceps","shoulders"],"bodyweight","Dips on gymnastics rings. Unstable surface requires extreme stabilization. Press to full lockout.","bw_dip"],
+["Ring Push-Up",["chest","triceps","core"],"bodyweight","Push-ups on rings. Instability increases chest and core activation significantly.","bw_push"],
+["Burpee",["full_body"],"bodyweight","Squat down, kick feet back to push-up, push up, jump feet forward, jump up with arms overhead.","bw_squat"],
+["Mountain Climber",["core","hip_flexors","full_body"],"bodyweight","Push-up position. Alternate driving knees to chest rapidly. Keep hips level and core tight.","bw_plank"],
+["Bear Crawl",["full_body","core","shoulders"],"bodyweight","On hands and toes, knees just off floor. Crawl forward moving opposite hand and foot. Core stability.","bw_plank"],
+["Crab Walk",["triceps","core","shoulders"],"bodyweight","Sit, hands behind you. Lift hips and walk on hands and feet face-up. Tricep and core work.","bw_plank"],
+["Hollow Body Hold",["core","abs"],"bodyweight","Lie face up. Arms overhead, legs extended. Lift shoulders and legs off floor. Hold banana shape.","bw_plank"],
+["Superman Hold",["back","glutes"],"bodyweight","Lie face down. Lift arms, chest, and legs off floor simultaneously. Squeeze back and glutes.","bw_plank"],
+["Bodyweight Calf Raise",["calves"],"bodyweight","Stand on edge of step. Rise up on toes, lower heels below step. Full range with bodyweight.","bw_squat"],
+["Box Jump",["quads","calves","glutes"],"bodyweight","Stand before box. Jump up landing softly on top. Step down and repeat. Explosive power.","bw_squat"],
+["Broad Jump",["quads","glutes","full_body"],"bodyweight","Standing jump for maximum distance. Swing arms and drive through hips. Land softly.","bw_squat"],
+["Tuck Jump",["quads","calves","core"],"bodyweight","Jump vertically bringing knees to chest at peak. Land softly. Explosive plyometric.","bw_squat"],
+["Wall Sit",["quads"],"bodyweight","Back against wall, slide down to 90 degree knee bend. Hold position. Isometric quad endurance.","bw_squat"],
+["Bodyweight Lunge",["quads","glutes"],"bodyweight","Step forward into lunge position. Lower back knee toward floor. Push off to return. Alternate legs.","bw_lunge"],
+["Reverse Lunge",["quads","glutes"],"bodyweight","Step backward into lunge. Lower back knee toward floor. Return to standing. Easier on knees.","bw_lunge"],
+["Lateral Lunge",["quads","glutes","hip_flexors"],"bodyweight","Step wide to one side bending that knee. Keep other leg straight. Push back to start.","bw_lunge"],
+["Step-Up (Bodyweight)",["quads","glutes"],"bodyweight","Step onto bench or box. Drive through heel to stand tall. Step down with control.","bw_lunge"],
+["Cossack Squat",["quads","hip_flexors","glutes"],"bodyweight","Wide stance, shift weight to one side into deep squat. Other leg stays straight. Alternate sides.","bw_squat"],
+["Sissy Squat",["quads"],"bodyweight","Lean back at knees, extending hips forward. Lower by bending knees. Extreme quad isolation.","bw_squat"],
+["Hanging Windshield Wiper",["obliques","core"],"bodyweight","Hang from bar, legs raised. Rotate legs side to side like windshield wipers. Advanced core.","bw_pull"],
+["Ab Wheel Rollout",["abs","core","lats"],"bodyweight","Kneel with ab wheel. Roll forward extending body. Pull back to kneeling using abs.","bw_plank"],
+["Dead Bug",["core","abs"],"bodyweight","Lie on back, arms and legs up. Extend opposite arm and leg while maintaining back contact with floor.","bw_crunch"],
+["Bird Dog",["core","back","glutes"],"bodyweight","Hands and knees. Extend opposite arm and leg simultaneously. Hold briefly. Alternate sides.","bw_plank"],
+["Sit-Up",["abs"],"bodyweight","Lie on back, knees bent. Curl torso up to seated position. Lower with control.","bw_crunch"],
+["Crunch",["abs"],"bodyweight","Lie on back, knees bent. Curl shoulders off floor squeezing abs. Lower slowly.","bw_crunch"],
+["Bicycle Crunch",["abs","obliques"],"bodyweight","Lie on back. Alternate touching elbow to opposite knee in cycling motion. Rotate torso fully.","bw_crunch"],
+["Russian Twist",["obliques","core"],"bodyweight","Sit with feet off floor, lean back slightly. Rotate torso side to side touching floor beside hips.","bw_crunch"],
+["Toe Touch",["abs"],"bodyweight","Lie on back, legs vertical. Reach hands up to touch toes. Lower shoulders back down.","bw_crunch"],
+["Flutter Kick",["abs","hip_flexors"],"bodyweight","Lie on back, legs extended and slightly raised. Alternate small rapid kicks up and down.","bw_crunch"],
+["Leg Raise (Lying)",["abs","hip_flexors"],"bodyweight","Lie on back, legs straight. Raise legs to vertical. Lower slowly without touching floor.","bw_crunch"],
+["Reverse Crunch",["abs"],"bodyweight","Lie on back. Curl knees and hips off floor toward chest. Squeeze lower abs.","bw_crunch"],
+// ===== JUMP ROPE =====
+["Jump Rope (Standard)",["calves","full_body"],"jump_rope","Basic two-foot jump. Stay on balls of feet with soft knees. Rotate wrists not arms. Light bouncing.","jump_rope"],
+["Double Under",["calves","full_body","shoulders"],"jump_rope","Rope passes under feet twice per jump. Jump slightly higher with faster wrist rotation.","jump_rope"],
+["Alternating Foot Jump Rope",["calves","full_body"],"jump_rope","Alternate feet like running in place while jumping rope. Light quick steps.","jump_rope"],
+["High Knees Jump Rope",["calves","hip_flexors","core"],"jump_rope","Drive knees high while jumping rope. Combines cardio with core and hip flexor work.","jump_rope"],
+["Jump Rope Criss-Cross",["calves","full_body","core"],"jump_rope","Cross arms in front of body every other jump. Requires coordination and timing.","jump_rope"],
+["Single Leg Jump Rope",["calves","core"],"jump_rope","Hop on one foot while jumping rope. Switch feet each set. Balance and calf endurance.","jump_rope"],
+// ===== RESISTANCE BAND =====
+["Band Pull-Apart",["rear_delts","traps"],"resistance_band","Hold band at shoulder height. Pull apart squeezing shoulder blades. Control return.","band_pull"],
+["Band Face Pull",["rear_delts","traps","shoulders"],"resistance_band","Attach band at face height. Pull toward face separating hands. External rotation at end.","band_pull"],
+["Band Shoulder Press",["shoulders","triceps"],"resistance_band","Stand on band, press handles overhead. Increasing resistance through range of motion.","band_push"],
+["Band Lat Pulldown",["lats","biceps"],"resistance_band","Anchor band overhead. Pull down to chest squeezing lats. Control return.","band_pull"],
+["Band Row",["back","biceps"],"resistance_band","Anchor band at chest height. Pull toward body squeezing back. Linear resistance profile.","band_pull"],
+["Band Curl",["biceps"],"resistance_band","Stand on band, curl handles to shoulders. Resistance increases at top of movement.","band_pull"],
+["Band Tricep Pushdown",["triceps"],"resistance_band","Anchor band overhead. Push down extending arms. Squeeze triceps at bottom.","band_push"],
+["Band Squat",["quads","glutes"],"resistance_band","Stand on band, handles at shoulders. Squat and stand. Increasing resistance at top.","band_push"],
+["Band Deadlift",["hamstrings","glutes"],"resistance_band","Stand on band. Hinge at hips, stand tall against band resistance.","band_pull"],
+["Band Good Morning",["hamstrings","glutes"],"resistance_band","Band behind neck and under feet. Hinge at hips, return to standing.","band_pull"],
+["Band Chest Press",["chest","triceps"],"resistance_band","Band behind back. Press handles forward. Increasing resistance through press.","band_push"],
+["Band Fly",["chest"],"resistance_band","Band behind back. Bring arms together in fly motion. Squeeze chest throughout.","band_push"],
+["Band Hip Thrust",["glutes"],"resistance_band","Band across hips on bench. Drive hips up against band resistance. Squeeze glutes.","band_push"],
+["Band Lateral Walk",["glutes"],"resistance_band","Band around ankles or knees. Walk sideways maintaining tension. Targets glute medius.","band_push"],
+["Band Clamshell",["glutes"],"resistance_band","Lie on side, band around knees. Open top knee like clamshell. Squeeze glute.","band_push"],
+// ===== ADDITIONAL COMPOUND & SPECIALTY =====
+["Trap Bar Deadlift",["quads","hamstrings","glutes","back"],"barbell","Stand inside trap bar. Grip handles, stand up straight. Neutral grip reduces lower back stress.","barbell_deadlift"],
+["Barbell Split Squat",["quads","glutes"],"barbell","Bar on back, one foot forward. Lower into split squat. Press up through front heel.","barbell_lunge"],
+["Barbell Glute Bridge",["glutes","hamstrings"],"barbell","Lie on floor, bar over hips. Drive hips up squeezing glutes. Lower with control.","barbell_deadlift"],
+["Barbell Z-Press",["shoulders","core"],"barbell","Press overhead while seated on floor with legs extended. No back support forces strict form.","barbell_press"],
+["Barbell JM Press",["triceps"],"barbell","Hybrid skull crusher/close grip bench. Lower to chin level. Press to lockout.","barbell_bench"],
+["Dumbbell W Press",["shoulders"],"dumbbell","Press with arms forming W shape. Emphasizes external rotation and mid delt.","db_press"],
+["Dumbbell Chest Supported Shrug",["traps"],"dumbbell","Lie face down on incline. Shrug dumbbells up squeezing traps.","db_row"],
+["Incline Hammer Curl",["biceps","forearms"],"dumbbell","Sit on incline bench. Hammer curl with arms hanging straight. Extended range of motion.","db_curl"],
+["Preacher Curl (Dumbbell)",["biceps"],"dumbbell","Arm over preacher pad. Curl dumbbell from full extension. Eliminates momentum.","db_curl"],
+["Spider Curl",["biceps"],"dumbbell","Lie chest-down on incline bench. Curl with arms hanging straight down. Strict isolation.","db_curl"],
+["Dumbbell Skullcrusher",["triceps"],"dumbbell","Lie on bench, dumbbells above chest. Lower to temples by bending elbows. Extend back up.","db_bench"],
+["Cable Bicep Curl (High)",["biceps"],"cable","Set cables high. Stand between, curl handles toward head. Peak contraction position.","cable_pull"],
+["Cable Chest Press",["chest","triceps"],"cable","Set cables at chest height. Press handles forward. Constant tension chest press.","cable_push"],
+["Cable Shrug",["traps"],"cable","Low cable, shrug handles upward. Constant tension through full range.","cable_pull"],
+["Machine Preacher Curl",["biceps"],"machine","Arm on machine pad. Curl against resistance. Strict isolation with guided path.","machine_curl"],
+["Machine Tricep Extension",["triceps"],"machine","Push down against machine resistance. Guided path for safe tricep isolation.","machine_ext"],
+["Machine Leg Press (Single Leg)",["quads","glutes"],"machine","Single leg on platform. Press out and return. Identifies and fixes imbalances.","machine_press"],
+["Machine Chest Fly",["chest"],"machine","Sit in machine, arms in fly position. Squeeze handles together. Constant tension.","machine_press"],
+["Machine Back Extension",["back","glutes"],"machine","Sit in machine, lean back against pad. Extend torso backward against resistance.","machine_ext"],
+["Machine Rotary Torso",["obliques"],"machine","Sit in machine. Rotate torso against resistance. Work both directions. Core rotation strength.","machine_ext"],
+["Machine Standing Calf",["calves"],"machine","Shoulders under pads. Rise on toes against machine resistance. Full calf development.","machine_press"],
+["Machine Seated Leg Curl",["hamstrings"],"machine","Sit in machine, pad on back of ankles. Curl legs under seat. Hamstring isolation.","machine_curl"],
+["Dumbbell Prone Y Raise",["rear_delts","traps"],"dumbbell","Lie face down on incline bench. Raise arms in Y position overhead. Targets lower traps.","db_fly"],
+["Dumbbell Prone T Raise",["rear_delts","traps"],"dumbbell","Lie face down on incline. Raise arms straight out to sides forming T. Middle trap focus.","db_fly"],
+["Barbell Drag Curl",["biceps"],"barbell","Curl barbell up keeping it in contact with body. Drag bar up torso. Different angle on biceps.","barbell_curl"],
+["Barbell Spider Curl",["biceps"],"barbell","Lean over incline bench, arms hanging. Strict barbell curl. No momentum possible.","barbell_curl"],
+["Plate Front Raise",["shoulders"],"other","Hold weight plate at waist. Raise to shoulder height or overhead. Constant grip challenge.","db_lateral"],
+["Plate Pinch Hold",["forearms"],"other","Pinch two plates together smooth sides out. Hold as long as possible. Grip endurance.","db_curl"],
+["Farmers Walk (Dumbbell)",["forearms","traps","core"],"dumbbell","Hold heavy dumbbells at sides. Walk with tall posture. Grip and total body endurance.","db_curl"],
+["Suitcase Carry",["core","forearms","obliques"],"dumbbell","Hold heavy dumbbell in one hand. Walk maintaining upright posture. Anti-lateral flexion.","db_curl"],
+["Overhead Carry",["shoulders","core"],"dumbbell","Hold dumbbell or KB locked out overhead. Walk with core braced. Shoulder stability.","db_press"],
+["Waiter Walk",["shoulders","core"],"kettlebell","Hold KB bottoms-up at shoulder height. Walk with control. Extreme stability demand.","kb_carry"],
+["Dip (Bench)",["triceps","chest"],"bodyweight","Hands on bench behind you, legs extended. Dip down bending elbows. Press back up.","bw_dip"],
+["Glute Ham Raise",["hamstrings","glutes"],"bodyweight","On GHD machine. Lower torso forward controlling with hamstrings. Curl back up.","bw_lunge"],
+["Back Extension (Bodyweight)",["back","glutes"],"bodyweight","On hyperextension bench. Lower torso down. Extend back up squeezing glutes and erectors.","bw_plank"],
+["Reverse Hyperextension",["glutes","hamstrings","back"],"bodyweight","On reverse hyper machine. Swing legs up behind you squeezing glutes. Control descent.","bw_plank"],
+["Pallof Press (Band)",["core","obliques"],"resistance_band","Anchor band at chest height. Press outward resisting rotation. Hold and return. Anti-rotation.","band_push"],
+["Band Overhead Press",["shoulders"],"resistance_band","Stand on band. Press overhead against increasing resistance. Full lockout.","band_push"],
+["Band Assisted Pull-Up",["lats","biceps"],"resistance_band","Loop band over bar, place foot in band. Perform pull-up with band assistance.","band_pull"],
+["Cable Oblique Crunch",["obliques"],"cable","Side bend against cable resistance. One side at a time. Controlled range of motion.","cable_pull"],
+["Landmine Squat",["quads","glutes"],"barbell","Hold end of landmine barbell at chest. Squat deep. Angled resistance path.","barbell_squat"],
+["Landmine Rotational Press",["core","shoulders","obliques"],"barbell","Hold end of barbell at shoulder. Press while rotating. Rotational power development.","barbell_press"],
+["Dumbbell Around the World",["chest","shoulders"],"dumbbell","Lie on bench. Arc dumbbells from hips over head in circular path. Full chest stretch.","db_fly"],
+["Cable Woodchop (Low to High)",["obliques","core"],"cable","Low cable, pull diagonally up and across body. Rotational power from low to high.","cable_pull"],
+["Cable Woodchop (High to Low)",["obliques","core"],"cable","High cable, pull diagonally down and across body. Rotational power from high to low.","cable_pull"],
+["Machine Abdominal Crunch",["abs"],"machine","Sit in machine. Crunch forward against resistance. Controlled ab isolation.","machine_ext"],
+["Dumbbell Tate Press",["triceps"],"dumbbell","Lie on bench, dumbbells extended. Lower to chest by bending elbows inward. Press back up.","db_bench"],
+["Barbell Hip Abduction",["glutes"],"barbell","Set up in squat stance with band above knees. Press knees outward against resistance.","barbell_squat"],
+["Cable Single-Arm Row",["back","biceps"],"cable","Single arm cable row. Allows rotation and full contraction. Anti-rotation benefit.","cable_pull"],
+["Dumbbell Cuban Press",["shoulders"],"dumbbell","Upright row to external rotation to press. Three-part shoulder movement for total delt development.","db_press"],
+["Standing Calf Raise (Bodyweight)",["calves"],"bodyweight","Stand on step edge. Rise up on toes, lower heels below step. Slow controlled reps.","bw_squat"],
+["Single-Leg Calf Raise",["calves"],"bodyweight","Stand on one foot on step edge. Rise up on toes, lower heel. Maximum calf isolation.","bw_squat"],
+["Barbell Preacher Curl",["biceps"],"barbell","Arm on preacher pad. Curl barbell from full extension. No cheating possible.","barbell_curl"],
+["EZ Bar Curl",["biceps"],"barbell","Curl EZ bar with angled grip. Reduces wrist strain. Standard bicep builder.","barbell_curl"],
+["EZ Bar Skull Crusher",["triceps"],"barbell","Lie on bench with EZ bar. Lower to forehead. Extend back up. Angled grip reduces wrist strain.","barbell_bench"],
+["Seated Calf Raise (Barbell)",["calves"],"barbell","Sit with barbell on knees. Rise on toes. Targets soleus. Full range of motion.","barbell_squat"],
+["Dumbbell Wrist Extension",["forearms"],"dumbbell","Forearms on thighs, palms down. Extend wrists upward. Lower slowly. Forearm extensor work.","db_curl"],
+["Single-Arm Cable Lateral Raise",["shoulders"],"cable","Low cable behind body. Single arm lateral raise. Constant tension through range.","cable_push"],
+["Cable Bayesian Curl",["biceps"],"cable","Face away from low cable. Curl with arm behind torso. Maximum bicep stretch.","cable_pull"],
+["Dumbbell Incline Row",["back","rear_delts"],"dumbbell","Lie face down on incline bench. Row dumbbells toward hips. No momentum.","db_row"],
+["High Pull (Barbell)",["traps","shoulders","full_body"],"barbell","Explosive pull from hang to chin height. Lead with elbows. Power movement.","barbell_curl"],
+["Kettlebell Dead Clean",["full_body"],"kettlebell","Clean KB from dead stop on floor to rack position. No swing momentum.","kb_swing"],
+["Kettlebell Squat Press",["quads","shoulders","full_body"],"kettlebell","Goblet squat into overhead press. Fluid full-body movement.","kb_press"],
+["Sandbag Bear Hug Squat",["quads","glutes","core"],"other","Bear hug heavy sandbag to chest. Squat. Core must fight to maintain position.","barbell_squat"],
+["Dumbbell Hex Press",["chest","triceps"],"dumbbell","Press dumbbells touching together throughout movement. Neutral grip. Inner chest focus.","db_bench"],
+["Barbell Reverse Lunge",["quads","glutes"],"barbell","Bar on back, step backward. Lower knee toward floor. Push through front foot to return.","barbell_lunge"],
+["Dumbbell Reverse Lunge",["quads","glutes"],"dumbbell","Dumbbells at sides. Step backward into lunge. Lower back knee. Return to standing.","db_lunge"],
+["Dumbbell Lateral Squat",["quads","glutes","hip_flexors"],"dumbbell","Hold dumbbells, step wide to side into squat. Push back to center. Alternate.","db_squat"],
+["Cable Single-Arm Chest Press",["chest","core"],"cable","Single arm cable press. Anti-rotation core demand. Chest and stability.","cable_push"],
+["Cable Single-Arm Lat Pulldown",["lats"],"cable","Single arm pulldown. Full range contraction. Identify and fix imbalances.","cable_pull"],
+["Machine Vertical Chest Press",["chest","triceps"],"machine","Upright chest press machine. Press handles forward and slightly up.","machine_press"],
+["Dumbbell Squeeze Curl",["biceps"],"dumbbell","Curl while actively squeezing the dumbbell as hard as possible. Increases forearm activation.","db_curl"],
+["Barbell Pause Bench Press",["chest","triceps"],"barbell","Bench press with 2-3 second pause on chest. Eliminates bounce. Builds power off chest.","barbell_bench"],
+["Tempo Squat",["quads","glutes"],"barbell","Squat with prescribed tempo (e.g., 3 seconds down, 1 second pause, 1 second up). Time under tension.","barbell_squat"],
+["Pin Squat",["quads","glutes"],"barbell","Squat to pins in power rack. Start each rep from dead stop on pins. Concentric strength.","barbell_squat"],
+["Board Press",["chest","triceps"],"barbell","Bench press lowering to board on chest. Reduces range of motion. Lockout strength.","barbell_bench"],
+["Spoto Press",["chest","triceps"],"barbell","Bench press with 1-inch pause above chest. Never touches chest. Constant tension.","barbell_bench"],
+["Barbell Box Squat",["quads","glutes","hamstrings"],"barbell","Squat to box, sit briefly, then drive up. Teaches sitting back. Builds posterior chain.","barbell_squat"],
+["Deficit Deadlift (Conventional)",["hamstrings","back","glutes"],"barbell","Stand on 2-4 inch platform. Conventional deadlift from deficit. Increased range of motion.","barbell_deadlift"],
+["Block Pull",["back","glutes","hamstrings"],"barbell","Deadlift from elevated blocks. Reduced range of motion. Overload top portion of pull.","barbell_deadlift"],
+["Rack Pull",["back","traps","glutes"],"barbell","Deadlift from pins at knee height. Heavy partial range. Lockout and upper back strength.","barbell_deadlift"],
+["Stiff-Leg Deadlift",["hamstrings","glutes","back"],"barbell","Deadlift with minimal knee bend. Lower bar as far as flexibility allows. Hamstring stretch.","barbell_deadlift"],
+["Dumbbell Lateral Lunge",["quads","glutes","hip_flexors"],"dumbbell","Hold dumbbell at chest. Step to side into deep lateral lunge. Push back to start.","db_lunge"],
+["Barbell Overhead Squat",["quads","shoulders","core"],"barbell","Hold barbell overhead with wide grip. Squat deep maintaining bar position. Mobility and stability.","barbell_squat"],
+];
+
+return raw.map((r,i)=>({
+  id:'ex_'+i,
+  name:r[0],
+  muscleGroups:r[1],
+  equipment:r[2],
+  instructions:r[3],
+  diagram:diag[r[4]]||SVG.press(),
+  custom:false
+}));
+}
+
+/* =============================================================
+   APP STATE & STORAGE
+   ============================================================= */
+const KEYS={exercises:'wt_exercises',workouts:'wt_workouts',logs:'wt_logs',unit:'wt_unit',activeWO:'wt_active'};
+
+function load(key,fallback=[]){try{return JSON.parse(localStorage.getItem(key))||fallback}catch(e){return fallback}}
+function save(key,data){localStorage.setItem(key,JSON.stringify(data))}
+
+// Seed exercises on first load
+if(!localStorage.getItem(KEYS.exercises)){save(KEYS.exercises,generateExerciseDB())}
+
+function getExercises(){return load(KEYS.exercises)}
+function getWorkouts(){return load(KEYS.workouts)}
+function getLogs(){return load(KEYS.logs)}
+function getUnit(){return localStorage.getItem(KEYS.unit)||'lbs'}
+function setUnit(u){localStorage.setItem(KEYS.unit,u);document.querySelectorAll('.unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===u))}
+
+/* =============================================================
+   ROUTING
+   ============================================================= */
+let currentView='home';
+function nav(view){
+  currentView=view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const el=document.getElementById('view-'+view);
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav===view));
+  // Render view
+  if(view==='home')renderHome();
+  if(view==='database')renderDatabase();
+  if(view==='workouts')renderWorkouts();
+  if(view==='history')renderHistory();
+  window.scrollTo(0,0);
+}
+
+/* =============================================================
+   TOAST
+   ============================================================= */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* =============================================================
+   HOME
+   ============================================================= */
+function renderHome(){
+  const logs=getLogs();
+  const exercises=getExercises();
+  // Stats
+  const totalWorkouts=logs.length;
+  let totalVolume=0;
+  logs.forEach(l=>l.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.completed)totalVolume+=s.weight*s.reps})));
+  // Streak — consecutive days with workouts
+  let streak=0;
+  if(logs.length){
+    const dates=[...new Set(logs.map(l=>new Date(l.startTime).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
+    let d=new Date();d.setHours(0,0,0,0);
+    for(const ds of dates){
+      const dd=new Date(ds);dd.setHours(0,0,0,0);
+      const diff=Math.round((d-dd)/(86400000));
+      if(diff<=1){streak++;d=dd}else break;
+    }
+  }
+  document.getElementById('home-stats').innerHTML=`
+    <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
+    <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Total Volume (${getUnit()})</div></div>
+    <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
+  `;
+  // Recent
+  const recent=logs.slice(-3).reverse();
+  const rc=document.getElementById('home-recent');
+  if(!recent.length){rc.innerHTML='<p class="fg3 small">No workouts logged yet. Start your first one!</p>';return}
+  rc.innerHTML=recent.map(l=>{
+    const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
+    const d=new Date(l.startTime);
+    return `<div class="recent-card">
+      <div><div class="rc-name">${esc(l.workoutName)}</div><div class="rc-meta">${d.toLocaleDateString()} &middot; ${l.exercises.length} exercises</div></div>
+      <div class="rc-dur">${dur}m</div>
+    </div>`;
+  }).join('');
+}
+
+/* =============================================================
+   DATABASE
+   ============================================================= */
+let dbMuscleFilter=new Set(), dbEquipFilter=new Set();
+const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body'];
+const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','other'];
+
+function renderDatabase(){
+  // Filters
+  document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
+  document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace('_',' ')}</div>`).join('');
+  const q=(document.getElementById('db-search').value||'').toLowerCase();
+  let exs=getExercises();
+  if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q));
+  if(dbMuscleFilter.size)exs=exs.filter(e=>e.muscleGroups.some(m=>dbMuscleFilter.has(m)));
+  if(dbEquipFilter.size)exs=exs.filter(e=>dbEquipFilter.has(e.equipment));
+  const grid=document.getElementById('db-grid');
+  grid.innerHTML=exs.slice(0,100).map(e=>`<div class="ex-card" onclick="openExerciseDetail('${e.id}')">
+    <div class="thumb">${e.diagram}</div>
+    <div class="info"><div class="name">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
+  </div>`).join('');
+  if(exs.length>100)grid.innerHTML+=`<p class="fg3 small text-center" style="grid-column:1/-1;padding:12px">Showing 100 of ${exs.length} results. Refine your search.</p>`;
+  if(!exs.length)grid.innerHTML='<p class="fg3 text-center" style="grid-column:1/-1;padding:20px">No exercises found.</p>';
+}
+
+function toggleFilter(type,val){
+  const set=type==='muscle'?dbMuscleFilter:dbEquipFilter;
+  if(set.has(val))set.delete(val);else set.add(val);
+  renderDatabase();
+}
+
+function openExerciseDetail(id){
+  const ex=getExercises().find(e=>e.id===id);if(!ex)return;
+  const logs=getLogs();
+  // History for this exercise
+  let history=[];
+  logs.forEach(l=>{
+    l.exercises.forEach(le=>{
+      if(le.exerciseId===id){
+        const completedSets=le.sets.filter(s=>s.completed&&s.weight>0);
+        if(completedSets.length){
+          const best=completedSets.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
+          const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+          history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm});
+        }
+      }
+    });
+  });
+  history=history.slice(-5).reverse();
+  openModal(`
+    <div class="modal-header"><h2>${esc(ex.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="text-center mb-md">${ex.diagram.replace('viewBox="0 0 120 120"','viewBox="0 0 120 120" width="140" height="140"')}</div>
+      <div class="flex gap-sm wrap mb-md">
+        ${ex.muscleGroups.map(m=>`<span class="tag tag-muscle">${m.replace('_',' ')}</span>`).join('')}
+        <span class="tag tag-equip">${ex.equipment.replace('_',' ')}</span>
+      </div>
+      <p class="small" style="line-height:1.6;color:var(--fg2)">${esc(ex.instructions)}</p>
+      ${history.length?`
+        <div class="divider"></div>
+        <h3 class="mb-sm" style="font-size:.9rem">My History</h3>
+        ${history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best}</span><span class="accent mono small">E1RM: ${h.e1rm}</span></div>`).join('')}
+      `:''}
+    </div>
+  `);
+}
+
+function openAddCustomExercise(){
+  openModal(`
+    <div class="modal-header"><h2>Add Custom Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <input class="input mb-sm" id="custom-name" placeholder="Exercise name">
+      <select class="input mb-sm" id="custom-muscle">
+        <option value="">Primary muscle group</option>
+        ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace('_',' ')}</option>`).join('')}
+      </select>
+      <select class="input mb-sm" id="custom-equip">
+        <option value="">Equipment</option>
+        ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace('_',' ')}</option>`).join('')}
+      </select>
+      <textarea class="input mb-sm" id="custom-instr" placeholder="Instructions (optional)"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveCustomExercise()">Add Exercise</button></div>
+  `);
+}
+
+function saveCustomExercise(){
+  const name=document.getElementById('custom-name').value.trim();
+  const muscle=document.getElementById('custom-muscle').value;
+  const equip=document.getElementById('custom-equip').value;
+  const instr=document.getElementById('custom-instr').value.trim();
+  if(!name||!muscle||!equip){toast('Fill in name, muscle, and equipment');return}
+  const exs=getExercises();
+  const svg=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="10" fill="none" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="72" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="48" x2="40" y2="55" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="48" x2="80" y2="55" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="72" x2="45" y2="105" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="72" x2="75" y2="105" stroke="#b8f53a" stroke-width="2"/><text x="60" y="115" text-anchor="middle" font-size="10" fill="#b8f53a">CUSTOM</text></svg>`;
+  exs.push({id:'ex_custom_'+Date.now(),name,muscleGroups:[muscle],equipment:equip,instructions:instr||'Custom exercise.',diagram:svg,custom:true});
+  save(KEYS.exercises,exs);
+  closeModal();toast('Exercise added!');
+  if(currentView==='database')renderDatabase();
+}
+
+/* =============================================================
+   MY WORKOUTS
+   ============================================================= */
+function renderWorkouts(){
+  const wos=getWorkouts();
+  const list=document.getElementById('workouts-list');
+  const empty=document.getElementById('workouts-empty');
+  if(!wos.length){list.innerHTML='';empty.classList.remove('hidden');return}
+  empty.classList.add('hidden');
+  list.innerHTML=wos.map(w=>`<div class="wo-card">
+    <div class="wo-info">
+      <div class="wo-name">${esc(w.name)}</div>
+      <div class="wo-meta">${w.exercises.length} exercises &middot; ~${w.exercises.length*5}min</div>
+    </div>
+    <div class="wo-actions">
+      <button class="btn btn-sm btn-primary" onclick="startFromTemplate('${w.id}')">Start</button>
+      <button class="btn btn-sm" onclick="editWorkoutTemplate('${w.id}')">Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteWorkout('${w.id}')">&#x2715;</button>
+    </div>
+  </div>`).join('');
+}
+
+function deleteWorkout(id){
+  let wos=getWorkouts().filter(w=>w.id!==id);
+  save(KEYS.workouts,wos);renderWorkouts();toast('Deleted');
+}
+
+/* =============================================================
+   CREATE/EDIT WORKOUT
+   ============================================================= */
+let createExercises=[];
+let editingWorkoutId=null;
+
+function openCreateWorkout(){
+  createExercises=[];editingWorkoutId=null;
+  document.getElementById('create-title').textContent='Create Workout';
+  document.getElementById('create-name').value='';
+  document.getElementById('create-save-btn').textContent='Save Workout';
+  renderCreateExercises();
+  nav('create');
+}
+
+function editWorkoutTemplate(id){
+  const w=getWorkouts().find(w=>w.id===id);if(!w)return;
+  editingWorkoutId=id;
+  createExercises=w.exercises.map(e=>({...e}));
+  document.getElementById('create-title').textContent='Edit Workout';
+  document.getElementById('create-name').value=w.name;
+  document.getElementById('create-save-btn').textContent='Save Changes';
+  renderCreateExercises();
+  nav('create');
+}
+
+function renderCreateExercises(){
+  const exs=getExercises();
+  const con=document.getElementById('create-exercises');
+  con.innerHTML=createExercises.map((ce,i)=>{
+    const ex=exs.find(e=>e.id===ce.exerciseId);
+    return `<div class="card flex gap-md between" draggable="true" data-idx="${i}"
+      ondragstart="ceDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="ceDrop(event,${i})">
+      <div class="flex gap-sm" style="flex:1;min-width:0">
+        <span class="fg3" style="cursor:grab">&#x2630;</span>
+        <div style="min-width:0">
+          <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex?esc(ex.name):'Unknown'}</div>
+          <div class="flex gap-sm mt-sm">
+            <input class="input" style="width:50px;padding:6px" type="number" min="1" value="${ce.targetSets}" onchange="createExercises[${i}].targetSets=+this.value" placeholder="#">
+            <span class="fg3 small">&times;</span>
+            <input class="input" style="width:70px;padding:6px" value="${esc(ce.targetReps)}" onchange="createExercises[${i}].targetReps=this.value" placeholder="8-12">
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="createExercises.splice(${i},1);renderCreateExercises()">&times;</button>
+    </div>`;
+  }).join('');
+}
+
+let ceDragIdx=null;
+function ceDragStart(e,i){ceDragIdx=i}
+function ceDrop(e,i){
+  e.preventDefault();
+  if(ceDragIdx===null||ceDragIdx===i)return;
+  const [moved]=createExercises.splice(ceDragIdx,1);
+  createExercises.splice(i,0,moved);
+  renderCreateExercises();
+}
+
+function saveWorkoutTemplate(){
+  const name=document.getElementById('create-name').value.trim();
+  if(!name){toast('Enter a workout name');return}
+  if(!createExercises.length){toast('Add at least one exercise');return}
+  let wos=getWorkouts();
+  if(editingWorkoutId){
+    const idx=wos.findIndex(w=>w.id===editingWorkoutId);
+    if(idx>=0){wos[idx].name=name;wos[idx].exercises=createExercises}
+  }else{
+    wos.push({id:'wo_'+Date.now(),name,exercises:createExercises,createdAt:new Date().toISOString()});
+  }
+  save(KEYS.workouts,wos);
+  toast(editingWorkoutId?'Workout updated!':'Workout saved!');
+  editingWorkoutId=null;
+  nav('workouts');
+}
+
+/* =============================================================
+   EXERCISE PICKER MODAL
+   ============================================================= */
+let pickerTarget='create'; // 'create' or 'active'
+let pickerMuscle='', pickerEquip='';
+
+function openExercisePicker(target){
+  pickerTarget=target;pickerMuscle='';pickerEquip='';
+  renderExercisePicker('');
+}
+
+function renderExercisePicker(q){
+  let exs=getExercises();
+  if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
+  if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
+  if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
+  openModal(`
+    <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="search-wrap"><span class="search-icon">&#128269;</span><input class="input" id="picker-search" placeholder="Search exercises..." value="${esc(q||'')}" oninput="renderExercisePicker(this.value)"></div>
+      <div class="flex gap-sm mb-sm">
+        <select class="input" style="font-size:.8rem" onchange="pickerMuscle=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
+          <option value="">All Muscles</option>
+          ${ALL_MUSCLES.map(m=>`<option value="${m}" ${pickerMuscle===m?'selected':''}>${m.replace('_',' ')}</option>`).join('')}
+        </select>
+        <select class="input" style="font-size:.8rem" onchange="pickerEquip=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
+          <option value="">All Equipment</option>
+          ${ALL_EQUIP.map(e=>`<option value="${e}" ${pickerEquip===e?'selected':''}>${e.replace('_',' ')}</option>`).join('')}
+        </select>
+      </div>
+      <div style="max-height:350px;overflow-y:auto">
+        ${exs.slice(0,60).map(e=>`<div class="ex-card" style="margin-bottom:4px" onclick="pickExercise('${e.id}')">
+          <div class="thumb" style="width:36px;height:36px">${e.diagram}</div>
+          <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
+        </div>`).join('')}
+        ${exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 results. Refine search.</p>':''}
+        ${!exs.length?'<p class="fg3 text-center" style="padding:16px">No matches found.</p>':''}
+      </div>
+      <div class="divider"></div>
+      <a href="#" class="small" onclick="event.preventDefault();closeModal();openAddCustomExercise()">Can't find it? Add custom exercise</a>
+    </div>
+  `);
+  setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}},100);
+}
+
+function pickExercise(id){
+  const ex=getExercises().find(e=>e.id===id);if(!ex)return;
+  if(pickerTarget==='create'){
+    createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:''});
+    closeModal();renderCreateExercises();
+  }else if(pickerTarget==='active'){
+    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,sets:[{weight:0,reps:0,completed:false}]});
+    closeModal();renderActiveWorkout();
+  }
+}
+
+/* =============================================================
+   ACTIVE WORKOUT
+   ============================================================= */
+let activeWorkout=null;
+let timerInterval=null;
+
+function startWorkoutFlow(){
+  const wos=getWorkouts();
+  if(!wos.length){
+    startEmptyWorkout();return;
+  }
+  let html=`<div class="modal-header"><h2>Start Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <button class="btn btn-block mb-md" onclick="closeModal();startEmptyWorkout()">&#9654; Start Empty (Build As I Go)</button>
+      <div class="divider"></div>
+      <h3 class="mb-sm fg2" style="font-size:.85rem">Or pick a template:</h3>
+      ${wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();startFromTemplate('${w.id}')">
+        <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+        <span class="accent" style="font-size:1.2rem">&#9654;</span>
+      </div>`).join('')}
+    </div>`;
+  openModal(html);
+}
+
+function startEmptyWorkout(){
+  activeWorkout={id:'log_'+Date.now(),workoutName:'Quick Workout',startTime:new Date().toISOString(),endTime:null,exercises:[],fromTemplate:false};
+  save(KEYS.activeWO,activeWorkout);
+  beginActiveWorkout();
+}
+
+function startFromTemplate(id){
+  const w=getWorkouts().find(w=>w.id===id);if(!w)return;
+  const exs=getExercises();
+  const logs=getLogs();
+  activeWorkout={
+    id:'log_'+Date.now(),
+    workoutName:w.name,
+    startTime:new Date().toISOString(),
+    endTime:null,
+    fromTemplate:true,
+    templateId:id,
+    exercises:w.exercises.map(we=>{
+      const ex=exs.find(e=>e.id===we.exerciseId);
+      // Find previous sets for this exercise
+      const prev=findPreviousSets(we.exerciseId,logs);
+      const sets=[];
+      for(let i=0;i<(we.targetSets||3);i++){
+        sets.push({weight:prev[i]?prev[i].weight:0,reps:prev[i]?prev[i].reps:0,completed:false});
+      }
+      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,sets};
+    })
+  };
+  save(KEYS.activeWO,activeWorkout);
+  beginActiveWorkout();
+}
+
+function findPreviousSets(exerciseId,logs){
+  for(let i=logs.length-1;i>=0;i--){
+    const le=logs[i].exercises.find(e=>e.exerciseId===exerciseId);
+    if(le)return le.sets.filter(s=>s.completed);
+  }
+  return[];
+}
+
+function beginActiveWorkout(){
+  const unit=getUnit();
+  document.querySelectorAll('.unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===unit));
+  nav('active');
+  document.getElementById('aw-name').textContent=activeWorkout.workoutName;
+  startTimer();
+  renderActiveWorkout();
+}
+
+function startTimer(){
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    if(!activeWorkout)return;
+    const elapsed=Math.floor((Date.now()-new Date(activeWorkout.startTime).getTime())/1000);
+    const m=Math.floor(elapsed/60);
+    const s=elapsed%60;
+    document.getElementById('aw-timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+}
+
+function renderActiveWorkout(){
+  if(!activeWorkout)return;
+  const exs=getExercises();
+  const logs=getLogs();
+  const con=document.getElementById('aw-exercises');
+  con.innerHTML=activeWorkout.exercises.map((ae,ei)=>{
+    const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
+    const prev=findPreviousSets(ae.exerciseId,logs);
+    return`<div class="aw-exercise ${allDone?'completed':''}" draggable="true" data-ei="${ei}"
+      ondragstart="awDragStart(event,${ei})" ondragover="event.preventDefault()" ondrop="awDrop(event,${ei})">
+      <div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
+        <span class="drag">&#x2630;</span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}</span>
+        ${ae.targetReps?`<span class="target">${ae.targetSets||''}x${ae.targetReps}</span>`:''}
+        <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
+      </div>
+      <div class="aw-ex-body">
+        <table class="set-table">
+          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th></tr></thead>
+          <tbody>
+            ${ae.sets.map((s,si)=>`<tr>
+              <td>${si+1}</td>
+              <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+              <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value)" placeholder="0"></td>
+              <td><input type="number" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0"></td>
+              <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let awDragIdx=null;
+function awDragStart(e,i){awDragIdx=i}
+function awDrop(e,i){
+  e.preventDefault();
+  if(awDragIdx===null||awDragIdx===i)return;
+  const [moved]=activeWorkout.exercises.splice(awDragIdx,1);
+  activeWorkout.exercises.splice(i,0,moved);
+  renderActiveWorkout();
+}
+
+function updateSet(ei,si,field,val){
+  activeWorkout.exercises[ei].sets[si][field]=val;
+  save(KEYS.activeWO,activeWorkout);
+}
+
+function toggleSet(ei,si){
+  const s=activeWorkout.exercises[ei].sets[si];
+  s.completed=!s.completed;
+  save(KEYS.activeWO,activeWorkout);
+  renderActiveWorkout();
+}
+
+function addSet(ei){
+  activeWorkout.exercises[ei].sets.push({weight:0,reps:0,completed:false});
+  save(KEYS.activeWO,activeWorkout);
+  renderActiveWorkout();
+}
+
+function openExerciseHistory(exId){
+  const logs=getLogs();
+  let history=[];
+  logs.forEach(l=>{
+    l.exercises.forEach(le=>{
+      if(le.exerciseId===exId){
+        const completed=le.sets.filter(s=>s.completed&&s.weight>0);
+        if(completed.length){
+          const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
+          const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+          history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed});
+        }
+      }
+    });
+  });
+  history=history.slice(-5).reverse();
+  const ex=getExercises().find(e=>e.id===exId);
+  openModal(`
+    <div class="modal-header"><h2>${ex?esc(ex.name):'Exercise'} History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${history.length?history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best}</span><span class="accent mono small">E1RM: ${h.e1rm}</span></div>`).join(''):'<p class="fg3 small">No previous history for this exercise.</p>'}
+    </div>
+  `);
+}
+
+/* =============================================================
+   FINISH WORKOUT
+   ============================================================= */
+function finishWorkout(){
+  if(!activeWorkout)return;
+  activeWorkout.endTime=new Date().toISOString();
+  const totalSets=activeWorkout.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.completed).length,0);
+  let totalVol=0;
+  activeWorkout.exercises.forEach(e=>e.sets.forEach(s=>{if(s.completed)totalVol+=s.weight*s.reps}));
+  const dur=Math.round((new Date(activeWorkout.endTime)-new Date(activeWorkout.startTime))/60000);
+
+  // Check for PRs
+  const logs=getLogs();
+  const prs=[];
+  activeWorkout.exercises.forEach(ae=>{
+    const completedSets=ae.sets.filter(s=>s.completed&&s.weight>0);
+    if(!completedSets.length)return;
+    const bestNow=completedSets.reduce((a,b)=>a.weight>b.weight?a:b);
+    let prevBest=0;
+    logs.forEach(l=>l.exercises.forEach(le=>{
+      if(le.exerciseId===ae.exerciseId){
+        le.sets.forEach(s=>{if(s.completed&&s.weight>prevBest)prevBest=s.weight});
+      }
+    }));
+    if(bestNow.weight>prevBest&&prevBest>0){
+      prs.push({name:ae.exerciseName,weight:bestNow.weight,reps:bestNow.reps});
+    }
+  });
+
+  openModal(`
+    <div class="modal-header"><h2>Workout Complete!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="flex gap-sm mb-md">
+        <div class="finish-stat"><div class="val">${dur}</div><div class="lbl">Minutes</div></div>
+        <div class="finish-stat"><div class="val">${totalSets}</div><div class="lbl">Sets</div></div>
+        <div class="finish-stat"><div class="val">${totalVol>=1000?(totalVol/1000).toFixed(1)+'k':totalVol}</div><div class="lbl">Volume (${getUnit()})</div></div>
+      </div>
+      ${prs.length?`
+        <div class="mb-md">
+          <h3 style="font-size:.9rem" class="mb-sm">&#127942; Personal Records!</h3>
+          ${prs.map(p=>`<div class="flex between" style="padding:6px 0;border-bottom:1px solid var(--bg4)">
+            <span class="small">${esc(p.name)}</span>
+            <span class="pr-badge">PR ${p.weight}x${p.reps}</span>
+          </div>`).join('')}
+        </div>
+      `:''}
+      ${!activeWorkout.fromTemplate?`
+        <div class="divider"></div>
+        <p class="small fg2 mb-sm">Save this as a reusable template?</p>
+        <input class="input mb-sm" id="save-template-name" placeholder="Template name" value="${esc(activeWorkout.workoutName)}">
+        <button class="btn btn-sm btn-block mb-md" onclick="saveAsTemplate()">Save as Template</button>
+      `:''}
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="confirmFinish()">Save & Finish</button></div>
+  `);
+}
+
+function saveAsTemplate(){
+  const name=document.getElementById('save-template-name').value.trim();
+  if(!name){toast('Enter a name');return}
+  const wos=getWorkouts();
+  wos.push({
+    id:'wo_'+Date.now(),name,
+    exercises:activeWorkout.exercises.map(e=>({exerciseId:e.exerciseId,targetSets:e.sets.length,targetReps:'',notes:''})),
+    createdAt:new Date().toISOString()
+  });
+  save(KEYS.workouts,wos);
+  toast('Template saved!');
+}
+
+function confirmFinish(){
+  const logs=getLogs();
+  logs.push({
+    id:activeWorkout.id,
+    workoutName:activeWorkout.workoutName,
+    startTime:activeWorkout.startTime,
+    endTime:activeWorkout.endTime,
+    exercises:activeWorkout.exercises
+  });
+  save(KEYS.logs,logs);
+  localStorage.removeItem(KEYS.activeWO);
+  activeWorkout=null;
+  if(timerInterval)clearInterval(timerInterval);
+  closeModal();
+  toast('Workout saved!');
+  nav('home');
+}
+
+/* =============================================================
+   HISTORY
+   ============================================================= */
+function renderHistory(){
+  const logs=getLogs().slice().reverse();
+  const con=document.getElementById('history-list');
+  if(!logs.length){con.innerHTML='<p class="fg3 text-center mt-lg">No workout history yet.</p>';return}
+  con.innerHTML=logs.map(l=>{
+    const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
+    const d=new Date(l.startTime);
+    const totalSets=l.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.completed).length,0);
+    let vol=0;l.exercises.forEach(e=>e.sets.forEach(s=>{if(s.completed)vol+=s.weight*s.reps}));
+    return`<div class="card" style="cursor:pointer" onclick="openLogDetail('${l.id}')">
+      <div class="flex between mb-sm">
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase">${esc(l.workoutName)}</div>
+          <div class="small fg2">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <div class="mono accent">${dur}m</div>
+      </div>
+      <div class="flex gap-md small fg2">
+        <span>${l.exercises.length} exercises</span>
+        <span>${totalSets} sets</span>
+        <span>${vol.toLocaleString()} ${getUnit()} volume</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openLogDetail(id){
+  const l=getLogs().find(l=>l.id===id);if(!l)return;
+  const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
+  openModal(`
+    <div class="modal-header"><h2>${esc(l.workoutName)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p class="small fg2 mb-md">${new Date(l.startTime).toLocaleDateString()} &middot; ${dur} minutes</p>
+      ${l.exercises.map(e=>`
+        <div class="mb-md">
+          <h3 style="font-size:.88rem">${esc(e.exerciseName)}</h3>
+          ${e.sets.filter(s=>s.completed).map((s,i)=>`<div class="small fg2">&nbsp;&nbsp;Set ${i+1}: ${s.weight} x ${s.reps}</div>`).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
+/* =============================================================
+   MODAL
+   ============================================================= */
+function openModal(html){
+  document.getElementById('modal-content').innerHTML=html;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+/* =============================================================
+   UTILS
+   ============================================================= */
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* =============================================================
+   RESUME ACTIVE WORKOUT IF EXISTS
+   ============================================================= */
+(function(){
+  const saved=load(KEYS.activeWO,null);
+  if(saved&&saved.startTime&&!saved.endTime){
+    activeWorkout=saved;
+    beginActiveWorkout();
+  }else{
+    nav('home');
+  }
+})();
+</script>
+</body>
+</html>
