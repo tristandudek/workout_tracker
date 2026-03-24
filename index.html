@@ -372,25 +372,40 @@ select.input{appearance:none;cursor:pointer;
 .auth-row>*{flex:1}
 
 /* ============================================================
-   PROFILE BADGE
+   TOP RIGHT BAR
    ============================================================ */
 #profile-badge{
   position:fixed;top:0;right:0;z-index:600;padding:10px 16px;
   display:flex;align-items:center;gap:10px;
   background:linear-gradient(to right,transparent,#fff 30%);
 }
-#profile-badge .badge-name{
-  font-family:var(--font-display);font-weight:700;font-size:.82rem;
-  text-transform:uppercase;letter-spacing:.04em;color:var(--accent);
-  cursor:pointer;
+.profile-menu-wrap{position:relative}
+.profile-menu-btn{
+  width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:1.1rem;color:var(--fg2);transition:border-color .15s;overflow:hidden;
 }
-#profile-badge .badge-name:hover{text-decoration:underline}
-#profile-badge .badge-logout{
-  background:none;border:1px solid var(--bg4);color:var(--fg3);
-  padding:4px 10px;font-size:.68rem;font-family:var(--font-display);
-  font-weight:700;text-transform:uppercase;cursor:pointer;transition:all .12s;
+.profile-menu-btn:hover{border-color:var(--accent)}
+.profile-menu-btn img{width:100%;height:100%;object-fit:cover}
+.profile-menu-dropdown{
+  position:absolute;top:calc(100% + 6px);right:0;width:200px;
+  background:var(--bg2);border:1px solid var(--bg4);z-index:700;
+  display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);
 }
-#profile-badge .badge-logout:hover{border-color:var(--red);color:var(--red)}
+.profile-menu-dropdown.open{display:block}
+.profile-menu-name{
+  padding:10px 14px;font-family:var(--font-display);font-weight:700;
+  font-size:.85rem;text-transform:uppercase;color:var(--fg);
+  border-bottom:1px solid var(--bg4);
+}
+.profile-menu-item{
+  display:block;width:100%;padding:10px 14px;background:none;border:none;
+  text-align:left;font-size:.82rem;color:var(--fg2);cursor:pointer;
+  font-family:var(--font-body);transition:background .12s;
+}
+.profile-menu-item:hover{background:var(--bg3);color:var(--fg)}
+.profile-menu-logout{color:var(--red)}
+.profile-menu-logout:hover{background:rgba(255,59,59,.08)}
 
 /* ============================================================
    PROFILE VIEW
@@ -628,12 +643,9 @@ select.input{appearance:none;cursor:pointer;
   <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon">&#128240;</span>Feed</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon">&#128203;</span>My Workouts</button>
   <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon">&#128221;</span>My Plans</button>
-  <button class="sidebar-link" data-nav="profile" onclick="nav('profile')"><span class="sidebar-icon">&#128100;</span>My Profile</button>
-  <div class="sidebar-spacer"></div>
-  <button class="sidebar-logout" onclick="handleLogout()">Logout</button>
 </div>
 
-<!-- PROFILE BADGE -->
+<!-- TOP RIGHT BAR -->
 <div id="profile-badge">
   <div class="notif-wrap">
     <button class="notif-bell" onclick="toggleNotifications()">
@@ -645,8 +657,18 @@ select.input{appearance:none;cursor:pointer;
       <div id="notif-list"></div>
     </div>
   </div>
-  <span class="badge-name" id="badge-name" onclick="nav('profile')"></span>
-  <button class="badge-logout" onclick="handleLogout()">Logout</button>
+  <div class="profile-menu-wrap">
+    <button class="profile-menu-btn" id="profile-menu-btn" onclick="toggleProfileMenu()">
+      <span id="badge-avatar-icon">&#128100;</span>
+    </button>
+    <div class="profile-menu-dropdown" id="profile-menu-dropdown">
+      <div class="profile-menu-name" id="badge-name"></div>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')">My Profile</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile');setTimeout(()=>document.getElementById('priv-workouts')?.scrollIntoView({behavior:'smooth'}),300)">Privacy Settings</button>
+      <div class="divider" style="margin:6px 0"></div>
+      <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()">Logout</button>
+    </div>
+  </div>
 </div>
 
 <div id="app">
@@ -1451,6 +1473,13 @@ async function initApp(user){
   currentProfile=await fetchProfile();
   if(currentProfile){
     document.getElementById('badge-name').textContent=currentProfile.name;
+    // Update top-right avatar
+    const avatarBtn=document.getElementById('badge-avatar-icon');
+    if(currentProfile.avatar_url){
+      avatarBtn.innerHTML=`<img src="${currentProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    }else{
+      avatarBtn.textContent=(currentProfile.name||'?')[0].toUpperCase();
+    }
   }
 
   document.getElementById('auth-view').style.display='none';
@@ -2304,8 +2333,9 @@ async function openLogDetail(id){
    PROFILE
    ============================================================= */
 async function renderProfile(){
-  if(!currentProfile)currentProfile=await fetchProfile();
-  if(!currentProfile)return;
+  // Always fetch fresh profile data to ensure fields populate
+  currentProfile=await fetchProfile();
+  if(!currentProfile){toast('Could not load profile');return}
   const p=currentProfile;
 
   // Avatar
@@ -3091,6 +3121,24 @@ async function openPublicProfile(userId){
 }
 
 /* =============================================================
+   PROFILE MENU (top right dropdown)
+   ============================================================= */
+let profileMenuOpen=false;
+function toggleProfileMenu(){
+  profileMenuOpen=!profileMenuOpen;
+  document.getElementById('profile-menu-dropdown').classList.toggle('open',profileMenuOpen);
+  // Close notif dropdown if open
+  if(profileMenuOpen&&notifOpen){notifOpen=false;document.getElementById('notif-dropdown').classList.remove('open')}
+}
+function closeProfileMenu(){
+  profileMenuOpen=false;
+  document.getElementById('profile-menu-dropdown').classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  if(profileMenuOpen&&!e.target.closest('.profile-menu-wrap')){closeProfileMenu()}
+});
+
+/* =============================================================
    NOTIFICATIONS
    ============================================================= */
 let notifOpen=false;
@@ -3099,6 +3147,8 @@ function toggleNotifications(){
   notifOpen=!notifOpen;
   document.getElementById('notif-dropdown').classList.toggle('open',notifOpen);
   if(notifOpen)loadNotifications();
+  // Close profile menu if open
+  if(notifOpen&&profileMenuOpen){closeProfileMenu()}
 }
 
 async function loadNotifications(){
