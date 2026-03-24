@@ -86,7 +86,6 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 @media(min-width:768px){
   .sidebar{display:flex}
   #app-wrapper #app{margin-left:220px}
-  #profile-badge{left:220px}
   .nav{display:none!important}
 }
 @media(max-width:767px){
@@ -375,9 +374,8 @@ select.input{appearance:none;cursor:pointer;
    TOP RIGHT BAR
    ============================================================ */
 #profile-badge{
-  position:fixed;top:0;right:0;z-index:600;padding:10px 16px;
-  display:flex;align-items:center;gap:10px;
-  background:linear-gradient(to right,transparent,#fff 30%);
+  position:fixed;top:8px;right:12px;z-index:600;
+  display:flex;align-items:center;gap:8px;
 }
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
@@ -1456,10 +1454,16 @@ async function handleSignup(){
 async function handleLogout(){
   await sb.auth.signOut();
   currentUser=null;currentProfile=null;
+  activeWorkout=null;
+  if(timerInterval)clearInterval(timerInterval);
+  saveActiveWO(null);
+  hideResumeWorkoutBanner();
   invalidateCache();
+  closeProfileMenu();
   document.getElementById('app-wrapper').style.display='none';
   document.getElementById('auth-view').style.display='flex';
   document.getElementById('loading-overlay').classList.add('hidden');
+  showLogin();
 }
 
 async function fetchProfile(){
@@ -1508,12 +1512,14 @@ async function initApp(user){
   // Update notification badge
   await updateNotifBadge();
 
+  // Always land on feed — never auto-resume active workout
+  await nav('feed');
+
+  // If there's a workout in progress, load it into memory and show resume banner
   const saved=loadActiveWO();
   if(saved&&saved.startTime&&!saved.endTime){
     activeWorkout=saved;
-    beginActiveWorkout();
-  }else{
-    await nav('feed');
+    showResumeWorkoutBanner();
   }
 }
 
@@ -2053,6 +2059,27 @@ function beginActiveWorkout(){
   document.getElementById('aw-name').textContent=activeWorkout.workoutName;
   startTimer();
   renderActiveWorkout();
+  hideResumeWorkoutBanner();
+}
+
+function showResumeWorkoutBanner(){
+  let banner=document.getElementById('resume-workout-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='resume-workout-banner';
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:550;background:var(--accent);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;';
+    document.body.appendChild(banner);
+  }
+  banner.innerHTML=`<span>Workout in progress: ${esc(activeWorkout.workoutName)}</span><button style="background:#fff;color:var(--accent);border:none;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.8rem;text-transform:uppercase;cursor:pointer" onclick="beginActiveWorkout()">Resume</button>`;
+  banner.style.display='flex';
+  // Push content down
+  document.getElementById('app').style.paddingTop='48px';
+}
+
+function hideResumeWorkoutBanner(){
+  const banner=document.getElementById('resume-workout-banner');
+  if(banner)banner.style.display='none';
+  document.getElementById('app').style.paddingTop='';
 }
 
 function startTimer(){
@@ -2145,6 +2172,7 @@ function confirmDiscard(){
   saveActiveWO(null);
   activeWorkout=null;
   if(timerInterval)clearInterval(timerInterval);
+  hideResumeWorkoutBanner();
   closeModal();
   toast('Workout discarded');
   nav('feed');
@@ -2283,6 +2311,7 @@ async function confirmFinish(){
   saveActiveWO(null);
   activeWorkout=null;
   if(timerInterval)clearInterval(timerInterval);
+  hideResumeWorkoutBanner();
   closeModal();
   toast('Workout saved!');
   await nav('feed');
