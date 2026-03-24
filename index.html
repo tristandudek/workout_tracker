@@ -6,10 +6,7 @@
 <title>IRON LOG — Workout Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<<<<<<< HEAD
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 <style>
 /* ============================================================
    RESET & BASE
@@ -18,11 +15,7 @@
 :root{
   --bg:#0d0d0f;--bg2:#141416;--bg3:#1a1a1e;--bg4:#222228;
   --fg:#f0f0f0;--fg2:#999;--fg3:#555;
-<<<<<<< HEAD
   --accent:#38bdf8;--accent2:#0ea5e9;--red:#ff3b3b;--red2:#cc2a2a;
-=======
-  --accent:#b8f53a;--accent2:#a0d832;--red:#ff3b3b;--red2:#cc2a2a;
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   --font-display:'Barlow Condensed',sans-serif;
   --font-body:'Inter',sans-serif;
   --font-mono:'JetBrains Mono',monospace;
@@ -110,11 +103,7 @@ select.input{appearance:none;cursor:pointer;
   font-family:var(--font-display);user-select:none;
 }
 .chip:hover{border-color:var(--fg3);color:var(--fg)}
-<<<<<<< HEAD
 .chip.active{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.08)}
-=======
-.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(184,245,58,.08)}
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 
 /* Modal */
 .modal-backdrop{
@@ -313,7 +302,6 @@ select.input{appearance:none;cursor:pointer;
 .finish-stat .val{font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--accent)}
 .finish-stat .lbl{font-size:.7rem;color:var(--fg2);text-transform:uppercase;margin-top:2px;font-family:var(--font-display)}
 
-<<<<<<< HEAD
 /* ============================================================
    AUTH VIEW
    ============================================================ */
@@ -514,22 +502,16 @@ select.input{appearance:none;cursor:pointer;
 .active-plan-card .apc-title{font-family:var(--font-display);font-weight:800;text-transform:uppercase;font-size:.9rem;color:var(--accent)}
 .active-plan-card .apc-meta{font-size:.78rem;color:var(--fg2);margin-top:2px}
 
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 @media(max-width:500px){
   .ex-grid{grid-template-columns:1fr}
   .stats-strip{flex-wrap:wrap}
   .stat-box{min-width:33%}
   h1{font-size:1.9rem}
-<<<<<<< HEAD
   #profile-badge{padding:8px 10px}
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 </style>
 </head>
 <body>
-<<<<<<< HEAD
 
 <!-- ============================================================
      LOADING OVERLAY
@@ -603,8 +585,6 @@ select.input{appearance:none;cursor:pointer;
   <button class="badge-logout" onclick="handleLogout()">Logout</button>
 </div>
 
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 <div id="app">
 
 <!-- ============================================================
@@ -625,7 +605,6 @@ select.input{appearance:none;cursor:pointer;
   <div id="home-stats" class="stats-strip"></div>
   <h3 class="fg2 mt-md mb-sm" style="font-size:.85rem">Recent Workouts</h3>
   <div id="home-recent"></div>
-<<<<<<< HEAD
   <div id="home-active-plan" class="hidden"></div>
 </div>
 
@@ -662,8 +641,6 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-public-profile" data-view="public-profile">
   <button class="btn btn-sm btn-ghost mb-md" onclick="history.back()||nav('feed')">&larr; Back</button>
   <div id="pub-profile-content"></div>
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 </div>
 
 <!-- ============================================================
@@ -689,14 +666,10 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-workouts" data-view="workouts">
   <div class="flex between mb-md mt-md">
     <h2>My Workouts</h2>
-<<<<<<< HEAD
     <div class="flex gap-sm">
       <button class="btn btn-sm" onclick="nav('database')">Exercise DB</button>
       <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
     </div>
-=======
-    <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   </div>
   <div id="workouts-list"></div>
   <div id="workouts-empty" class="text-center mt-lg hidden">
@@ -747,7 +720,6 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-history" data-view="history">
   <h2 class="mt-md mb-md">Workout History</h2>
-<<<<<<< HEAD
   <button class="btn btn-sm btn-ghost mb-md" onclick="nav('profile')">&larr; Back to Profile</button>
   <div id="history-list"></div>
 </div>
@@ -889,22 +861,6 @@ select.input{appearance:none;cursor:pointer;
 </div><!-- #app -->
 
 <!-- MODAL -->
-=======
-  <div id="history-list"></div>
-</div>
-
-</div><!-- /app -->
-
-<!-- NAV BAR -->
-<nav class="nav" id="main-nav">
-  <button class="nav-btn active" data-nav="home" onclick="nav('home')"><span class="nav-icon">&#9776;</span>Home</button>
-  <button class="nav-btn" data-nav="database" onclick="nav('database')"><span class="nav-icon">&#128218;</span>Database</button>
-  <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon">&#128203;</span>Workouts</button>
-  <button class="nav-btn" data-nav="history" onclick="nav('history')"><span class="nav-icon">&#128200;</span>History</button>
-</nav>
-
-<!-- MODAL CONTAINER -->
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 <div class="modal-backdrop" id="modal-backdrop" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
 </div>
@@ -912,7 +868,6 @@ select.input{appearance:none;cursor:pointer;
 <!-- TOAST -->
 <div id="toast"></div>
 
-<<<<<<< HEAD
 <!-- NAV BAR -->
 <nav class="nav" id="main-nav">
   <button class="nav-btn active" data-nav="home" onclick="nav('home')"><span class="nav-icon">&#9776;</span>Home</button>
@@ -1071,187 +1026,6 @@ const raw=[
 ["Close-Grip Lat Pulldown",["lats","biceps"],"cable","Narrow grip, pull to chest. More bicep involvement. Squeeze at bottom.","cable_pull"],
 ["Machine Shoulder Press",["shoulders","triceps"],"machine","Sit in machine, press handles overhead. Guided path for safe shoulder pressing.","machine_press"],
 ["Machine Row",["back","biceps"],"machine","Sit in machine, pull handles toward torso. Squeeze shoulder blades together. Control return.","machine_curl"],
-=======
-<script>
-/* =============================================================
-   EXERCISE DATABASE — SEED DATA
-   ============================================================= */
-function generateExerciseDB(){
-
-// SVG diagram generators — simple stick figure cartoons for each movement pattern
-const SVG={
-  press:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="20" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="30" x2="60" y2="70" stroke="${c}" stroke-width="2"/><line x1="60" y1="45" x2="35" y2="25" stroke="${c}" stroke-width="2"/><line x1="60" y1="45" x2="85" y2="25" stroke="${c}" stroke-width="2"/><line x1="25" y1="22" x2="95" y2="22" stroke="${c}" stroke-width="3" stroke-linecap="round"/><line x1="60" y1="70" x2="45" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="75" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
-  bench:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="62" width="90" height="6" fill="${c}" opacity="0.3"/><circle cx="55" cy="52" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="60" x2="55" y2="82" stroke="${c}" stroke-width="2"/><line x1="55" y1="68" x2="35" y2="48" stroke="${c}" stroke-width="2"/><line x1="55" y1="68" x2="75" y2="48" stroke="${c}" stroke-width="2"/><line x1="25" y1="45" x2="85" y2="45" stroke="${c}" stroke-width="3" stroke-linecap="round"/><line x1="55" y1="82" x2="40" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="82" x2="70" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
-  squat:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="22" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="32" x2="60" y2="62" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="45" y2="55" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="75" y2="55" stroke="${c}" stroke-width="2"/><line x1="60" y1="62" x2="40" y2="85" stroke="${c}" stroke-width="2"/><line x1="40" y1="85" x2="35" y2="110" stroke="${c}" stroke-width="2"/><line x1="60" y1="62" x2="80" y2="85" stroke="${c}" stroke-width="2"/><line x1="80" y1="85" x2="85" y2="110" stroke="${c}" stroke-width="2"/><line x1="30" y1="18" x2="90" y2="18" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
-  deadlift:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="30" r="10" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="60" y2="70" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="40" y2="85" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="80" y2="85" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="42" y2="92" stroke="${c}" stroke-width="2"/><line x1="42" y1="92" x2="38" y2="110" stroke="${c}" stroke-width="2"/><line x1="60" y1="70" x2="78" y2="92" stroke="${c}" stroke-width="2"/><line x1="78" y1="92" x2="82" y2="110" stroke="${c}" stroke-width="2"/><line x1="30" y1="88" x2="90" y2="88" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
-  row:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="70" cy="28" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="65" y1="36" x2="50" y2="68" stroke="${c}" stroke-width="2"/><line x1="55" y1="52" x2="35" y2="70" stroke="${c}" stroke-width="2"/><line x1="55" y1="52" x2="75" y2="60" stroke="${c}" stroke-width="2"/><line x1="50" y1="68" x2="35" y2="100" stroke="${c}" stroke-width="2"/><line x1="50" y1="68" x2="65" y2="100" stroke="${c}" stroke-width="2"/><line x1="25" y1="72" x2="85" y2="72" stroke="${c}" stroke-width="3" stroke-linecap="round"/></svg>`,
-  curl:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="68" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="45" y2="55" stroke="${c}" stroke-width="2"/><line x1="45" y1="55" x2="48" y2="38" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="75" y2="42" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="72" y2="100" stroke="${c}" stroke-width="2"/><rect x="42" y="32" width="8" height="4" fill="${c}" opacity="0.5"/></svg>`,
-  fly:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="34" x2="60" y2="72" stroke="${c}" stroke-width="2"/><path d="M60 48 Q30 35 25 55" fill="none" stroke="${c}" stroke-width="2"/><path d="M60 48 Q90 35 95 55" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="72" x2="48" y2="105" stroke="${c}" stroke-width="2"/><line x1="60" y1="72" x2="72" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
-  lunge:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="27" x2="55" y2="62" stroke="${c}" stroke-width="2"/><line x1="55" y1="40" x2="40" y2="50" stroke="${c}" stroke-width="2"/><line x1="55" y1="40" x2="70" y2="50" stroke="${c}" stroke-width="2"/><line x1="55" y1="62" x2="35" y2="85" stroke="${c}" stroke-width="2"/><line x1="35" y1="85" x2="30" y2="110" stroke="${c}" stroke-width="2"/><line x1="55" y1="62" x2="80" y2="80" stroke="${c}" stroke-width="2"/><line x1="80" y1="80" x2="90" y2="110" stroke="${c}" stroke-width="2"/></svg>`,
-  pullup:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><line x1="20" y1="12" x2="100" y2="12" stroke="${c}" stroke-width="3"/><circle cx="60" cy="30" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="39" x2="60" y2="78" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="42" y2="15" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="78" y2="15" stroke="${c}" stroke-width="2"/><line x1="60" y1="78" x2="48" y2="108" stroke="${c}" stroke-width="2"/><line x1="60" y1="78" x2="72" y2="108" stroke="${c}" stroke-width="2"/></svg>`,
-  plank:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="90" cy="52" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="82" y1="55" x2="25" y2="62" stroke="${c}" stroke-width="2"/><line x1="75" y1="58" x2="70" y2="75" stroke="${c}" stroke-width="2"/><line x1="70" y1="75" x2="65" y2="60" stroke="${c}" stroke-width="2"/><line x1="25" y1="62" x2="20" y2="88" stroke="${c}" stroke-width="2"/><line x1="25" y1="62" x2="35" y2="88" stroke="${c}" stroke-width="2"/><line x1="85" y1="58" x2="90" y2="80" stroke="${c}" stroke-width="2"/><line x1="90" y1="80" x2="92" y2="88" stroke="${c}" stroke-width="2"/></svg>`,
-  swing:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="22" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="31" x2="58" y2="65" stroke="${c}" stroke-width="2"/><line x1="58" y1="48" x2="40" y2="42" stroke="${c}" stroke-width="2"/><line x1="40" y1="42" x2="35" y2="30" stroke="${c}" stroke-width="2"/><line x1="58" y1="48" x2="76" y2="42" stroke="${c}" stroke-width="2"/><line x1="76" y1="42" x2="80" y2="30" stroke="${c}" stroke-width="2"/><rect x="32" y="24" width="10" height="10" rx="2" fill="none" stroke="${c}" stroke-width="1.5"/><line x1="58" y1="65" x2="42" y2="100" stroke="${c}" stroke-width="2"/><line x1="58" y1="65" x2="74" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
-  cable:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="8" width="8" height="100" fill="${c}" opacity="0.15" stroke="${c}" stroke-width="1"/><circle cx="65" cy="25" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="65" y1="34" x2="65" y2="72" stroke="${c}" stroke-width="2"/><line x1="65" y1="48" x2="45" y2="38" stroke="${c}" stroke-width="2"/><line x1="45" y1="38" x2="18" y2="30" stroke="${c}" stroke-width="1.5" stroke-dasharray="3,2"/><line x1="65" y1="48" x2="80" y2="55" stroke="${c}" stroke-width="2"/><line x1="65" y1="72" x2="52" y2="105" stroke="${c}" stroke-width="2"/><line x1="65" y1="72" x2="78" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
-  machine:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="15" width="90" height="90" rx="2" fill="none" stroke="${c}" stroke-width="1" opacity="0.2"/><circle cx="60" cy="35" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="44" x2="60" y2="75" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="40" y2="48" stroke="${c}" stroke-width="2"/><line x1="60" y1="55" x2="80" y2="48" stroke="${c}" stroke-width="2"/><line x1="60" y1="75" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="75" x2="72" y2="100" stroke="${c}" stroke-width="2"/><rect x="30" y="92" width="60" height="6" fill="${c}" opacity="0.15"/></svg>`,
-  carry:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="16" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="25" x2="60" y2="65" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="38" y2="60" stroke="${c}" stroke-width="2"/><line x1="60" y1="40" x2="82" y2="60" stroke="${c}" stroke-width="2"/><rect x="30" y="58" width="10" height="12" fill="none" stroke="${c}" stroke-width="1.5"/><rect x="80" y="58" width="10" height="12" fill="none" stroke="${c}" stroke-width="1.5"/><line x1="60" y1="65" x2="48" y2="100" stroke="${c}" stroke-width="2"/><line x1="60" y1="65" x2="72" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
-  crunch:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="72" cy="38" r="9" fill="none" stroke="${c}" stroke-width="2"/><path d="M68 46 Q55 70 40 72" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="45" y2="42" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="65" y2="42" stroke="${c}" stroke-width="2"/><line x1="40" y1="72" x2="25" y2="95" stroke="${c}" stroke-width="2"/><line x1="25" y1="95" x2="30" y2="105" stroke="${c}" stroke-width="2"/><line x1="40" y1="72" x2="55" y2="90" stroke="${c}" stroke-width="2"/><line x1="55" y1="90" x2="60" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
-  jump:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="58" stroke="${c}" stroke-width="2"/><line x1="60" y1="38" x2="42" y2="30" stroke="${c}" stroke-width="2"/><line x1="60" y1="38" x2="78" y2="30" stroke="${c}" stroke-width="2"/><line x1="60" y1="58" x2="45" y2="82" stroke="${c}" stroke-width="2"/><line x1="45" y1="82" x2="42" y2="98" stroke="${c}" stroke-width="2"/><line x1="60" y1="58" x2="75" y2="82" stroke="${c}" stroke-width="2"/><line x1="75" y1="82" x2="78" y2="98" stroke="${c}" stroke-width="2"/><path d="M30 15 Q60 0 90 15" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="3,2"/></svg>`,
-  lateral:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="18" r="9" fill="none" stroke="${c}" stroke-width="2"/><line x1="60" y1="27" x2="60" y2="68" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="28" y2="35" stroke="${c}" stroke-width="2"/><line x1="60" y1="42" x2="92" y2="35" stroke="${c}" stroke-width="2"/><rect x="22" y="32" width="8" height="5" fill="${c}" opacity="0.4"/><rect x="90" y="32" width="8" height="5" fill="${c}" opacity="0.4"/><line x1="60" y1="68" x2="48" y2="105" stroke="${c}" stroke-width="2"/><line x1="60" y1="68" x2="72" y2="105" stroke="${c}" stroke-width="2"/></svg>`,
-  extension:(c='#b8f53a')=>`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="70" width="60" height="8" fill="${c}" opacity="0.15"/><circle cx="55" cy="50" r="8" fill="none" stroke="${c}" stroke-width="2"/><line x1="55" y1="58" x2="55" y2="75" stroke="${c}" stroke-width="2"/><line x1="55" y1="65" x2="38" y2="78" stroke="${c}" stroke-width="2"/><line x1="38" y1="78" x2="32" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="65" x2="72" y2="78" stroke="${c}" stroke-width="2"/><line x1="72" y1="78" x2="78" y2="100" stroke="${c}" stroke-width="2"/><line x1="55" y1="75" x2="55" y2="100" stroke="${c}" stroke-width="2"/></svg>`,
-};
-
-const diag={
-  barbell_press:SVG.press(),barbell_bench:SVG.bench(),barbell_squat:SVG.squat(),
-  barbell_deadlift:SVG.deadlift(),barbell_row:SVG.row(),barbell_curl:SVG.curl(),
-  barbell_lunge:SVG.lunge(),
-  db_press:SVG.press(),db_bench:SVG.bench(),db_curl:SVG.curl(),db_fly:SVG.fly(),
-  db_row:SVG.row(),db_lateral:SVG.lateral(),db_lunge:SVG.lunge(),db_squat:SVG.squat(),
-  kb_swing:SVG.swing(),kb_press:SVG.press(),kb_squat:SVG.squat(),kb_carry:SVG.carry(),
-  cable_pull:SVG.cable(),cable_push:SVG.cable(),
-  machine_press:SVG.machine(),machine_ext:SVG.extension(),machine_curl:SVG.machine(),
-  smith_press:SVG.press(),smith_squat:SVG.squat(),
-  bw_pull:SVG.pullup(),bw_push:SVG.press(),bw_plank:SVG.plank(),bw_squat:SVG.squat(),
-  bw_crunch:SVG.crunch(),bw_lunge:SVG.lunge(),bw_dip:SVG.bench(),
-  jump_rope:SVG.jump(),
-  band_pull:SVG.cable(),band_push:SVG.press(),
-};
-
-// Exercise definitions — condensed format: [name, muscles[], equipment, instructions, diagramKey]
-const raw=[
-// ===== BARBELL =====
-["Barbell Back Squat",["quads","glutes","hamstrings","core"],"barbell","Stand with barbell on upper back. Bend knees and hips to lower until thighs are parallel. Drive through heels to stand.","barbell_squat"],
-["Barbell Front Squat",["quads","glutes","core"],"barbell","Hold barbell in front rack position across front delts. Squat deep keeping torso upright. Drive up through heels.","barbell_squat"],
-["Barbell Deadlift",["hamstrings","glutes","back","core"],"barbell","Stand over barbell with mid-foot under bar. Hinge at hips, grip bar, drive through floor extending hips and knees together.","barbell_deadlift"],
-["Sumo Deadlift",["hamstrings","glutes","quads","back"],"barbell","Take a wide stance with toes pointed out. Grip bar between legs. Drive through floor extending hips.","barbell_deadlift"],
-["Romanian Deadlift",["hamstrings","glutes","back"],"barbell","Hold barbell at hip height. Push hips back maintaining slight knee bend. Lower bar along thighs until hamstring stretch. Return to start.","barbell_deadlift"],
-["Barbell Bench Press",["chest","triceps","shoulders"],"barbell","Lie on bench, grip bar slightly wider than shoulders. Lower to chest, press up to lockout. Keep shoulder blades retracted.","barbell_bench"],
-["Incline Barbell Bench Press",["chest","shoulders","triceps"],"barbell","Set bench to 30-45 degrees. Lower bar to upper chest, press to lockout. Emphasizes upper chest.","barbell_bench"],
-["Decline Barbell Bench Press",["chest","triceps"],"barbell","Set bench to slight decline. Lower bar to lower chest, press to lockout. Emphasizes lower chest.","barbell_bench"],
-["Close-Grip Bench Press",["triceps","chest"],"barbell","Grip bar at shoulder width or narrower. Lower to chest, press to lockout. Emphasizes triceps.","barbell_bench"],
-["Barbell Overhead Press",["shoulders","triceps","core"],"barbell","Stand with barbell at shoulder height. Press overhead to lockout. Keep core tight, avoid excessive lean.","barbell_press"],
-["Push Press",["shoulders","triceps","quads"],"barbell","Start with bar at shoulders. Dip knees slightly then drive bar overhead using leg momentum. Lock out arms.","barbell_press"],
-["Barbell Row",["back","biceps","rear_delts"],"barbell","Hinge forward at hips, grip bar. Pull bar to lower chest/upper abdomen. Squeeze shoulder blades. Lower with control.","barbell_row"],
-["Pendlay Row",["back","biceps","rear_delts"],"barbell","From dead stop on floor, explosively row bar to lower chest. Keep torso parallel to floor. Return bar to floor each rep.","barbell_row"],
-["Barbell Curl",["biceps","forearms"],"barbell","Stand with bar at arms length, palms up. Curl bar to shoulders keeping elbows pinned. Lower with control.","barbell_curl"],
-["Barbell Skull Crusher",["triceps"],"barbell","Lie on bench, hold bar above chest with arms extended. Lower bar to forehead by bending elbows. Extend back up.","barbell_bench"],
-["Barbell Lunge",["quads","glutes","hamstrings"],"barbell","Bar on upper back, step forward into lunge. Lower back knee toward floor. Push off front foot to return.","barbell_lunge"],
-["Barbell Good Morning",["hamstrings","glutes","back"],"barbell","Bar on upper back, push hips back hinging at waist. Keep slight knee bend. Return to upright.","barbell_deadlift"],
-["Zercher Squat",["quads","glutes","core","biceps"],"barbell","Hold barbell in crook of elbows. Squat deep keeping torso upright. Drive up through heels.","barbell_squat"],
-["Barbell Hack Squat",["quads","glutes"],"barbell","Hold barbell behind legs. Squat down keeping bar close to body. Stand up through heels.","barbell_squat"],
-["Barbell Hip Thrust",["glutes","hamstrings"],"barbell","Upper back on bench, barbell over hips. Drive hips up squeezing glutes at top. Lower with control.","barbell_deadlift"],
-["Barbell Shrug",["traps"],"barbell","Hold barbell at arms length. Shrug shoulders straight up toward ears. Hold at top, lower slowly.","barbell_curl"],
-["Barbell Upright Row",["shoulders","traps"],"barbell","Hold bar with narrow grip at waist. Pull straight up along body to chin level. Lead with elbows.","barbell_curl"],
-["Barbell Reverse Curl",["forearms","biceps"],"barbell","Grip bar with palms down. Curl to shoulders keeping elbows pinned. Lower with control.","barbell_curl"],
-["Barbell Wrist Curl",["forearms"],"barbell","Sit with forearms on thighs, palms up, bar hanging over knees. Curl wrists up. Lower slowly.","barbell_curl"],
-["Floor Press",["chest","triceps"],"barbell","Lie on floor, press barbell from chest to lockout. Elbows touch floor at bottom. Good for lockout strength.","barbell_bench"],
-["Meadows Row",["back","lats","rear_delts"],"barbell","Stand perpendicular to landmine. Row end of bar to hip with single arm. Keep elbow tight to body.","barbell_row"],
-["Landmine Press",["shoulders","chest","triceps"],"barbell","Hold end of barbell at shoulder with one hand. Press at an angle. Great for shoulder-friendly pressing.","barbell_press"],
-["Landmine Row",["back","biceps"],"barbell","Straddle barbell. Row end of bar to chest with both hands. Squeeze back at top.","barbell_row"],
-["Barbell Calf Raise",["calves"],"barbell","Bar on back, stand on edge of platform. Rise up on toes, lower heels below platform. Full range of motion.","barbell_squat"],
-["Barbell Pullover",["lats","chest"],"barbell","Lie on bench, hold bar above chest. Lower bar behind head in arc. Pull back over chest.","barbell_bench"],
-["Snatch-Grip Deadlift",["back","hamstrings","traps"],"barbell","Wide grip deadlift. Increases range of motion and upper back demand. Stand tall at top.","barbell_deadlift"],
-["Deficit Deadlift",["hamstrings","glutes","back"],"barbell","Stand on 2-4 inch platform. Deadlift with increased range of motion from deficit.","barbell_deadlift"],
-["Pause Squat",["quads","glutes","core"],"barbell","Back squat with 2-3 second pause at bottom. Eliminates stretch reflex. Build strength out of hole.","barbell_squat"],
-["Barbell Thruster",["quads","shoulders","full_body"],"barbell","Front squat into overhead press in one fluid movement. Use leg drive to press bar overhead.","barbell_press"],
-["Barbell Power Clean",["full_body","traps","shoulders"],"barbell","Explosive pull from floor to front rack position. Triple extension of ankles, knees, hips.","barbell_deadlift"],
-["Hang Clean",["full_body","traps"],"barbell","Start at hip height. Explosive hip extension to pull bar to front rack. Catch in quarter squat.","barbell_deadlift"],
-["Barbell Snatch",["full_body","shoulders","back"],"barbell","Explosive wide-grip pull from floor to overhead in one movement. Full body power exercise.","barbell_press"],
-// ===== DUMBBELL =====
-["Dumbbell Bench Press",["chest","triceps","shoulders"],"dumbbell","Lie on bench with dumbbells at chest level. Press to lockout. Greater range of motion than barbell.","db_bench"],
-["Incline Dumbbell Press",["chest","shoulders","triceps"],"dumbbell","Bench at 30-45 degrees. Press dumbbells from chest to lockout. Targets upper chest.","db_bench"],
-["Decline Dumbbell Press",["chest","triceps"],"dumbbell","Bench at slight decline. Press dumbbells from chest to lockout. Targets lower chest.","db_bench"],
-["Dumbbell Fly",["chest"],"dumbbell","Lie on bench, arms extended above chest. Open arms wide in arc, slight bend in elbows. Squeeze chest to return.","db_fly"],
-["Incline Dumbbell Fly",["chest","shoulders"],"dumbbell","Bench at 30-45 degrees. Perform fly motion. Targets upper chest with full stretch.","db_fly"],
-["Dumbbell Row",["back","biceps"],"dumbbell","One hand and knee on bench. Row dumbbell to hip, squeezing shoulder blade. Lower with control.","db_row"],
-["Dumbbell Shoulder Press",["shoulders","triceps"],"dumbbell","Seated or standing, press dumbbells from shoulders to overhead lockout. Control the negative.","db_press"],
-["Arnold Press",["shoulders","triceps"],"dumbbell","Start palms facing you at chest. Rotate and press overhead finishing with palms forward. Reverse to lower.","db_press"],
-["Dumbbell Lateral Raise",["shoulders"],"dumbbell","Stand with dumbbells at sides. Raise arms out to sides until parallel with floor. Lower slowly.","db_lateral"],
-["Dumbbell Front Raise",["shoulders"],"dumbbell","Stand with dumbbells at thighs. Raise one or both arms forward to shoulder height. Lower slowly.","db_lateral"],
-["Dumbbell Rear Delt Fly",["rear_delts","back"],"dumbbell","Bent over, arms hanging down. Raise dumbbells out to sides squeezing rear delts. Lower slowly.","db_fly"],
-["Dumbbell Curl",["biceps"],"dumbbell","Stand with dumbbells at sides, palms up. Curl to shoulders alternating or together. Lower with control.","db_curl"],
-["Hammer Curl",["biceps","forearms"],"dumbbell","Curl with palms facing each other (neutral grip). Targets brachialis and forearms. Control the weight.","db_curl"],
-["Incline Dumbbell Curl",["biceps"],"dumbbell","Sit on incline bench, arms hanging straight down. Curl dumbbells up. Greater stretch on biceps.","db_curl"],
-["Concentration Curl",["biceps"],"dumbbell","Seated, elbow braced on inner thigh. Curl dumbbell to shoulder with strict form. Peak contraction focus.","db_curl"],
-["Dumbbell Tricep Kickback",["triceps"],"dumbbell","Bent over, upper arm parallel to floor. Extend forearm back squeezing triceps. Lower slowly.","db_row"],
-["Dumbbell Overhead Tricep Extension",["triceps"],"dumbbell","Hold one dumbbell overhead with both hands. Lower behind head by bending elbows. Extend back up.","db_press"],
-["Dumbbell Lunge",["quads","glutes","hamstrings"],"dumbbell","Hold dumbbells at sides. Step forward into lunge, lower back knee. Push off to return.","db_lunge"],
-["Dumbbell Walking Lunge",["quads","glutes","hamstrings"],"dumbbell","Hold dumbbells at sides. Alternate lunging forward continuously walking. Maintain upright torso.","db_lunge"],
-["Dumbbell Bulgarian Split Squat",["quads","glutes"],"dumbbell","Rear foot elevated on bench. Lower into single-leg squat. Drive up through front heel.","db_lunge"],
-["Dumbbell Goblet Squat",["quads","glutes","core"],"dumbbell","Hold dumbbell at chest. Squat deep keeping torso upright. Drive up through heels.","db_squat"],
-["Dumbbell Romanian Deadlift",["hamstrings","glutes"],"dumbbell","Hold dumbbells at thighs. Push hips back, lower along legs. Maintain slight knee bend. Return to start.","db_row"],
-["Dumbbell Shrug",["traps"],"dumbbell","Hold dumbbells at sides. Shrug shoulders up toward ears. Hold briefly at top, lower slowly.","db_curl"],
-["Dumbbell Pullover",["lats","chest"],"dumbbell","Lie across bench, hold dumbbell above chest. Lower behind head in arc. Pull back over chest.","db_bench"],
-["Dumbbell Step-Up",["quads","glutes"],"dumbbell","Hold dumbbells, step onto box/bench. Drive through heel to stand tall. Step down with control.","db_lunge"],
-["Dumbbell Calf Raise",["calves"],"dumbbell","Hold dumbbells at sides, stand on edge. Rise on toes, lower heels below for full stretch.","db_squat"],
-["Dumbbell Reverse Fly",["rear_delts","back"],"dumbbell","Seated or bent over. Raise dumbbells out to sides with slight elbow bend. Squeeze shoulder blades.","db_fly"],
-["Dumbbell Floor Press",["chest","triceps"],"dumbbell","Lie on floor, press dumbbells. Elbows rest on floor at bottom. Good for tricep emphasis.","db_bench"],
-["Dumbbell Squeeze Press",["chest","triceps"],"dumbbell","Press dumbbells together throughout the press. Squeeze inward constantly. Intense chest contraction.","db_bench"],
-["Single-Arm Dumbbell Row",["back","biceps","core"],"dumbbell","Hand on bench, row with opposite arm. Pull to hip keeping elbow close. Anti-rotation core work.","db_row"],
-["Dumbbell Chest-Supported Row",["back","rear_delts"],"dumbbell","Lie face down on incline bench. Row dumbbells toward hips. Eliminates momentum.","db_row"],
-["Dumbbell Zottman Curl",["biceps","forearms"],"dumbbell","Curl up with palms up, rotate to palms down at top, lower with palms down. Hits all forearm muscles.","db_curl"],
-["Dumbbell Wrist Curl",["forearms"],"dumbbell","Forearms on thighs, palms up. Curl wrists upward. Lower slowly for forearm development.","db_curl"],
-["Dumbbell Side Bend",["obliques"],"dumbbell","Hold dumbbell in one hand. Bend sideways toward that side, return upright. Work both sides evenly.","db_curl"],
-["Renegade Row",["back","core","triceps"],"dumbbell","Push-up position on dumbbells. Row one dumbbell while stabilizing with the other. Alternate sides.","db_row"],
-["Dumbbell Snatch",["full_body","shoulders"],"dumbbell","Explosive single-arm pull from floor to overhead in one motion. Full body power movement.","db_press"],
-["Dumbbell Clean and Press",["full_body","shoulders"],"dumbbell","Clean dumbbell to shoulder then press overhead. Combine pulling and pressing power.","db_press"],
-["Dumbbell Thrusters",["quads","shoulders","full_body"],"dumbbell","Hold at shoulders, squat, then press overhead using leg drive on the way up.","db_press"],
-// ===== KETTLEBELL =====
-["Kettlebell Swing",["glutes","hamstrings","core","full_body"],"kettlebell","Hinge at hips, swing KB between legs. Drive hips forward to swing KB to chest height. Control the descent.","kb_swing"],
-["Kettlebell Goblet Squat",["quads","glutes","core"],"kettlebell","Hold KB at chest by horns. Squat deep keeping elbows inside knees. Drive up through heels.","kb_squat"],
-["Kettlebell Turkish Get-Up",["full_body","shoulders","core"],"kettlebell","Start lying down, KB in one hand extended. Stand up in controlled stages. Reverse to lie back down.","kb_press"],
-["Kettlebell Clean",["full_body","forearms"],"kettlebell","Swing KB between legs then pull to rack position at shoulder. Smooth transition, don't bang wrist.","kb_swing"],
-["Kettlebell Snatch",["full_body","shoulders"],"kettlebell","Explosive single-arm pull from between legs to overhead lockout. Requires hip drive and timing.","kb_press"],
-["Kettlebell Press",["shoulders","triceps"],"kettlebell","From rack position, press KB overhead to lockout. Keep core tight. Lower with control.","kb_press"],
-["Kettlebell Windmill",["obliques","shoulders","hamstrings"],"kettlebell","KB locked out overhead. Hinge at hip pushing opposite hip out. Lower hand to floor. Stand back up.","kb_press"],
-["Kettlebell Farmer Carry",["forearms","traps","core"],"kettlebell","Hold heavy KBs at sides. Walk with tall posture and tight core. Grip and loaded carry endurance.","kb_carry"],
-["Kettlebell Halo",["shoulders","core"],"kettlebell","Hold KB upside down at chest. Circle it around head in controlled arc. Reverse direction each set.","kb_press"],
-["Kettlebell Figure Eight",["core","full_body"],"kettlebell","Pass KB between and around legs in figure-eight pattern. Maintain squat position throughout.","kb_swing"],
-["Kettlebell Sumo Deadlift",["glutes","hamstrings","quads"],"kettlebell","Wide stance, KB between feet. Hinge and grip KB, stand tall squeezing glutes. Lower with control.","kb_squat"],
-["Kettlebell Row",["back","biceps"],"kettlebell","Hinge forward, row KB to hip. Keep elbow close to body. Squeeze back at top.","kb_swing"],
-["Kettlebell Lunge",["quads","glutes"],"kettlebell","Hold KB in goblet or rack position. Lunge forward, lowering back knee. Return to standing.","kb_squat"],
-["Kettlebell Thruster",["quads","shoulders","full_body"],"kettlebell","Goblet squat into press. Use leg drive to help press KB overhead.","kb_press"],
-["Kettlebell Single-Leg Deadlift",["hamstrings","glutes","core"],"kettlebell","Hold KB in one hand, hinge on opposite leg. Extend free leg behind. Return to standing.","kb_swing"],
-["Kettlebell Floor Press",["chest","triceps"],"kettlebell","Lie on floor, press KB from chest to lockout. Elbow touches floor at bottom.","kb_press"],
-["Kettlebell Racked Carry",["core","shoulders"],"kettlebell","Hold KB in rack position at shoulder. Walk maintaining upright posture. Challenges core stability.","kb_carry"],
-["Kettlebell Bottoms-Up Press",["shoulders","forearms","core"],"kettlebell","Hold KB upside down at shoulder. Press overhead maintaining balance. Extreme grip and stability demand.","kb_press"],
-["Kettlebell Swing (Single Arm)",["glutes","hamstrings","core"],"kettlebell","Single arm version of KB swing. Anti-rotation challenge. Alternate hands at top or between sets.","kb_swing"],
-["Kettlebell High Pull",["full_body","shoulders","traps"],"kettlebell","Explosive swing with elbow pull. KB comes to shoulder height with elbow high. Power movement.","kb_swing"],
-// ===== CABLE =====
-["Cable Crossover",["chest"],"cable","Set pulleys high, step forward. Bring handles together in front of chest in hugging motion. Squeeze chest.","cable_push"],
-["Low Cable Crossover",["chest"],"cable","Set pulleys low. Bring handles up and together in front of chest. Targets upper chest.","cable_push"],
-["Cable Row (Seated)",["back","biceps"],"cable","Sit at cable row station. Pull handle to torso squeezing shoulder blades. Control the return.","cable_pull"],
-["Lat Pulldown",["lats","biceps"],"cable","Wide grip on lat bar. Pull to upper chest squeezing lats. Control the weight back up.","cable_pull"],
-["Close-Grip Lat Pulldown",["lats","biceps"],"cable","Narrow grip pulldown. Pull to upper chest. Greater bicep involvement and lat stretch.","cable_pull"],
-["Straight-Arm Pulldown",["lats"],"cable","Stand facing high cable. Arms straight, pull bar down to thighs. Isolates lats without bicep help.","cable_pull"],
-["Cable Curl",["biceps"],"cable","Low cable, curl handle to shoulders. Constant tension throughout range. Control eccentric.","cable_pull"],
-["Cable Hammer Curl",["biceps","forearms"],"cable","Use rope attachment. Curl with neutral grip. Constant cable tension throughout.","cable_pull"],
-["Tricep Pushdown",["triceps"],"cable","High cable, push bar/rope down extending arms. Keep elbows pinned at sides. Squeeze at bottom.","cable_push"],
-["Overhead Tricep Extension (Cable)",["triceps"],"cable","Face away from high cable. Hold rope overhead. Extend arms forward and up. Stretch at bottom.","cable_push"],
-["Face Pull",["rear_delts","traps","shoulders"],"cable","High cable with rope. Pull toward face separating hands. Squeeze rear delts and external rotators.","cable_pull"],
-["Cable Fly",["chest"],"cable","Set cables at chest height. Arms wide, bring handles together in arc. Constant tension on chest.","cable_push"],
-["Cable Lateral Raise",["shoulders"],"cable","Low cable behind or beside you. Raise arm to side until parallel. Constant tension through range.","cable_push"],
-["Cable Front Raise",["shoulders"],"cable","Low cable, raise handle forward to shoulder height. Control the negative.","cable_push"],
-["Cable Pull-Through",["glutes","hamstrings"],"cable","Face away from low cable, rope between legs. Hinge at hips then drive through to stand tall.","cable_pull"],
-["Cable Crunch",["abs","core"],"cable","Kneel below high cable with rope behind head. Crunch down curling torso. Focus on ab contraction.","cable_pull"],
-["Cable Woodchop",["obliques","core"],"cable","High to low diagonal pulling motion. Rotate torso with control. Work both sides.","cable_pull"],
-["Cable Reverse Fly",["rear_delts"],"cable","Cross cables at chest height. Pull handles outward in reverse fly motion. Squeeze rear delts.","cable_push"],
-["Cable Kickback",["triceps"],"cable","Low cable, hinge forward. Extend arm back squeezing tricep at lockout.","cable_push"],
-["Cable Upright Row",["shoulders","traps"],"cable","Low cable, pull straight up along body. Lead with elbows to shoulder height.","cable_pull"],
-["Cable External Rotation",["shoulders"],"cable","Elbow at side, rotate forearm outward against cable resistance. Key for shoulder health.","cable_pull"],
-["Cable Pallof Press",["core","obliques"],"cable","Stand perpendicular to cable at chest height. Press handle straight out. Resist rotation.","cable_push"],
-["Cable Hip Abduction",["glutes","hip_flexors"],"cable","Low cable on ankle. Stand sideways, lift leg outward against resistance. Targets outer hip.","cable_pull"],
-["Cable Hip Adduction",["hip_flexors"],"cable","Low cable on ankle. Stand sideways, pull leg inward across body against resistance.","cable_pull"],
-// ===== MACHINE =====
-["Leg Press",["quads","glutes","hamstrings"],"machine","Sit in leg press, feet shoulder width on platform. Press out extending legs. Lower with control.","machine_press"],
-["Leg Extension",["quads"],"machine","Sit in machine, pad on shins. Extend legs to straight. Squeeze quads at top. Lower slowly.","machine_ext"],
-["Leg Curl (Lying)",["hamstrings"],"machine","Lie face down, pad behind ankles. Curl heels toward glutes. Squeeze hamstrings. Lower slowly.","machine_curl"],
-["Leg Curl (Seated)",["hamstrings"],"machine","Sit in machine, pad behind ankles. Curl legs under. Squeeze hamstrings at bottom.","machine_curl"],
-["Hack Squat Machine",["quads","glutes"],"machine","Back against pad, shoulders under pads. Squat down and drive up. Emphasis on quads.","machine_press"],
-["Chest Press Machine",["chest","triceps"],"machine","Sit in machine, press handles forward to lockout. Guided path reduces stabilizer demand.","machine_press"],
-["Pec Deck",["chest"],"machine","Sit in machine, arms against pads. Bring pads together squeezing chest. Controlled return.","machine_press"],
-["Machine Row",["back","biceps"],"machine","Sit in machine, pull handles toward torso. Squeeze shoulder blades together. Control return.","machine_curl"],
-["Machine Shoulder Press",["shoulders","triceps"],"machine","Sit in machine, press handles overhead. Guided path for safe shoulder pressing.","machine_press"],
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 ["Lat Pulldown Machine",["lats","biceps"],"machine","Sit in machine, pull handles down squeezing lats. Smooth controlled motion.","machine_curl"],
 ["Calf Raise Machine (Standing)",["calves"],"machine","Shoulders under pads, rise up on toes. Full range — stretch at bottom, squeeze at top.","machine_press"],
 ["Calf Raise Machine (Seated)",["calves"],"machine","Sit with pads on knees. Rise up on toes. Targets soleus muscle. Full range of motion.","machine_ext"],
@@ -1454,7 +1228,6 @@ return raw.map((r,i)=>({
 }
 
 /* =============================================================
-<<<<<<< HEAD
    DATA CACHE & SUPABASE HELPERS
    ============================================================= */
 let _exerciseCache=null;
@@ -1643,39 +1416,17 @@ async function initApp(user){
     await nav('home');
   }
 }
-=======
-   APP STATE & STORAGE
-   ============================================================= */
-const KEYS={exercises:'wt_exercises',workouts:'wt_workouts',logs:'wt_logs',unit:'wt_unit',activeWO:'wt_active'};
-
-function load(key,fallback=[]){try{return JSON.parse(localStorage.getItem(key))||fallback}catch(e){return fallback}}
-function save(key,data){localStorage.setItem(key,JSON.stringify(data))}
-
-// Seed exercises on first load
-if(!localStorage.getItem(KEYS.exercises)){save(KEYS.exercises,generateExerciseDB())}
-
-function getExercises(){return load(KEYS.exercises)}
-function getWorkouts(){return load(KEYS.workouts)}
-function getLogs(){return load(KEYS.logs)}
-function getUnit(){return localStorage.getItem(KEYS.unit)||'lbs'}
-function setUnit(u){localStorage.setItem(KEYS.unit,u);document.querySelectorAll('.unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===u))}
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 
 /* =============================================================
    ROUTING
    ============================================================= */
 let currentView='home';
-<<<<<<< HEAD
 async function nav(view){
-=======
-function nav(view){
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   currentView=view;
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const el=document.getElementById('view-'+view);
   if(el)el.classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav===view));
-<<<<<<< HEAD
   if(view==='home')await renderHome();
   if(view==='feed')await renderFeed();
   if(view==='search')await renderSearch();
@@ -1683,13 +1434,6 @@ function nav(view){
   if(view==='workouts')await renderWorkouts();
   if(view==='history')await renderHistory();
   if(view==='profile')await renderProfile();
-=======
-  // Render view
-  if(view==='home')renderHome();
-  if(view==='database')renderDatabase();
-  if(view==='workouts')renderWorkouts();
-  if(view==='history')renderHistory();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   window.scrollTo(0,0);
 }
 
@@ -1703,7 +1447,6 @@ function toast(msg){
 }
 
 /* =============================================================
-<<<<<<< HEAD
    UTILITY: timeAgo
    ============================================================= */
 function timeAgo(dateStr){
@@ -1725,18 +1468,6 @@ async function renderHome(){
   const totalWorkouts=logs.length;
   let totalVolume=0;
   logs.forEach(l=>l.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.completed)totalVolume+=s.weight*s.reps})));
-=======
-   HOME
-   ============================================================= */
-function renderHome(){
-  const logs=getLogs();
-  const exercises=getExercises();
-  // Stats
-  const totalWorkouts=logs.length;
-  let totalVolume=0;
-  logs.forEach(l=>l.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.completed)totalVolume+=s.weight*s.reps})));
-  // Streak — consecutive days with workouts
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   let streak=0;
   if(logs.length){
     const dates=[...new Set(logs.map(l=>new Date(l.startTime).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
@@ -1752,7 +1483,6 @@ function renderHome(){
     <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Total Volume (${getUnit()})</div></div>
     <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
   `;
-<<<<<<< HEAD
   const recent=logs.slice(-3).reverse();
   const rc=document.getElementById('home-recent');
   if(!recent.length){rc.innerHTML='<p class="fg3 small">No workouts logged yet. Start your first one!</p>'}
@@ -1780,20 +1510,6 @@ function renderHome(){
       ${workouts.length?`<button class="btn btn-sm btn-primary mt-sm" onclick="startPlanWorkout('${plan.id}',0)">Start Next Workout</button>`:''}
     </div>`;
   }else{apc.classList.add('hidden');apc.innerHTML=''}
-=======
-  // Recent
-  const recent=logs.slice(-3).reverse();
-  const rc=document.getElementById('home-recent');
-  if(!recent.length){rc.innerHTML='<p class="fg3 small">No workouts logged yet. Start your first one!</p>';return}
-  rc.innerHTML=recent.map(l=>{
-    const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
-    const d=new Date(l.startTime);
-    return `<div class="recent-card">
-      <div><div class="rc-name">${esc(l.workoutName)}</div><div class="rc-meta">${d.toLocaleDateString()} &middot; ${l.exercises.length} exercises</div></div>
-      <div class="rc-dur">${dur}m</div>
-    </div>`;
-  }).join('');
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 /* =============================================================
@@ -1803,20 +1519,11 @@ let dbMuscleFilter=new Set(), dbEquipFilter=new Set();
 const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body'];
 const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','other'];
 
-<<<<<<< HEAD
 async function renderDatabase(){
   document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
   document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace('_',' ')}</div>`).join('');
   const q=(document.getElementById('db-search').value||'').toLowerCase();
   let exs=await getExercises();
-=======
-function renderDatabase(){
-  // Filters
-  document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
-  document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace('_',' ')}</div>`).join('');
-  const q=(document.getElementById('db-search').value||'').toLowerCase();
-  let exs=getExercises();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q));
   if(dbMuscleFilter.size)exs=exs.filter(e=>e.muscleGroups.some(m=>dbMuscleFilter.has(m)));
   if(dbEquipFilter.size)exs=exs.filter(e=>dbEquipFilter.has(e.equipment));
@@ -1835,17 +1542,10 @@ function toggleFilter(type,val){
   renderDatabase();
 }
 
-<<<<<<< HEAD
 async function openExerciseDetail(id){
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===id);if(!ex)return;
   const logs=await getLogs();
-=======
-function openExerciseDetail(id){
-  const ex=getExercises().find(e=>e.id===id);if(!ex)return;
-  const logs=getLogs();
-  // History for this exercise
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   let history=[];
   logs.forEach(l=>{
     l.exercises.forEach(le=>{
@@ -1869,17 +1569,13 @@ function openExerciseDetail(id){
         <span class="tag tag-equip">${ex.equipment.replace('_',' ')}</span>
       </div>
       <p class="small" style="line-height:1.6;color:var(--fg2)">${esc(ex.instructions)}</p>
-<<<<<<< HEAD
       ${ex.photo_url?`<div class="mt-md"><img src="${ex.photo_url}" style="max-width:100%;border:1px solid var(--bg4);border-radius:var(--radius)"></div>`:''}
       ${ex.video_url?`<div class="mt-md"><a href="${esc(ex.video_url)}" target="_blank" class="btn btn-sm">Watch Demo Video</a></div>`:''}
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
       ${history.length?`
         <div class="divider"></div>
         <h3 class="mb-sm" style="font-size:.9rem">My History</h3>
         ${history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best}</span><span class="accent mono small">E1RM: ${h.e1rm}</span></div>`).join('')}
       `:''}
-<<<<<<< HEAD
       ${ex.custom?`
         <div class="divider"></div>
         <div class="flex gap-sm" style="justify-content:flex-end">
@@ -1887,8 +1583,6 @@ function openExerciseDetail(id){
           <button class="btn btn-sm btn-danger" onclick="deleteCustomExercise('${ex.id}')">Delete</button>
         </div>
       `:''}
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
     </div>
   `);
 }
@@ -1907,7 +1601,6 @@ function openAddCustomExercise(){
         ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace('_',' ')}</option>`).join('')}
       </select>
       <textarea class="input mb-sm" id="custom-instr" placeholder="Instructions (optional)"></textarea>
-<<<<<<< HEAD
       <div class="profile-field">
         <label>Demo Photo (optional)</label>
         <div class="photo-upload-area" onclick="document.getElementById('custom-ex-photo').click()" style="padding:10px">
@@ -1919,24 +1612,17 @@ function openAddCustomExercise(){
         <label>Demo Video URL (optional)</label>
         <input class="input" id="custom-video-url" placeholder="YouTube or video link">
       </div>
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
     </div>
     <div class="modal-footer"><button class="btn btn-primary" onclick="saveCustomExercise()">Add Exercise</button></div>
   `);
 }
 
-<<<<<<< HEAD
 async function saveCustomExercise(){
-=======
-function saveCustomExercise(){
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const name=document.getElementById('custom-name').value.trim();
   const muscle=document.getElementById('custom-muscle').value;
   const equip=document.getElementById('custom-equip').value;
   const instr=document.getElementById('custom-instr').value.trim();
   if(!name||!muscle||!equip){toast('Fill in name, muscle, and equipment');return}
-<<<<<<< HEAD
 
   let photoUrl=null;
   const photoInput=document.getElementById('custom-ex-photo');
@@ -2006,26 +1692,13 @@ async function deleteCustomExercise(id){
   invalidateCache('exercises');
   closeModal();toast('Exercise deleted');
   if(currentView==='database')await renderDatabase();
-=======
-  const exs=getExercises();
-  const svg=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="10" fill="none" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="72" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="48" x2="40" y2="55" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="48" x2="80" y2="55" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="72" x2="45" y2="105" stroke="#b8f53a" stroke-width="2"/><line x1="60" y1="72" x2="75" y2="105" stroke="#b8f53a" stroke-width="2"/><text x="60" y="115" text-anchor="middle" font-size="10" fill="#b8f53a">CUSTOM</text></svg>`;
-  exs.push({id:'ex_custom_'+Date.now(),name,muscleGroups:[muscle],equipment:equip,instructions:instr||'Custom exercise.',diagram:svg,custom:true});
-  save(KEYS.exercises,exs);
-  closeModal();toast('Exercise added!');
-  if(currentView==='database')renderDatabase();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 /* =============================================================
    MY WORKOUTS
    ============================================================= */
-<<<<<<< HEAD
 async function renderWorkouts(){
   const wos=await getWorkouts();
-=======
-function renderWorkouts(){
-  const wos=getWorkouts();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const list=document.getElementById('workouts-list');
   const empty=document.getElementById('workouts-empty');
   if(!wos.length){list.innerHTML='';empty.classList.remove('hidden');return}
@@ -2043,17 +1716,11 @@ function renderWorkouts(){
   </div>`).join('');
 }
 
-<<<<<<< HEAD
 async function deleteWorkout(id){
   const{error}=await sb.from('workout_templates').delete().eq('id',id);
   if(error){toast('Error deleting');console.error(error);return}
   invalidateCache('workouts');
   await renderWorkouts();toast('Deleted');
-=======
-function deleteWorkout(id){
-  let wos=getWorkouts().filter(w=>w.id!==id);
-  save(KEYS.workouts,wos);renderWorkouts();toast('Deleted');
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 /* =============================================================
@@ -2071,14 +1738,9 @@ function openCreateWorkout(){
   nav('create');
 }
 
-<<<<<<< HEAD
 async function editWorkoutTemplate(id){
   const wos=await getWorkouts();
   const w=wos.find(w=>w.id===id);if(!w)return;
-=======
-function editWorkoutTemplate(id){
-  const w=getWorkouts().find(w=>w.id===id);if(!w)return;
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   editingWorkoutId=id;
   createExercises=w.exercises.map(e=>({...e}));
   document.getElementById('create-title').textContent='Edit Workout';
@@ -2088,13 +1750,8 @@ function editWorkoutTemplate(id){
   nav('create');
 }
 
-<<<<<<< HEAD
 async function renderCreateExercises(){
   const exs=await getExercises();
-=======
-function renderCreateExercises(){
-  const exs=getExercises();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const con=document.getElementById('create-exercises');
   con.innerHTML=createExercises.map((ce,i)=>{
     const ex=exs.find(e=>e.id===ce.exerciseId);
@@ -2126,7 +1783,6 @@ function ceDrop(e,i){
   renderCreateExercises();
 }
 
-<<<<<<< HEAD
 async function saveWorkoutTemplate(){
   const name=document.getElementById('create-name').value.trim();
   if(!name){toast('Enter a workout name');return}
@@ -2144,33 +1800,12 @@ async function saveWorkoutTemplate(){
   toast(editingWorkoutId?'Workout updated!':'Workout saved!');
   editingWorkoutId=null;
   await nav('workouts');
-=======
-function saveWorkoutTemplate(){
-  const name=document.getElementById('create-name').value.trim();
-  if(!name){toast('Enter a workout name');return}
-  if(!createExercises.length){toast('Add at least one exercise');return}
-  let wos=getWorkouts();
-  if(editingWorkoutId){
-    const idx=wos.findIndex(w=>w.id===editingWorkoutId);
-    if(idx>=0){wos[idx].name=name;wos[idx].exercises=createExercises}
-  }else{
-    wos.push({id:'wo_'+Date.now(),name,exercises:createExercises,createdAt:new Date().toISOString()});
-  }
-  save(KEYS.workouts,wos);
-  toast(editingWorkoutId?'Workout updated!':'Workout saved!');
-  editingWorkoutId=null;
-  nav('workouts');
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 /* =============================================================
    EXERCISE PICKER MODAL
    ============================================================= */
-<<<<<<< HEAD
 let pickerTarget='create';
-=======
-let pickerTarget='create'; // 'create' or 'active'
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 let pickerMuscle='', pickerEquip='';
 
 function openExercisePicker(target){
@@ -2178,13 +1813,8 @@ function openExercisePicker(target){
   renderExercisePicker('');
 }
 
-<<<<<<< HEAD
 async function renderExercisePicker(q){
   let exs=await getExercises();
-=======
-function renderExercisePicker(q){
-  let exs=getExercises();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
@@ -2217,14 +1847,9 @@ function renderExercisePicker(q){
   setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}},100);
 }
 
-<<<<<<< HEAD
 async function pickExercise(id){
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===id);if(!ex)return;
-=======
-function pickExercise(id){
-  const ex=getExercises().find(e=>e.id===id);if(!ex)return;
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   if(pickerTarget==='create'){
     createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:''});
     closeModal();renderCreateExercises();
@@ -2240,17 +1865,10 @@ function pickExercise(id){
 let activeWorkout=null;
 let timerInterval=null;
 
-<<<<<<< HEAD
 async function startWorkoutFlow(){
   const wos=await getWorkouts();
   if(!wos.length){
     await startEmptyWorkout();return;
-=======
-function startWorkoutFlow(){
-  const wos=getWorkouts();
-  if(!wos.length){
-    startEmptyWorkout();return;
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   }
   let html=`<div class="modal-header"><h2>Start Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
@@ -2265,7 +1883,6 @@ function startWorkoutFlow(){
   openModal(html);
 }
 
-<<<<<<< HEAD
 async function startEmptyWorkout(){
   activeWorkout={id:'log_'+Date.now(),workoutName:'Quick Workout',startTime:new Date().toISOString(),endTime:null,exercises:[],fromTemplate:false};
   saveActiveWO(activeWorkout);
@@ -2277,18 +1894,6 @@ async function startFromTemplate(id){
   const w=wos.find(w=>w.id===id);if(!w)return;
   const exs=await getExercises();
   const logs=await getLogs();
-=======
-function startEmptyWorkout(){
-  activeWorkout={id:'log_'+Date.now(),workoutName:'Quick Workout',startTime:new Date().toISOString(),endTime:null,exercises:[],fromTemplate:false};
-  save(KEYS.activeWO,activeWorkout);
-  beginActiveWorkout();
-}
-
-function startFromTemplate(id){
-  const w=getWorkouts().find(w=>w.id===id);if(!w)return;
-  const exs=getExercises();
-  const logs=getLogs();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   activeWorkout={
     id:'log_'+Date.now(),
     workoutName:w.name,
@@ -2296,15 +1901,9 @@ function startFromTemplate(id){
     endTime:null,
     fromTemplate:true,
     templateId:id,
-<<<<<<< HEAD
     sourcePlanId:w.source_plan_id||null,
     exercises:w.exercises.map(we=>{
       const ex=exs.find(e=>e.id===we.exerciseId);
-=======
-    exercises:w.exercises.map(we=>{
-      const ex=exs.find(e=>e.id===we.exerciseId);
-      // Find previous sets for this exercise
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
       const prev=findPreviousSets(we.exerciseId,logs);
       const sets=[];
       for(let i=0;i<(we.targetSets||3);i++){
@@ -2313,11 +1912,7 @@ function startFromTemplate(id){
       return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,sets};
     })
   };
-<<<<<<< HEAD
   saveActiveWO(activeWorkout);
-=======
-  save(KEYS.activeWO,activeWorkout);
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   beginActiveWorkout();
 }
 
@@ -2331,11 +1926,7 @@ function findPreviousSets(exerciseId,logs){
 
 function beginActiveWorkout(){
   const unit=getUnit();
-<<<<<<< HEAD
   document.querySelectorAll('#unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===unit));
-=======
-  document.querySelectorAll('.unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===unit));
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   nav('active');
   document.getElementById('aw-name').textContent=activeWorkout.workoutName;
   startTimer();
@@ -2353,16 +1944,9 @@ function startTimer(){
   },1000);
 }
 
-<<<<<<< HEAD
 async function renderActiveWorkout(){
   if(!activeWorkout)return;
   const logs=await getLogs();
-=======
-function renderActiveWorkout(){
-  if(!activeWorkout)return;
-  const exs=getExercises();
-  const logs=getLogs();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const con=document.getElementById('aw-exercises');
   con.innerHTML=activeWorkout.exercises.map((ae,ei)=>{
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
@@ -2406,41 +1990,24 @@ function awDrop(e,i){
 
 function updateSet(ei,si,field,val){
   activeWorkout.exercises[ei].sets[si][field]=val;
-<<<<<<< HEAD
   saveActiveWO(activeWorkout);
-=======
-  save(KEYS.activeWO,activeWorkout);
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 function toggleSet(ei,si){
   const s=activeWorkout.exercises[ei].sets[si];
   s.completed=!s.completed;
-<<<<<<< HEAD
   saveActiveWO(activeWorkout);
-=======
-  save(KEYS.activeWO,activeWorkout);
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   renderActiveWorkout();
 }
 
 function addSet(ei){
   activeWorkout.exercises[ei].sets.push({weight:0,reps:0,completed:false});
-<<<<<<< HEAD
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
 
 async function openExerciseHistory(exId){
   const logs=await getLogs();
-=======
-  save(KEYS.activeWO,activeWorkout);
-  renderActiveWorkout();
-}
-
-function openExerciseHistory(exId){
-  const logs=getLogs();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   let history=[];
   logs.forEach(l=>{
     l.exercises.forEach(le=>{
@@ -2455,12 +2022,8 @@ function openExerciseHistory(exId){
     });
   });
   history=history.slice(-5).reverse();
-<<<<<<< HEAD
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===exId);
-=======
-  const ex=getExercises().find(e=>e.id===exId);
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   openModal(`
     <div class="modal-header"><h2>${ex?esc(ex.name):'Exercise'} History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
@@ -2472,11 +2035,7 @@ function openExerciseHistory(exId){
 /* =============================================================
    FINISH WORKOUT
    ============================================================= */
-<<<<<<< HEAD
 async function finishWorkout(){
-=======
-function finishWorkout(){
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   if(!activeWorkout)return;
   activeWorkout.endTime=new Date().toISOString();
   const totalSets=activeWorkout.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.completed).length,0);
@@ -2484,12 +2043,7 @@ function finishWorkout(){
   activeWorkout.exercises.forEach(e=>e.sets.forEach(s=>{if(s.completed)totalVol+=s.weight*s.reps}));
   const dur=Math.round((new Date(activeWorkout.endTime)-new Date(activeWorkout.startTime))/60000);
 
-<<<<<<< HEAD
   const logs=await getLogs();
-=======
-  // Check for PRs
-  const logs=getLogs();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const prs=[];
   activeWorkout.exercises.forEach(ae=>{
     const completedSets=ae.sets.filter(s=>s.completed&&s.weight>0);
@@ -2506,7 +2060,6 @@ function finishWorkout(){
     }
   });
 
-<<<<<<< HEAD
   // If public, show share option first
   if(currentProfile&&currentProfile.is_workouts_public){
     showShareWorkoutModal(null, (shared, caption, photoUrls)=>{
@@ -2521,8 +2074,6 @@ function finishWorkout(){
 }
 
 function showSummaryModal(dur, totalSets, totalVol, prs){
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   openModal(`
     <div class="modal-header"><h2>Workout Complete!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
@@ -2551,7 +2102,6 @@ function showSummaryModal(dur, totalSets, totalVol, prs){
   `);
 }
 
-<<<<<<< HEAD
 async function saveAsTemplate(){
   const name=document.getElementById('save-template-name').value.trim();
   if(!name){toast('Enter a name');return}
@@ -2587,53 +2137,18 @@ async function confirmFinish(){
 
   invalidateCache('logs');
   saveActiveWO(null);
-=======
-function saveAsTemplate(){
-  const name=document.getElementById('save-template-name').value.trim();
-  if(!name){toast('Enter a name');return}
-  const wos=getWorkouts();
-  wos.push({
-    id:'wo_'+Date.now(),name,
-    exercises:activeWorkout.exercises.map(e=>({exerciseId:e.exerciseId,targetSets:e.sets.length,targetReps:'',notes:''})),
-    createdAt:new Date().toISOString()
-  });
-  save(KEYS.workouts,wos);
-  toast('Template saved!');
-}
-
-function confirmFinish(){
-  const logs=getLogs();
-  logs.push({
-    id:activeWorkout.id,
-    workoutName:activeWorkout.workoutName,
-    startTime:activeWorkout.startTime,
-    endTime:activeWorkout.endTime,
-    exercises:activeWorkout.exercises
-  });
-  save(KEYS.logs,logs);
-  localStorage.removeItem(KEYS.activeWO);
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   activeWorkout=null;
   if(timerInterval)clearInterval(timerInterval);
   closeModal();
   toast('Workout saved!');
-<<<<<<< HEAD
   await nav('home');
-=======
-  nav('home');
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
 }
 
 /* =============================================================
    HISTORY
    ============================================================= */
-<<<<<<< HEAD
 async function renderHistory(){
   const logs=(await getLogs()).slice().reverse();
-=======
-function renderHistory(){
-  const logs=getLogs().slice().reverse();
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const con=document.getElementById('history-list');
   if(!logs.length){con.innerHTML='<p class="fg3 text-center mt-lg">No workout history yet.</p>';return}
   con.innerHTML=logs.map(l=>{
@@ -2658,14 +2173,9 @@ function renderHistory(){
   }).join('');
 }
 
-<<<<<<< HEAD
 async function openLogDetail(id){
   const logs=await getLogs();
   const l=logs.find(l=>l.id===id);if(!l)return;
-=======
-function openLogDetail(id){
-  const l=getLogs().find(l=>l.id===id);if(!l)return;
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
   const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
   openModal(`
     <div class="modal-header"><h2>${esc(l.workoutName)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
@@ -2682,7 +2192,6 @@ function openLogDetail(id){
 }
 
 /* =============================================================
-<<<<<<< HEAD
    PROFILE
    ============================================================= */
 async function renderProfile(){
@@ -3543,8 +3052,6 @@ async function submitWorkoutPost(){
 }
 
 /* =============================================================
-=======
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
    MODAL
    ============================================================= */
 function openModal(html){
@@ -3561,7 +3068,6 @@ function closeModal(){
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 /* =============================================================
-<<<<<<< HEAD
    BOOTSTRAP
    ============================================================= */
 (async function(){
@@ -3585,19 +3091,3 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
 </script>
 </body>
 </html>
-=======
-   RESUME ACTIVE WORKOUT IF EXISTS
-   ============================================================= */
-(function(){
-  const saved=load(KEYS.activeWO,null);
-  if(saved&&saved.startTime&&!saved.endTime){
-    activeWorkout=saved;
-    beginActiveWorkout();
-  }else{
-    nav('home');
-  }
-})();
-</script>
-</body>
-</html>
->>>>>>> f5ee6a4abaa4b505c467ee8c45b1e75ba297fef5
