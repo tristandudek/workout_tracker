@@ -3282,6 +3282,25 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
   // Handle Supabase email confirmation callback
   // Supabase appends #access_token=...&type=signup&refresh_token=... after email confirm
   const hash=window.location.hash;
+  // Handle error callback (expired or denied confirmation link)
+  if(hash&&hash.includes('error=')){
+    const params=new URLSearchParams(hash.substring(1));
+    const err=params.get('error');
+    const desc=params.get('error_description')||'';
+    window.history.replaceState(null,'',window.location.pathname+window.location.search);
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('auth-view').style.display='flex';
+    document.getElementById('auth-login').style.display='none';
+    document.getElementById('auth-signup').style.display='none';
+    document.getElementById('auth-confirm').style.display='block';
+    document.getElementById('auth-confirm').innerHTML=`
+      <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,59,59,.1);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.8rem">&#9888;</div>
+      <h2 style="font-size:1.4rem;margin-bottom:8px">Link Expired</h2>
+      <p style="color:var(--fg2);line-height:1.6;margin-bottom:16px">Your confirmation link has expired. Please sign up again.</p>
+      <button class="btn btn-primary" onclick="showSignup()">Back to Sign Up</button>
+    `;
+    return;
+  }
   if(hash&&hash.includes('access_token')){
     const params=new URLSearchParams(hash.substring(1));
     const accessToken=params.get('access_token');
