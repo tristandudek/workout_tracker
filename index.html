@@ -629,6 +629,18 @@ select.input{appearance:none;cursor:pointer;
     <button class="btn btn-primary btn-block" onclick="handleSignup()">Create Account</button>
     <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Log In</a></div>
   </div>
+
+  <!-- EMAIL CONFIRMATION SCREEN -->
+  <div id="auth-confirm" style="display:none;text-align:center;padding:20px 0">
+    <div style="width:64px;height:64px;border-radius:50%;background:rgba(56,189,248,.12);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.8rem">&#9993;</div>
+    <h2 style="font-size:1.4rem;margin-bottom:8px">Check Your Email!</h2>
+    <p style="color:var(--fg2);line-height:1.6;margin-bottom:6px">We've sent a confirmation link to</p>
+    <p style="color:var(--accent);font-family:var(--font-mono);font-size:.9rem;margin-bottom:16px" id="confirm-email-display"></p>
+    <p style="color:var(--fg2);line-height:1.6;font-size:.88rem">Click the link in your email to activate your account and get started.</p>
+    <div class="divider"></div>
+    <p class="small" style="color:var(--fg3)">Didn't get it? Check your spam folder.</p>
+    <button class="btn btn-sm mt-md" onclick="showLogin()">Back to Login</button>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -1385,10 +1397,12 @@ async function seedExercisesIfNeeded(){
 function showLogin(){
   document.getElementById('auth-login').style.display='block';
   document.getElementById('auth-signup').style.display='none';
+  document.getElementById('auth-confirm').style.display='none';
 }
 function showSignup(){
   document.getElementById('auth-login').style.display='none';
   document.getElementById('auth-signup').style.display='block';
+  document.getElementById('auth-confirm').style.display='none';
 }
 
 let signupWeightUnit='lbs';
@@ -1422,27 +1436,21 @@ async function handleSignup(){
     options:{data:{name,username,gender}}
   });
   if(error){toast(error.message);return}
-  if(!data.user){toast('Check your email to confirm your account');return}
 
-  await new Promise(r=>setTimeout(r,1000));
-
-  const{data:existingProfile}=await sb.from('profiles').select('id').eq('id',data.user.id).single();
-  if(!existingProfile){
-    await sb.from('profiles').insert({
-      id:data.user.id,username,name,email,gender
-    });
-  }
-
+  // Store signup body metrics locally to save after email confirmation
   if(weight||bodyfat){
-    const metric={user_id:data.user.id};
-    if(weight){metric.weight=weight;metric.weight_unit=signupWeightUnit}
-    if(bodyfat)metric.body_fat_pct=bodyfat;
-    await sb.from('body_metrics').insert(metric);
+    const pending={};
+    if(weight){pending.weight=weight;pending.weight_unit=signupWeightUnit}
+    if(bodyfat)pending.body_fat_pct=bodyfat;
+    localStorage.setItem('wt_pending_metrics',JSON.stringify(pending));
   }
-
   if(weight)localStorage.setItem('wt_unit',signupWeightUnit);
 
-  await initApp(data.user);
+  // Show confirmation screen — don't log in until email is confirmed
+  document.getElementById('auth-login').style.display='none';
+  document.getElementById('auth-signup').style.display='none';
+  document.getElementById('auth-confirm').style.display='block';
+  document.getElementById('confirm-email-display').textContent=email;
 }
 
 async function handleLogout(){
@@ -1469,6 +1477,17 @@ async function initApp(user){
   invalidateCache();
 
   await seedExercisesIfNeeded();
+
+  // Save any pending body metrics from signup (stored before email confirmation)
+  const pendingMetrics=localStorage.getItem('wt_pending_metrics');
+  if(pendingMetrics){
+    try{
+      const m=JSON.parse(pendingMetrics);
+      m.user_id=user.id;
+      await sb.from('body_metrics').insert(m);
+    }catch(e){console.error('Pending metrics error:',e)}
+    localStorage.removeItem('wt_pending_metrics');
+  }
 
   currentProfile=await fetchProfile();
   if(currentProfile){
