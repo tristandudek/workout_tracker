@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 /* ============================================================
    RESET & BASE
@@ -828,15 +829,24 @@ select.input{appearance:none;cursor:pointer;
   <!-- Stats Row -->
   <div id="profile-stats" class="stats-strip"></div>
 
-  <!-- Body Metrics Graphs -->
+  <!-- Body Metrics Graph (Chart.js dual axis) -->
   <div class="profile-section">
     <div class="flex between mb-sm">
       <h3>Body Metrics</h3>
       <button class="btn btn-sm btn-primary" onclick="openLogMetrics()">Log Stats</button>
     </div>
-    <div class="metrics-chart" id="metrics-chart-container">
-      <canvas id="metrics-canvas" height="180"></canvas>
+    <div style="position:relative;height:220px">
+      <canvas id="metrics-canvas"></canvas>
     </div>
+  </div>
+
+  <!-- Creator Section: My Plans -->
+  <div class="profile-section">
+    <div class="flex between mb-sm">
+      <h3 id="profile-plans-title">My Plans</h3>
+      <button class="btn btn-sm btn-primary" id="profile-create-plan-btn" onclick="openCreatePlan()">+ Create Plan</button>
+    </div>
+    <div id="profile-plans-list"></div>
   </div>
 
   <!-- Activity Feed -->
@@ -2358,6 +2368,8 @@ async function openLogDetail(id){
 /* =============================================================
    PROFILE
    ============================================================= */
+let metricsChart=null;
+
 async function renderProfile(){
   currentProfile=await fetchProfile();
   if(!currentProfile){toast('Could not load profile');return}
@@ -2390,17 +2402,150 @@ async function renderProfile(){
       if(diff<=1){streak++;d=dd}else break;
     }
   }
+
+  // "Workouts done by others" stat
+  const{count:othersDoneCount}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',currentUser.id).neq('user_id',currentUser.id);
+
   document.getElementById('profile-stats').innerHTML=`
     <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
     <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
     <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
+    <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Done by Others</div></div>
   `;
 
-  // Body metrics graph
-  await renderMetrics();
+  // Body metrics chart (Chart.js dual axis)
+  await renderMetricsChart();
+
+  // Creator section: plans
+  await renderProfilePlans(currentUser.id, true);
 
   // Activity feed
   await renderProfileActivityFeed();
+}
+
+async function renderMetricsChart(){
+  const{data,error}=await sb.from('body_metrics').select('*').eq('user_id',currentUser.id).order('recorded_at',{ascending:true});
+  const canvas=document.getElementById('metrics-canvas');
+  if(!canvas)return;
+
+  // Destroy previous chart if exists
+  if(metricsChart){metricsChart.destroy();metricsChart=null}
+
+  if(!data||data.length<1){
+    canvas.parentElement.innerHTML='<p class="fg3 small text-center" style="padding:40px 0">No body metrics logged yet. Tap "Log Stats" to add your first entry.</p>';
+    return;
+  }
+
+  const weightData=data.filter(d=>d.weight!=null);
+  const bfData=data.filter(d=>d.body_fat_pct!=null);
+  const allDates=data.map(d=>new Date(d.recorded_at).toLocaleDateString([],{month:'short',day:'numeric'}));
+
+  const datasets=[];
+  const scales={x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:10,family:'Inter'}}}};
+
+  if(weightData.length){
+    datasets.push({
+      label:'Weight ('+getUnit()+')',
+      data:data.map(d=>d.weight),
+      borderColor:'#38bdf8',
+      backgroundColor:'rgba(56,189,248,.1)',
+      borderWidth:2,
+      pointRadius:3,
+      pointBackgroundColor:'#38bdf8',
+      tension:0.3,
+      yAxisID:'yWeight',
+      spanGaps:true
+    });
+    scales.yWeight={
+      type:'linear',position:'left',
+      title:{display:true,text:'Weight ('+getUnit()+')',font:{size:11,family:'Barlow Condensed',weight:'700'},color:'#38bdf8'},
+      grid:{color:'rgba(0,0,0,.06)'},
+      ticks:{font:{size:10,family:'JetBrains Mono'},color:'#38bdf8'}
+    };
+  }
+
+  if(bfData.length){
+    datasets.push({
+      label:'Body Fat %',
+      data:data.map(d=>d.body_fat_pct),
+      borderColor:'#fb923c',
+      backgroundColor:'rgba(251,146,60,.1)',
+      borderWidth:2,
+      pointRadius:3,
+      pointBackgroundColor:'#fb923c',
+      tension:0.3,
+      yAxisID:'yBF',
+      spanGaps:true
+    });
+    scales.yBF={
+      type:'linear',position:'right',
+      title:{display:true,text:'Body Fat %',font:{size:11,family:'Barlow Condensed',weight:'700'},color:'#fb923c'},
+      grid:{drawOnChartArea:false},
+      ticks:{font:{size:10,family:'JetBrains Mono'},color:'#fb923c',callback:v=>v+'%'}
+    };
+  }
+
+  metricsChart=new Chart(canvas,{
+    type:'line',
+    data:{labels:allDates,datasets},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:11,family:'Barlow Condensed',weight:'600'},usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{backgroundColor:'#111',titleFont:{family:'Barlow Condensed',weight:'700'},bodyFont:{family:'JetBrains Mono',size:12}}
+      },
+      scales
+    }
+  });
+}
+
+async function renderProfilePlans(userId, isOwn){
+  const titleEl=document.getElementById('profile-plans-title');
+  const createBtn=document.getElementById('profile-create-plan-btn');
+  const container=document.getElementById('profile-plans-list');
+  if(!titleEl)return;
+
+  if(isOwn){
+    titleEl.textContent='My Plans';
+    createBtn.style.display='';
+  }else{
+    titleEl.textContent=(currentProfile?.username||'Their')+"'s Plans";
+    createBtn.style.display='none';
+  }
+
+  const{data:plans}=await sb.from('workout_plans').select('*').eq('user_id',userId).eq('is_public',true).order('created_at',{ascending:false});
+  if(!plans||!plans.length){
+    container.innerHTML='<p class="fg3 small">No plans created yet.</p>';
+    return;
+  }
+
+  // Get adoption counts + completion counts
+  const planIds=plans.map(p=>p.id);
+  const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
+  const adoptCounts={};
+  (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
+
+  const{data:completions}=await sb.from('workout_logs').select('source_plan_id').in('source_plan_id',planIds).neq('user_id',userId);
+  const completionCounts={};
+  (completions||[]).forEach(c=>{completionCounts[c.source_plan_id]=(completionCounts[c.source_plan_id]||0)+1});
+
+  // Check which plans current user has adopted (for "Use This Plan" button)
+  let adopted=new Set();
+  if(!isOwn){
+    const{data:myAdoptions}=await sb.from('plan_adoptions').select('plan_id').eq('adopted_by_user_id',currentUser.id).in('plan_id',planIds);
+    adopted=new Set((myAdoptions||[]).map(a=>a.plan_id));
+  }
+
+  container.innerHTML=plans.map(p=>`<div class="plan-card">
+    <div class="plan-name">${esc(p.name)}</div>
+    ${p.description?`<div class="small fg2 mt-sm">${esc(p.description)}</div>`:''}
+    <div class="plan-meta">${(p.workouts||[]).length} workouts</div>
+    <div class="plan-adopters">${adoptCounts[p.id]||0} athletes using &middot; ${completionCounts[p.id]||0} completions</div>
+    ${!isOwn?(adopted.has(p.id)?`<span class="tag tag-muscle mt-sm">Using this plan</span>`:`<button class="btn btn-sm btn-primary mt-sm" onclick="adoptPlan('${p.id}')">Use This Plan</button>`):''}
+    ${isOwn?`<div class="flex gap-sm mt-sm"><button class="btn btn-sm" onclick="editPlan('${p.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')">Delete</button></div>`:''}
+  </div>`).join('');
 }
 
 async function renderMyInfo(){
@@ -2575,120 +2720,11 @@ async function saveMetrics(){
   await renderMetrics();
 }
 
-async function renderMetrics(){
-  const{data,error}=await sb.from('body_metrics').select('*')
-    .eq('user_id',currentUser.id).order('recorded_at',{ascending:true});
-  if(error){console.error(error);return}
-
-  drawMetricsChart(data);
-
-  const reversed=[...data].reverse();
-  const container=document.getElementById('metrics-history');
-  if(!reversed.length){
-    container.innerHTML='<p class="fg3 small text-center">No body metrics logged yet.</p>';
-    return;
-  }
-  container.innerHTML=`<table class="metrics-table">
-    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th></th></tr></thead>
-    <tbody>
-      ${reversed.map(m=>`<tr>
-        <td>${new Date(m.recorded_at).toLocaleDateString()}</td>
-        <td>${m.weight?m.weight+' '+(m.weight_unit||''):'—'}</td>
-        <td>${m.body_fat_pct?m.body_fat_pct+'%':'—'}</td>
-        <td><button class="del-btn" onclick="deleteMetric('${m.id}')">&times;</button></td>
-      </tr>`).join('')}
-    </tbody>
-  </table>`;
-}
-
 async function deleteMetric(id){
   const{error}=await sb.from('body_metrics').delete().eq('id',id);
   if(error){toast('Error deleting');console.error(error);return}
   toast('Deleted');
-  await renderMetrics();
-}
-
-function drawMetricsChart(data){
-  const canvas=document.getElementById('metrics-canvas');
-  if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  const dpr=window.devicePixelRatio||1;
-  const rect=canvas.parentElement.getBoundingClientRect();
-  const W=rect.width-24;
-  const H=180;
-  canvas.width=W*dpr;canvas.height=H*dpr;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
-
-  if(data.length<2){
-    ctx.fillStyle='#555';ctx.font='12px Inter';ctx.textAlign='center';
-    ctx.fillText('Need at least 2 entries to show chart',W/2,H/2);
-    return;
-  }
-
-  const weightData=data.filter(d=>d.weight!=null);
-  const bfData=data.filter(d=>d.body_fat_pct!=null);
-  const pad={t:20,r:10,b:30,l:45};
-  const chartW=W-pad.l-pad.r;
-  const chartH=H-pad.t-pad.b;
-
-  function drawLine(pts,color){
-    if(pts.length<2)return;
-    const vals=pts.map(p=>p.y);
-    const minV=Math.min(...vals);const maxV=Math.max(...vals);
-    const range=maxV-minV||1;
-    const minT=pts[0].t;const maxT=pts[pts.length-1].t;
-    const tRange=maxT-minT||1;
-
-    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;
-    pts.forEach((p,i)=>{
-      const x=pad.l+((p.t-minT)/tRange)*chartW;
-      const y=pad.t+chartH-(((p.y-minV)/range)*chartH);
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    });
-    ctx.stroke();
-
-    pts.forEach(p=>{
-      const x=pad.l+((p.t-minT)/tRange)*chartW;
-      const y=pad.t+chartH-(((p.y-minV)/range)*chartH);
-      ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
-    });
-
-    ctx.fillStyle='#555';ctx.font='10px JetBrains Mono';ctx.textAlign='right';
-    ctx.fillText(minV.toFixed(1),pad.l-4,pad.t+chartH);
-    ctx.fillText(maxV.toFixed(1),pad.l-4,pad.t+8);
-  }
-
-  const allTimes=data.map(d=>new Date(d.recorded_at).getTime());
-  const minT=Math.min(...allTimes);const maxT=Math.max(...allTimes);
-  ctx.fillStyle='#555';ctx.font='10px Inter';ctx.textAlign='center';
-  const firstDate=new Date(minT).toLocaleDateString([],{month:'short',day:'numeric'});
-  const lastDate=new Date(maxT).toLocaleDateString([],{month:'short',day:'numeric'});
-  ctx.fillText(firstDate,pad.l,H-6);
-  ctx.fillText(lastDate,W-pad.r,H-6);
-
-  ctx.strokeStyle='#222228';ctx.lineWidth=0.5;
-  for(let i=0;i<=4;i++){
-    const y=pad.t+(chartH/4)*i;
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
-  }
-
-  if(weightData.length>=2){
-    drawLine(weightData.map(d=>({t:new Date(d.recorded_at).getTime(),y:d.weight})),'#38bdf8');
-  }
-  if(bfData.length>=2){
-    drawLine(bfData.map(d=>({t:new Date(d.recorded_at).getTime(),y:d.body_fat_pct})),'#f472b6');
-  }
-
-  ctx.font='10px Inter';ctx.textAlign='left';
-  if(weightData.length>=2){
-    ctx.fillStyle='#38bdf8';ctx.fillRect(pad.l,4,10,3);ctx.fillText('Weight',pad.l+14,10);
-  }
-  if(bfData.length>=2){
-    const offset=weightData.length>=2?80:0;
-    ctx.fillStyle='#f472b6';ctx.fillRect(pad.l+offset,4,10,3);ctx.fillText('Body Fat %',pad.l+offset+14,10);
-  }
+  if(currentView==='profile')await renderMetricsChart();
 }
 
 /* =============================================================
@@ -2721,19 +2757,6 @@ async function uploadAvatar(event){
 /* =============================================================
    PRIVACY
    ============================================================= */
-/* =============================================================
-   CREATOR STATS
-   ============================================================= */
-async function renderCreatorStats(){
-  const{data}=await sb.rpc('get_creator_stats',{p_user_id:currentUser.id});
-  const s=data&&data[0]?data[0]:{total_plan_adoptions:0,total_workouts_from_plans:0,most_popular_plan_name:null,most_popular_plan_adoptions:0};
-  document.getElementById('creator-stats').innerHTML=`
-    <div class="creator-stat"><div class="cs-val">${s.total_plan_adoptions||0}</div><div class="cs-lbl">Plan Adoptions</div></div>
-    <div class="creator-stat"><div class="cs-val">${s.total_workouts_from_plans||0}</div><div class="cs-lbl">Workouts by Others</div></div>
-    ${s.most_popular_plan_name?`<div class="creator-stat" style="grid-column:1/-1"><div class="cs-val" style="font-size:1rem">${esc(s.most_popular_plan_name)}</div><div class="cs-lbl">Most Popular Plan (${s.most_popular_plan_adoptions} adopters)</div></div>`:''}
-  `;
-}
-
 /* =============================================================
    PROGRESS PHOTOS
    ============================================================= */
@@ -2803,31 +2826,6 @@ async function deleteProgressPhoto(id){
 /* =============================================================
    MY PLANS
    ============================================================= */
-async function renderMyPlans(){
-  const{data:plans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  const container=document.getElementById('my-plans-list');
-  if(!plans||!plans.length){container.innerHTML='<p class="fg3 small">No plans created yet.</p>';return}
-
-  const planIds=plans.map(p=>p.id);
-  const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
-  const counts={};
-  (adoptions||[]).forEach(a=>{counts[a.plan_id]=(counts[a.plan_id]||0)+1});
-
-  container.innerHTML=plans.map(p=>`<div class="plan-card">
-    <div class="flex between">
-      <div>
-        <div class="plan-name">${esc(p.name)}</div>
-        <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${p.is_public?'Public':'Private'}</div>
-        <div class="plan-adopters">${counts[p.id]||0} athletes using this plan</div>
-      </div>
-      <div class="flex gap-sm">
-        <button class="btn btn-sm" onclick="editPlan('${p.id}')">Edit</button>
-        <button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')">&times;</button>
-      </div>
-    </div>
-  </div>`).join('');
-}
-
 /* =============================================================
    PLAN CRUD
    ============================================================= */
