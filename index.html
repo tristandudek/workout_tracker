@@ -674,8 +674,8 @@ select.input{appearance:none;cursor:pointer;
     <div class="profile-menu-dropdown" id="profile-menu-dropdown">
       <div class="profile-menu-name" id="badge-name"></div>
       <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')">My Profile</button>
-      <button class="profile-menu-item" onclick="closeProfileMenu();openMyInfoModal()">My Information</button>
-      <button class="profile-menu-item" onclick="closeProfileMenu();openPrivacyModal()">Privacy Settings</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('my-info')">My Information</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('privacy')">Privacy Settings</button>
       <div class="divider" style="margin:6px 0"></div>
       <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()">Logout</button>
     </div>
@@ -811,7 +811,7 @@ select.input{appearance:none;cursor:pointer;
 </div>
 
 <!-- ============================================================
-     PROFILE VIEW
+     PROFILE VIEW (pure view page)
      ============================================================ -->
 <div class="view" id="view-profile" data-view="profile">
   <div class="profile-header mt-md">
@@ -822,110 +822,77 @@ select.input{appearance:none;cursor:pointer;
     </div>
     <h2 id="profile-display-name"></h2>
     <p class="fg2 small" id="profile-username-display"></p>
+    <p class="fg2 small mt-sm" id="profile-bio-display" style="max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5"></p>
   </div>
 
-  <!-- Creator Metrics -->
-  <div class="creator-stats" id="creator-stats"></div>
+  <!-- Stats Row -->
+  <div id="profile-stats" class="stats-strip"></div>
+
+  <!-- Body Metrics Graphs -->
+  <div class="profile-section">
+    <div class="flex between mb-sm">
+      <h3>Body Metrics</h3>
+      <button class="btn btn-sm btn-primary" onclick="openLogMetrics()">Log Stats</button>
+    </div>
+    <div class="metrics-chart" id="metrics-chart-container">
+      <canvas id="metrics-canvas" height="180"></canvas>
+    </div>
+  </div>
 
   <!-- Activity Feed -->
   <div class="profile-section">
     <h3 class="mb-sm">Activity</h3>
     <div id="profile-activity-feed"></div>
   </div>
+</div>
 
-  <!-- Profile Info -->
+<!-- ============================================================
+     MY INFORMATION PAGE
+     ============================================================ -->
+<div class="view" id="view-my-info" data-view="my-info">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')">&larr; Back to Profile</button>
+  <h2 class="mb-md">My Information</h2>
   <div class="profile-section">
-    <h3>Profile Info</h3>
-    <div class="profile-field">
-      <label>Name</label>
-      <input class="input" id="prof-name">
-    </div>
-    <div class="profile-field">
-      <label>Username</label>
-      <input class="input" id="prof-username">
-    </div>
-    <div class="profile-field">
-      <label>Email</label>
-      <input class="input" id="prof-email" disabled style="opacity:.6">
-    </div>
-    <div class="profile-field">
-      <label>Gender</label>
-      <select class="input" id="prof-gender">
+    <div class="profile-field"><label>Name</label><input class="input" id="mi-name"></div>
+    <div class="profile-field"><label>Username</label><input class="input" id="mi-username"></div>
+    <div class="profile-field"><label>Email</label><input class="input" id="mi-email" disabled style="opacity:.6"></div>
+    <div class="profile-field"><label>Gender</label>
+      <select class="input" id="mi-gender">
         <option value="male">Male</option>
         <option value="female">Female</option>
         <option value="other">Other</option>
         <option value="prefer_not_to_say">Prefer not to say</option>
       </select>
     </div>
-    <div class="profile-field">
-      <label>Bio</label>
-      <textarea class="input" id="prof-bio" placeholder="Tell us about yourself..." style="min-height:50px"></textarea>
-    </div>
-    <div class="profile-field">
-      <label>Weight Unit Preference</label>
-      <div class="unit-toggle" id="prof-unit-toggle">
-        <span data-punit="lbs" onclick="setProfUnit('lbs')">LBS</span>
-        <span data-punit="kg" onclick="setProfUnit('kg')">KG</span>
-      </div>
-    </div>
-    <button class="btn btn-sm btn-primary mt-sm" onclick="saveProfile()">Save Profile</button>
+    <button class="btn btn-primary mt-md" onclick="saveMyInfoPage()">Save Changes</button>
   </div>
+</div>
 
-  <!-- Privacy Settings -->
+<!-- ============================================================
+     PRIVACY SETTINGS PAGE
+     ============================================================ -->
+<div class="view" id="view-privacy" data-view="privacy">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')">&larr; Back to Profile</button>
+  <h2 class="mb-md">Privacy Settings</h2>
   <div class="profile-section">
-    <h3>Privacy Settings</h3>
+    <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
     <div class="privacy-row">
       <span class="privacy-label">Workout History</span>
-      <label class="toggle-switch"><input type="checkbox" id="priv-workouts" onchange="savePrivacy()"><span class="toggle-slider"></span></label>
+      <label class="toggle-switch"><input type="checkbox" id="ps-workouts"><span class="toggle-slider"></span></label>
     </div>
     <div class="privacy-row">
-      <span class="privacy-label">Weight History</span>
-      <label class="toggle-switch"><input type="checkbox" id="priv-weight" onchange="savePrivacy()"><span class="toggle-slider"></span></label>
+      <span class="privacy-label">Weight</span>
+      <label class="toggle-switch"><input type="checkbox" id="ps-weight"><span class="toggle-slider"></span></label>
     </div>
     <div class="privacy-row">
-      <span class="privacy-label">Body Fat History</span>
-      <label class="toggle-switch"><input type="checkbox" id="priv-bodyfat" onchange="savePrivacy()"><span class="toggle-slider"></span></label>
+      <span class="privacy-label">Body Fat %</span>
+      <label class="toggle-switch"><input type="checkbox" id="ps-bodyfat"><span class="toggle-slider"></span></label>
     </div>
     <div class="privacy-row">
       <span class="privacy-label">Progress Photos</span>
-      <label class="toggle-switch"><input type="checkbox" id="priv-photos" onchange="savePrivacy()"><span class="toggle-slider"></span></label>
+      <label class="toggle-switch"><input type="checkbox" id="ps-photos"><span class="toggle-slider"></span></label>
     </div>
-  </div>
-
-  <!-- Body Metrics -->
-  <div class="profile-section">
-    <div class="flex between mb-sm">
-      <h3>Body Metrics</h3>
-      <button class="btn btn-sm btn-primary" onclick="openLogMetrics()">Log Today's Stats</button>
-    </div>
-    <div class="metrics-chart" id="metrics-chart-container">
-      <canvas id="metrics-canvas" height="180"></canvas>
-    </div>
-    <div id="metrics-history"></div>
-  </div>
-
-  <!-- Progress Photos -->
-  <div class="profile-section">
-    <div class="flex between mb-sm">
-      <h3>Progress Photos</h3>
-      <button class="btn btn-sm btn-primary" onclick="openUploadProgressPhoto()">Upload</button>
-    </div>
-    <div class="photo-grid" id="progress-photos-grid"></div>
-  </div>
-
-  <!-- My Workout Plans -->
-  <div class="profile-section">
-    <div class="flex between mb-sm">
-      <h3>My Workout Plans</h3>
-      <button class="btn btn-sm btn-primary" onclick="openCreatePlan()">+ Create Plan</button>
-    </div>
-    <div id="my-plans-list"></div>
-  </div>
-
-  <!-- Workout History (moved from dedicated view) -->
-  <div class="profile-section">
-    <h3 class="mb-sm">Workout History</h3>
-    <div id="profile-history-list"></div>
+    <button class="btn btn-primary mt-md" onclick="savePrivacyPage()">Save Changes</button>
   </div>
 </div>
 
@@ -1549,6 +1516,8 @@ async function nav(view){
   if(view==='workouts')await renderWorkouts();
   if(view==='history')await renderHistory();
   if(view==='profile')await renderProfile();
+  if(view==='my-info')await renderMyInfo();
+  if(view==='privacy')await renderPrivacy();
   window.scrollTo(0,0);
 }
 
@@ -2390,7 +2359,6 @@ async function openLogDetail(id){
    PROFILE
    ============================================================= */
 async function renderProfile(){
-  // Always fetch fresh profile data to ensure fields populate
   currentProfile=await fetchProfile();
   if(!currentProfile){toast('Could not load profile');return}
   const p=currentProfile;
@@ -2405,38 +2373,78 @@ async function renderProfile(){
 
   document.getElementById('profile-display-name').textContent=p.name;
   document.getElementById('profile-username-display').textContent='@'+p.username;
-  document.getElementById('prof-name').value=p.name;
-  document.getElementById('prof-username').value=p.username;
-  document.getElementById('prof-email').value=p.email;
-  document.getElementById('prof-gender').value=p.gender;
-  document.getElementById('prof-bio').value=p.bio||'';
+  document.getElementById('profile-bio-display').textContent=p.bio||'';
 
-  const unit=getUnit();
-  document.querySelectorAll('#prof-unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.punit===unit));
+  // Stats row
+  const logs=await getLogs();
+  const totalWorkouts=logs.length;
+  let totalVolume=0;
+  logs.forEach(l=>l.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.completed)totalVolume+=s.weight*s.reps})));
+  let streak=0;
+  if(logs.length){
+    const dates=[...new Set(logs.map(l=>new Date(l.startTime).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
+    let d=new Date();d.setHours(0,0,0,0);
+    for(const ds of dates){
+      const dd=new Date(ds);dd.setHours(0,0,0,0);
+      const diff=Math.round((d-dd)/(86400000));
+      if(diff<=1){streak++;d=dd}else break;
+    }
+  }
+  document.getElementById('profile-stats').innerHTML=`
+    <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
+    <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
+    <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
+  `;
 
-  // Privacy toggles
-  document.getElementById('priv-workouts').checked=!!p.is_workouts_public;
-  document.getElementById('priv-weight').checked=!!p.is_weight_public;
-  document.getElementById('priv-bodyfat').checked=!!p.is_body_fat_public;
-  document.getElementById('priv-photos').checked=!!p.is_photos_public;
-
-  // Creator stats
-  await renderCreatorStats();
+  // Body metrics graph
+  await renderMetrics();
 
   // Activity feed
   await renderProfileActivityFeed();
+}
 
-  // Body metrics
-  await renderMetrics();
+async function renderMyInfo(){
+  if(!currentProfile)currentProfile=await fetchProfile();
+  if(!currentProfile)return;
+  const p=currentProfile;
+  document.getElementById('mi-name').value=p.name;
+  document.getElementById('mi-username').value=p.username;
+  document.getElementById('mi-email').value=p.email;
+  document.getElementById('mi-gender').value=p.gender;
+}
 
-  // Progress photos
-  await renderProgressPhotos();
+async function saveMyInfoPage(){
+  const name=document.getElementById('mi-name').value.trim();
+  const username=document.getElementById('mi-username').value.trim();
+  const gender=document.getElementById('mi-gender').value;
+  if(!name||!username){toast('Name and username required');return}
+  const{error}=await sb.from('profiles').update({name,username,gender}).eq('id',currentUser.id);
+  if(error){toast(error.message.includes('unique')?'Username already taken':'Error saving');console.error(error);return}
+  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;
+  document.getElementById('badge-name').textContent=name;
+  toast('Information saved!');
+}
 
-  // My plans
-  await renderMyPlans();
+async function renderPrivacy(){
+  if(!currentProfile)currentProfile=await fetchProfile();
+  if(!currentProfile)return;
+  document.getElementById('ps-workouts').checked=!!currentProfile.is_workouts_public;
+  document.getElementById('ps-weight').checked=!!currentProfile.is_weight_public;
+  document.getElementById('ps-bodyfat').checked=!!currentProfile.is_body_fat_public;
+  document.getElementById('ps-photos').checked=!!currentProfile.is_photos_public;
+}
 
-  // History section
-  await renderProfileHistory();
+async function savePrivacyPage(){
+  const updates={
+    is_workouts_public:document.getElementById('ps-workouts').checked,
+    is_weight_public:document.getElementById('ps-weight').checked,
+    is_body_fat_public:document.getElementById('ps-bodyfat').checked,
+    is_photos_public:document.getElementById('ps-photos').checked
+  };
+  const{error}=await sb.from('profiles').update(updates).eq('id',currentUser.id);
+  if(error){toast('Error saving');console.error(error);return}
+  Object.assign(currentProfile,updates);
+  toast('Privacy settings saved!');
 }
 
 async function renderProfileActivityFeed(){
@@ -2527,110 +2535,6 @@ async function renderProfileActivityFeed(){
   container.innerHTML=activities.slice(0,15).map(a=>a.html).join('');
 }
 
-function setProfUnit(u){
-  localStorage.setItem('wt_unit',u);
-  document.querySelectorAll('#prof-unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.punit===u));
-}
-
-async function saveProfile(){
-  const name=document.getElementById('prof-name').value.trim();
-  const username=document.getElementById('prof-username').value.trim();
-  const gender=document.getElementById('prof-gender').value;
-  const bio=document.getElementById('prof-bio').value.trim();
-  if(!name||!username){toast('Name and username required');return}
-  const{error}=await sb.from('profiles').update({name,username,gender,bio}).eq('id',currentUser.id);
-  if(error){toast(error.message.includes('unique')?'Username already taken':'Error saving profile');console.error(error);return}
-  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;currentProfile.bio=bio;
-  document.getElementById('badge-name').textContent=name;
-  toast('Profile saved!');
-  await renderProfile();
-}
-
-function openMyInfoModal(){
-  if(!currentProfile)return;
-  const p=currentProfile;
-  openModal(`
-    <div class="modal-header"><h2>My Information</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <div class="profile-field"><label>Name</label><input class="input" id="mi-name" value="${esc(p.name)}"></div>
-      <div class="profile-field"><label>Username</label><input class="input" id="mi-username" value="${esc(p.username)}"></div>
-      <div class="profile-field"><label>Email</label><input class="input" id="mi-email" value="${esc(p.email)}" disabled style="opacity:.6"></div>
-      <div class="profile-field"><label>Gender</label>
-        <select class="input" id="mi-gender">
-          <option value="male" ${p.gender==='male'?'selected':''}>Male</option>
-          <option value="female" ${p.gender==='female'?'selected':''}>Female</option>
-          <option value="other" ${p.gender==='other'?'selected':''}>Other</option>
-          <option value="prefer_not_to_say" ${p.gender==='prefer_not_to_say'?'selected':''}>Prefer not to say</option>
-        </select>
-      </div>
-      <div class="profile-field"><label>Bio</label><textarea class="input" id="mi-bio" style="min-height:50px">${esc(p.bio||'')}</textarea></div>
-    </div>
-    <div class="modal-footer"><button class="btn btn-primary" onclick="saveMyInfo()">Save</button></div>
-  `);
-}
-
-async function saveMyInfo(){
-  const name=document.getElementById('mi-name').value.trim();
-  const username=document.getElementById('mi-username').value.trim();
-  const gender=document.getElementById('mi-gender').value;
-  const bio=document.getElementById('mi-bio').value.trim();
-  if(!name||!username){toast('Name and username required');return}
-  const{error}=await sb.from('profiles').update({name,username,gender,bio}).eq('id',currentUser.id);
-  if(error){toast(error.message.includes('unique')?'Username already taken':'Error saving');console.error(error);return}
-  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;currentProfile.bio=bio;
-  document.getElementById('badge-name').textContent=name;
-  closeModal();toast('Info updated!');
-  if(currentView==='profile')await renderProfile();
-}
-
-function openPrivacyModal(){
-  if(!currentProfile)return;
-  const p=currentProfile;
-  openModal(`
-    <div class="modal-header"><h2>Privacy Settings</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
-      <div class="privacy-row">
-        <span class="privacy-label">Workout History</span>
-        <label class="toggle-switch"><input type="checkbox" id="pm-workouts" ${p.is_workouts_public?'checked':''}><span class="toggle-slider"></span></label>
-      </div>
-      <div class="privacy-row">
-        <span class="privacy-label">Weight History</span>
-        <label class="toggle-switch"><input type="checkbox" id="pm-weight" ${p.is_weight_public?'checked':''}><span class="toggle-slider"></span></label>
-      </div>
-      <div class="privacy-row">
-        <span class="privacy-label">Body Fat History</span>
-        <label class="toggle-switch"><input type="checkbox" id="pm-bodyfat" ${p.is_body_fat_public?'checked':''}><span class="toggle-slider"></span></label>
-      </div>
-      <div class="privacy-row">
-        <span class="privacy-label">Progress Photos</span>
-        <label class="toggle-switch"><input type="checkbox" id="pm-photos" ${p.is_photos_public?'checked':''}><span class="toggle-slider"></span></label>
-      </div>
-    </div>
-    <div class="modal-footer"><button class="btn btn-primary" onclick="savePrivacyModal()">Save</button></div>
-  `);
-}
-
-async function savePrivacyModal(){
-  const updates={
-    is_workouts_public:document.getElementById('pm-workouts').checked,
-    is_weight_public:document.getElementById('pm-weight').checked,
-    is_body_fat_public:document.getElementById('pm-bodyfat').checked,
-    is_photos_public:document.getElementById('pm-photos').checked
-  };
-  const{error}=await sb.from('profiles').update(updates).eq('id',currentUser.id);
-  if(error){toast('Error saving');console.error(error);return}
-  Object.assign(currentProfile,updates);
-  closeModal();toast('Privacy updated!');
-  // Update the inline toggles on profile page if visible
-  const el=document.getElementById('priv-workouts');
-  if(el){
-    el.checked=updates.is_workouts_public;
-    document.getElementById('priv-weight').checked=updates.is_weight_public;
-    document.getElementById('priv-bodyfat').checked=updates.is_body_fat_public;
-    document.getElementById('priv-photos').checked=updates.is_photos_public;
-  }
-}
 
 function openLogMetrics(){
   openModal(`
@@ -2817,21 +2721,6 @@ async function uploadAvatar(event){
 /* =============================================================
    PRIVACY
    ============================================================= */
-async function savePrivacy(){
-  const{error}=await sb.from('profiles').update({
-    is_workouts_public:document.getElementById('priv-workouts').checked,
-    is_weight_public:document.getElementById('priv-weight').checked,
-    is_body_fat_public:document.getElementById('priv-bodyfat').checked,
-    is_photos_public:document.getElementById('priv-photos').checked
-  }).eq('id',currentUser.id);
-  if(error){toast('Error saving');return}
-  currentProfile.is_workouts_public=document.getElementById('priv-workouts').checked;
-  currentProfile.is_weight_public=document.getElementById('priv-weight').checked;
-  currentProfile.is_body_fat_public=document.getElementById('priv-bodyfat').checked;
-  currentProfile.is_photos_public=document.getElementById('priv-photos').checked;
-  toast('Privacy updated');
-}
-
 /* =============================================================
    CREATOR STATS
    ============================================================= */
