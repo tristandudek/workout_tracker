@@ -13,8 +13,8 @@
    ============================================================ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0d0d0f;--bg2:#141416;--bg3:#1a1a1e;--bg4:#222228;
-  --fg:#f0f0f0;--fg2:#999;--fg3:#555;
+  --bg:#ffffff;--bg2:#f5f5f5;--bg3:#ebebeb;--bg4:#ddd;
+  --fg:#111111;--fg2:#555;--fg3:#999;
   --accent:#38bdf8;--accent2:#0ea5e9;--red:#ff3b3b;--red2:#cc2a2a;
   --font-display:'Barlow Condensed',sans-serif;
   --font-body:'Inter',sans-serif;
@@ -25,13 +25,12 @@ html{font-size:15px;-webkit-tap-highlight-color:transparent}
 body{
   font-family:var(--font-body);color:var(--fg);background:var(--bg);
   min-height:100vh;overflow-x:hidden;
-  background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='60' height='60' fill='%230d0d0f'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='0.02'/%3E%3Crect x='30' y='30' width='1' height='1' fill='%23ffffff' opacity='0.015'/%3E%3C/svg%3E");
 }
 a{color:var(--accent);text-decoration:none}
 input,textarea,select,button{font-family:inherit;font-size:inherit}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
 
 /* ============================================================
    LAYOUT
@@ -40,6 +39,59 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 .view{display:none;animation:fadeUp .25s ease}
 .view.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Desktop Sidebar */
+.sidebar{
+  display:none;position:fixed;top:0;left:0;bottom:0;width:220px;
+  background:var(--bg2);border-right:1px solid var(--bg4);z-index:500;
+  padding:24px 16px;flex-direction:column;gap:6px;overflow-y:auto;
+}
+.sidebar .sidebar-logo{
+  font-family:var(--font-display);font-size:1.8rem;font-weight:900;
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px;
+  text-align:center;
+}
+.sidebar .sidebar-cta{
+  padding:14px;font-size:1rem;margin-bottom:12px;
+}
+.sidebar .sidebar-link{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:none;border:none;color:var(--fg2);cursor:pointer;
+  font-family:var(--font-display);font-size:.88rem;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em;transition:all .12s;
+  width:100%;text-align:left;border-radius:var(--radius);
+}
+.sidebar .sidebar-link:hover{background:var(--bg3);color:var(--fg)}
+.sidebar .sidebar-link.active{color:var(--accent);background:rgba(56,189,248,.12)}
+.sidebar .sidebar-link .sidebar-icon{font-size:1.1rem;width:24px;text-align:center}
+.sidebar .sidebar-spacer{flex:1}
+.sidebar .sidebar-logout{
+  margin-top:auto;padding:8px 12px;font-size:.78rem;color:var(--fg3);
+  background:none;border:1px solid var(--bg4);cursor:pointer;
+  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
+  width:100%;text-align:center;transition:all .12s;
+}
+.sidebar .sidebar-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* Feed search dropdown */
+.feed-search-wrap{position:relative;margin-bottom:16px}
+.feed-search-results{
+  position:absolute;top:100%;left:0;right:0;background:var(--bg2);
+  border:1px solid var(--bg4);z-index:50;max-height:300px;overflow-y:auto;
+  display:none;
+}
+.feed-search-results.open{display:block}
+.feed-search-results .user-card{margin:0;border:none;border-bottom:1px solid var(--bg4)}
+
+@media(min-width:768px){
+  .sidebar{display:flex}
+  #app-wrapper #app{margin-left:220px}
+  #profile-badge{left:220px}
+  .nav{display:none!important}
+}
+@media(max-width:767px){
+  .sidebar{display:none!important}
+}
 
 /* ============================================================
    TYPOGRAPHY
@@ -68,7 +120,7 @@ h3{font-size:1.15rem}
 }
 .btn:hover{background:var(--bg4)}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:var(--accent);color:#000;border-color:var(--accent)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn-primary:hover{background:var(--accent2)}
 .btn-danger{border-color:var(--red);color:var(--red)}
 .btn-danger:hover{background:var(--red);color:#fff}
@@ -87,7 +139,7 @@ h3{font-size:1.15rem}
 .input::placeholder{color:var(--fg3)}
 textarea.input{resize:vertical;min-height:60px}
 select.input{appearance:none;cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 12px center}
 
 /* Cards */
@@ -103,11 +155,11 @@ select.input{appearance:none;cursor:pointer;
   font-family:var(--font-display);user-select:none;
 }
 .chip:hover{border-color:var(--fg3);color:var(--fg)}
-.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.08)}
+.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.12)}
 
 /* Modal */
 .modal-backdrop{
-  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;
+  position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;
   display:none;align-items:flex-start;justify-content:center;
   padding:40px 16px;overflow-y:auto;animation:fadeIn .15s;
 }
@@ -144,7 +196,7 @@ select.input{appearance:none;cursor:pointer;
 /* Toast */
 #toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
-  background:var(--accent);color:#000;padding:10px 24px;
+  background:var(--accent);color:#fff;padding:10px 24px;
   font-family:var(--font-display);font-weight:700;font-size:.9rem;
   text-transform:uppercase;letter-spacing:.04em;z-index:2000;
   transition:transform .3s ease;white-space:nowrap;
@@ -222,13 +274,13 @@ select.input{appearance:none;cursor:pointer;
   cursor:pointer;display:flex;align-items:center;justify-content:center;
   color:transparent;font-size:.9rem;transition:all .15s;
 }
-.set-check.done{background:var(--accent);border-color:var(--accent);color:#000}
+.set-check.done{background:var(--accent);border-color:var(--accent);color:#fff}
 .set-check:hover{border-color:var(--fg3)}
 
 /* PR Badge */
 .pr-badge{
   display:inline-block;padding:1px 6px;font-size:.6rem;font-weight:800;
-  background:var(--accent);color:#000;font-family:var(--font-display);
+  background:var(--accent);color:#fff;font-family:var(--font-display);
   letter-spacing:.06em;margin-left:6px;animation:prPop .3s ease;
 }
 @keyframes prPop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
@@ -292,7 +344,7 @@ select.input{appearance:none;cursor:pointer;
   font-family:var(--font-display);font-weight:700;text-transform:uppercase;
 }
 .unit-toggle span{padding:4px 10px;cursor:pointer;transition:all .12s}
-.unit-toggle span.active{background:var(--accent);color:#000}
+.unit-toggle span.active{background:var(--accent);color:#fff}
 
 /* Finish Summary */
 .finish-stat{
@@ -325,7 +377,7 @@ select.input{appearance:none;cursor:pointer;
 #profile-badge{
   position:fixed;top:0;right:0;z-index:600;padding:10px 16px;
   display:flex;align-items:center;gap:10px;
-  background:linear-gradient(to right,transparent,var(--bg) 30%);
+  background:linear-gradient(to right,transparent,#fff 30%);
 }
 #profile-badge .badge-name{
   font-family:var(--font-display);font-weight:700;font-size:.82rem;
@@ -473,7 +525,7 @@ select.input{appearance:none;cursor:pointer;
 .toggle-slider{position:absolute;inset:0;background:var(--bg4);border-radius:12px;transition:.2s}
 .toggle-slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:var(--fg3);border-radius:50%;transition:.2s}
 .toggle-switch input:checked+.toggle-slider{background:var(--accent)}
-.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px);background:#000}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px);background:#fff}
 
 /* Creator stats */
 .creator-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
@@ -527,7 +579,7 @@ select.input{appearance:none;cursor:pointer;
 <div id="auth-view" style="display:none">
   <div class="auth-logo">
     <h1>IRON<span class="accent">LOG</span></h1>
-    <p>Track. Lift. Dominate.</p>
+    <p>Lift. Track. Share.</p>
   </div>
 
   <!-- LOGIN FORM -->
@@ -569,6 +621,18 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div id="app-wrapper" style="display:none">
 
+<!-- DESKTOP SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">IRON<span class="accent">LOG</span></div>
+  <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()">&#9654; Start Workout</button>
+  <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon">&#128240;</span>Feed</button>
+  <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon">&#128203;</span>My Workouts</button>
+  <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon">&#128221;</span>My Plans</button>
+  <button class="sidebar-link" data-nav="profile" onclick="nav('profile')"><span class="sidebar-icon">&#128100;</span>My Profile</button>
+  <div class="sidebar-spacer"></div>
+  <button class="sidebar-logout" onclick="handleLogout()">Logout</button>
+</div>
+
 <!-- PROFILE BADGE -->
 <div id="profile-badge">
   <div class="notif-wrap">
@@ -593,14 +657,14 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-home" data-view="home">
   <div class="mt-lg text-center">
     <h1 style="font-size:3rem;font-weight:900;letter-spacing:.08em">IRON<span class="accent">LOG</span></h1>
-    <p class="fg3 small" style="letter-spacing:.15em;margin-top:4px;font-family:var(--font-display);text-transform:uppercase">Track. Lift. Dominate.</p>
+    <p class="fg3 small" style="letter-spacing:.15em;margin-top:4px;font-family:var(--font-display);text-transform:uppercase">Lift. Track. Share.</p>
   </div>
   <div class="mt-lg">
     <button class="btn btn-primary btn-block" style="padding:18px;font-size:1.15rem" onclick="startWorkoutFlow()">&#9654; START WORKOUT</button>
   </div>
   <div class="flex gap-sm mt-md">
     <button class="btn btn-block grow" onclick="nav('workouts')">MY WORKOUTS</button>
-    <button class="btn btn-block grow" onclick="nav('database')">EXERCISE DB</button>
+    <button class="btn btn-block grow" onclick="nav('feed')">VIEW FEED</button>
   </div>
   <div id="home-stats" class="stats-strip"></div>
   <h3 class="fg2 mt-md mb-sm" style="font-size:.85rem">Recent Workouts</h3>
@@ -613,25 +677,16 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-feed" data-view="feed">
   <h2 class="mt-md mb-md">Feed</h2>
+  <div class="feed-search-wrap">
+    <div class="search-wrap" style="margin-bottom:0">
+      <span class="search-icon">&#128269;</span>
+      <input class="input" id="feed-search-input" placeholder="Search athletes..." oninput="feedSearchUsers()" onfocus="feedSearchFocus()" onblur="setTimeout(()=>closeFeedSearch(),200)">
+    </div>
+    <div class="feed-search-results" id="feed-search-results"></div>
+  </div>
   <div id="feed-list"></div>
   <div id="feed-empty" class="text-center mt-lg hidden">
     <p class="fg3">No posts yet. Complete a workout and share it!</p>
-  </div>
-</div>
-
-<!-- ============================================================
-     SEARCH VIEW
-     ============================================================ -->
-<div class="view" id="view-search" data-view="search">
-  <h2 class="mt-md mb-md">Discover</h2>
-  <div class="search-wrap">
-    <span class="search-icon">&#128269;</span>
-    <input class="input" id="search-users-input" placeholder="Search athletes..." oninput="searchUsers()">
-  </div>
-  <div id="search-results"></div>
-  <div id="all-athletes">
-    <h3 class="fg2 mb-sm" style="font-size:.85rem">All Athletes</h3>
-    <div class="user-grid" id="athletes-grid"></div>
   </div>
 </div>
 
@@ -666,10 +721,7 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-workouts" data-view="workouts">
   <div class="flex between mb-md mt-md">
     <h2>My Workouts</h2>
-    <div class="flex gap-sm">
-      <button class="btn btn-sm" onclick="nav('database')">Exercise DB</button>
-      <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
-    </div>
+    <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
   </div>
   <div id="workouts-list"></div>
   <div id="workouts-empty" class="text-center mt-lg hidden">
@@ -708,6 +760,7 @@ select.input{appearance:none;cursor:pointer;
         <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
         <span data-unit="kg" onclick="setUnit('kg')">KG</span>
       </div>
+      <button class="btn btn-sm btn-danger" onclick="discardWorkout()">Discard</button>
       <button class="btn btn-sm btn-primary" onclick="finishWorkout()">Finish</button>
     </div>
   </div>
@@ -868,11 +921,10 @@ select.input{appearance:none;cursor:pointer;
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- NAV BAR -->
+<!-- NAV BAR (mobile only) -->
 <nav class="nav" id="main-nav">
-  <button class="nav-btn active" data-nav="home" onclick="nav('home')"><span class="nav-icon">&#9776;</span>Home</button>
-  <button class="nav-btn" data-nav="feed" onclick="nav('feed')"><span class="nav-icon">&#128240;</span>Feed</button>
-  <button class="nav-btn" data-nav="search" onclick="nav('search')"><span class="nav-icon">&#128269;</span>Search</button>
+  <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon">&#128240;</span>Feed</button>
+  <button class="nav-btn" data-nav="start" onclick="startWorkoutFlow()"><span class="nav-icon">&#9654;</span>Start</button>
   <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon">&#128203;</span>Workouts</button>
   <button class="nav-btn" data-nav="profile" onclick="nav('profile')"><span class="nav-icon">&#128100;</span>Profile</button>
 </nav>
@@ -1413,7 +1465,7 @@ async function initApp(user){
     activeWorkout=saved;
     beginActiveWorkout();
   }else{
-    await nav('home');
+    await nav('feed');
   }
 }
 
@@ -1426,10 +1478,12 @@ async function nav(view){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   const el=document.getElementById('view-'+view);
   if(el)el.classList.add('active');
+  // Update mobile nav active states
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav===view));
+  // Update sidebar active states
+  document.querySelectorAll('.sidebar .sidebar-link').forEach(b=>b.classList.toggle('active',b.dataset.nav===view));
   if(view==='home')await renderHome();
   if(view==='feed')await renderFeed();
-  if(view==='search')await renderSearch();
   if(view==='database')await renderDatabase();
   if(view==='workouts')await renderWorkouts();
   if(view==='history')await renderHistory();
@@ -1867,19 +1921,39 @@ let timerInterval=null;
 
 async function startWorkoutFlow(){
   const wos=await getWorkouts();
-  if(!wos.length){
-    await startEmptyWorkout();return;
-  }
+  const{data:adoptions}=await sb.from('plan_adoptions').select('*,workout_plans(*)').eq('adopted_by_user_id',currentUser.id).eq('is_active',true);
+  const plans=(adoptions||[]).filter(a=>a.workout_plans).map(a=>a.workout_plans);
+
   let html=`<div class="modal-header"><h2>Start Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <button class="btn btn-block mb-md" onclick="closeModal();startEmptyWorkout()">&#9654; Start Empty (Build As I Go)</button>
-      <div class="divider"></div>
-      <h3 class="mb-sm fg2" style="font-size:.85rem">Or pick a template:</h3>
-      ${wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();startFromTemplate('${w.id}')">
-        <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+    <div class="modal-body">`;
+
+  // Option 1: Start from a Plan
+  if(plans.length){
+    html+=`<h3 class="mb-sm fg2" style="font-size:.85rem">Start from a Plan</h3>`;
+    html+=plans.map(p=>{
+      const pWorkouts=p.workouts||[];
+      return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startPlanWorkout('${p.id}',0)">
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${pWorkouts.length} workouts in plan</div></div>
         <span class="accent" style="font-size:1.2rem">&#9654;</span>
-      </div>`).join('')}
-    </div>`;
+      </div>`;
+    }).join('');
+    html+=`<div class="divider"></div>`;
+  }
+
+  // Option 2: Start from a Workout Template
+  if(wos.length){
+    html+=`<h3 class="mb-sm fg2" style="font-size:.85rem">Start from a Workout</h3>`;
+    html+=wos.map(w=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${w.id}')">
+      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+      <span class="accent" style="font-size:1.2rem">&#9654;</span>
+    </div>`).join('');
+    html+=`<div class="divider"></div>`;
+  }
+
+  // Option 3: Start Fresh
+  html+=`<button class="btn btn-block mt-sm" onclick="closeModal();startEmptyWorkout()">&#9654; Start Fresh — Build As I Go</button>`;
+
+  html+=`</div>`;
   openModal(html);
 }
 
@@ -2004,6 +2078,28 @@ function addSet(ei){
   activeWorkout.exercises[ei].sets.push({weight:0,reps:0,completed:false});
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
+}
+
+function discardWorkout(){
+  openModal(`
+    <div class="modal-header"><h2>Discard Workout?</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p style="line-height:1.5">Are you sure? This workout will not be saved.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDiscard()">Discard</button>
+    </div>
+  `);
+}
+
+function confirmDiscard(){
+  saveActiveWO(null);
+  activeWorkout=null;
+  if(timerInterval)clearInterval(timerInterval);
+  closeModal();
+  toast('Workout discarded');
+  nav('feed');
 }
 
 async function openExerciseHistory(exId){
@@ -2141,7 +2237,7 @@ async function confirmFinish(){
   if(timerInterval)clearInterval(timerInterval);
   closeModal();
   toast('Workout saved!');
-  await nav('home');
+  await nav('feed');
 }
 
 /* =============================================================
@@ -2162,7 +2258,10 @@ async function renderHistory(){
           <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase">${esc(l.workoutName)}</div>
           <div class="small fg2">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
         </div>
-        <div class="mono accent">${dur}m</div>
+        <div class="flex gap-sm" style="align-items:flex-start">
+          <div class="mono accent">${dur}m</div>
+          <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();deleteWorkoutLog('${l.id}')">&times;</button>
+        </div>
       </div>
       <div class="flex gap-md small fg2">
         <span>${l.exercises.length} exercises</span>
@@ -2171,6 +2270,16 @@ async function renderHistory(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function deleteWorkoutLog(id){
+  if(!confirm('Delete this workout log? This cannot be undone.'))return;
+  const{error}=await sb.from('workout_logs').delete().eq('id',id);
+  if(error){toast('Error deleting');console.error(error);return}
+  invalidateCache('logs');
+  toast('Workout deleted');
+  if(currentView==='history')await renderHistory();
+  if(currentView==='profile')await renderProfileHistory();
 }
 
 async function openLogDetail(id){
@@ -2856,6 +2965,36 @@ async function searchUsers(){
       </div>
     </div>`).join('');
   },300);
+}
+
+/* =============================================================
+   FEED SEARCH (inline dropdown)
+   ============================================================= */
+let feedSearchTimeout=null;
+function feedSearchUsers(){
+  const q=document.getElementById('feed-search-input').value.trim();
+  const container=document.getElementById('feed-search-results');
+  if(feedSearchTimeout)clearTimeout(feedSearchTimeout);
+  if(!q){container.innerHTML='';container.classList.remove('open');return}
+  feedSearchTimeout=setTimeout(async()=>{
+    const{data}=await sb.rpc('search_users',{query:q,p_limit:10});
+    if(!data||!data.length){container.innerHTML='<p class="fg3 small" style="padding:12px">No users found.</p>';container.classList.add('open');return}
+    container.innerHTML=data.filter(u=>u.user_id!==currentUser.id).map(u=>`<div class="user-card" onclick="closeFeedSearch();openPublicProfile('${u.user_id}')">
+      <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">${esc(u.name)}</div>
+        <div class="small fg2">@${esc(u.username)}</div>
+      </div>
+    </div>`).join('');
+    container.classList.add('open');
+  },300);
+}
+function feedSearchFocus(){
+  const q=document.getElementById('feed-search-input').value.trim();
+  if(q)document.getElementById('feed-search-results').classList.add('open');
+}
+function closeFeedSearch(){
+  document.getElementById('feed-search-results').classList.remove('open');
 }
 
 /* =============================================================
