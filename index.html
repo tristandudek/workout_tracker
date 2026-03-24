@@ -1433,7 +1433,7 @@ async function handleSignup(){
 
   const{data,error}=await sb.auth.signUp({
     email,password,
-    options:{data:{name,username,gender}}
+    options:{data:{name,username,gender},emailRedirectTo:'https://tristandudek.github.io/workout_tracker'}
   });
   if(error){toast(error.message);return}
 
@@ -3280,30 +3280,30 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
    ============================================================= */
 (async function(){
   // Handle Supabase email confirmation callback
-  // Supabase appends #access_token=...&type=signup to the URL after email confirm
-  if(window.location.hash&&window.location.hash.includes('access_token')){
-    // Let Supabase client pick up the token from the hash automatically
-    const{data:{session},error}=await sb.auth.getSession();
-    if(session&&session.user){
-      // Clear the hash so it doesn't persist in the URL
-      window.history.replaceState(null,'',window.location.pathname);
-      await initApp(session.user);
-      return;
-    }
-    // If getSession didn't work, try exchanging via the hash params
-    const params=new URLSearchParams(window.location.hash.substring(1));
+  // Supabase appends #access_token=...&type=signup&refresh_token=... after email confirm
+  const hash=window.location.hash;
+  if(hash&&hash.includes('access_token')){
+    const params=new URLSearchParams(hash.substring(1));
     const accessToken=params.get('access_token');
-    const refreshToken=params.get('refresh_token');
+    const refreshToken=params.get('refresh_token')||'';
     if(accessToken){
-      const{data,error:setErr}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken||''});
+      // Exchange tokens for a session
+      const{data,error}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken});
+      // Clear hash from URL
+      window.history.replaceState(null,'',window.location.pathname+window.location.search);
       if(data?.session?.user){
-        window.history.replaceState(null,'',window.location.pathname);
         await initApp(data.session.user);
         return;
       }
+      // If setSession failed, try getSession as fallback
+      const{data:fallback}=await sb.auth.getSession();
+      if(fallback?.session?.user){
+        await initApp(fallback.session.user);
+        return;
+      }
     }
-    // Fallback: clear hash and show login
-    window.history.replaceState(null,'',window.location.pathname);
+    // Clear hash even on failure
+    window.history.replaceState(null,'',window.location.pathname+window.location.search);
   }
 
   const{data:{session}}=await sb.auth.getSession();
