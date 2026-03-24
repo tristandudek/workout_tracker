@@ -2067,19 +2067,21 @@ function showResumeWorkoutBanner(){
   if(!banner){
     banner=document.createElement('div');
     banner.id='resume-workout-banner';
-    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:550;background:var(--accent);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;';
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:650;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;height:40px;';
     document.body.appendChild(banner);
   }
   banner.innerHTML=`<span>Workout in progress: ${esc(activeWorkout.workoutName)}</span><button style="background:#fff;color:var(--accent);border:none;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.8rem;text-transform:uppercase;cursor:pointer" onclick="beginActiveWorkout()">Resume</button>`;
   banner.style.display='flex';
-  // Push content down
+  // Push content and profile badge down below banner
   document.getElementById('app').style.paddingTop='48px';
+  document.getElementById('profile-badge').style.top='46px';
 }
 
 function hideResumeWorkoutBanner(){
   const banner=document.getElementById('resume-workout-banner');
   if(banner)banner.style.display='none';
   document.getElementById('app').style.paddingTop='';
+  document.getElementById('profile-badge').style.top='8px';
 }
 
 function startTimer(){
