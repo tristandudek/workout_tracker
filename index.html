@@ -674,7 +674,8 @@ select.input{appearance:none;cursor:pointer;
     <div class="profile-menu-dropdown" id="profile-menu-dropdown">
       <div class="profile-menu-name" id="badge-name"></div>
       <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')">My Profile</button>
-      <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile');setTimeout(()=>document.getElementById('priv-workouts')?.scrollIntoView({behavior:'smooth'}),300)">Privacy Settings</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();openMyInfoModal()">My Information</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();openPrivacyModal()">Privacy Settings</button>
       <div class="divider" style="margin:6px 0"></div>
       <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()">Logout</button>
     </div>
@@ -825,6 +826,12 @@ select.input{appearance:none;cursor:pointer;
 
   <!-- Creator Metrics -->
   <div class="creator-stats" id="creator-stats"></div>
+
+  <!-- Activity Feed -->
+  <div class="profile-section">
+    <h3 class="mb-sm">Activity</h3>
+    <div id="profile-activity-feed"></div>
+  </div>
 
   <!-- Profile Info -->
   <div class="profile-section">
@@ -2416,6 +2423,9 @@ async function renderProfile(){
   // Creator stats
   await renderCreatorStats();
 
+  // Activity feed
+  await renderProfileActivityFeed();
+
   // Body metrics
   await renderMetrics();
 
@@ -2427,6 +2437,94 @@ async function renderProfile(){
 
   // History section
   await renderProfileHistory();
+}
+
+async function renderProfileActivityFeed(){
+  const container=document.getElementById('profile-activity-feed');
+  const activities=[];
+
+  // Fetch workout logs
+  console.log('[ProfileFeed] fetching workout logs...');
+  const{data:logs,error:logErr}=await sb.from('workout_logs').select('*').eq('user_id',currentUser.id).order('start_time',{ascending:false}).limit(10);
+  console.log('[ProfileFeed] logs:',logs?.length,'error:',logErr);
+  if(logs){
+    logs.forEach(l=>{
+      const dur=l.end_time?Math.round((new Date(l.end_time)-new Date(l.start_time))/60000):0;
+      const exCount=l.exercises?l.exercises.length:0;
+      activities.push({
+        date:new Date(l.start_time),
+        type:'workout',
+        html:`<div class="card" style="cursor:pointer" onclick="openLogDetail('${l.id}')">
+          <div class="flex between">
+            <div>
+              <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">&#127947; ${esc(l.workout_name)}</div>
+              <div class="small fg2">${new Date(l.start_time).toLocaleDateString()} &middot; ${dur}m &middot; ${exCount} exercises</div>
+            </div>
+            <div class="mono accent">${dur}m</div>
+          </div>
+        </div>`
+      });
+    });
+  }
+
+  // Fetch progress photos
+  console.log('[ProfileFeed] fetching progress photos...');
+  const{data:photos,error:photoErr}=await sb.from('progress_photos').select('*').eq('user_id',currentUser.id).order('recorded_at',{ascending:false}).limit(5);
+  console.log('[ProfileFeed] photos:',photos?.length,'error:',photoErr);
+  if(photos){
+    photos.forEach(p=>{
+      activities.push({
+        date:new Date(p.recorded_at),
+        type:'photo',
+        html:`<div class="card">
+          <div class="small fg2" style="margin-bottom:6px">&#128247; Progress photo &middot; ${new Date(p.recorded_at).toLocaleDateString()}</div>
+          ${p.caption?`<div class="small" style="margin-bottom:6px">${esc(p.caption)}</div>`:''}
+          <img src="${p.photo_url}" style="max-width:100%;max-height:200px;object-fit:cover;border:1px solid var(--bg4);border-radius:var(--radius)" loading="lazy">
+        </div>`
+      });
+    });
+  }
+
+  // Fetch likes (posts I liked)
+  console.log('[ProfileFeed] fetching likes...');
+  const{data:likes,error:likeErr}=await sb.from('post_likes').select('*,workout_posts(id,caption,user_id,created_at,profiles:user_id(name))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(5);
+  console.log('[ProfileFeed] likes:',likes?.length,'error:',likeErr);
+  if(likes){
+    likes.forEach(l=>{
+      if(!l.workout_posts)return;
+      const postAuthor=l.workout_posts.profiles?.name||'Someone';
+      activities.push({
+        date:new Date(l.created_at),
+        type:'like',
+        html:`<div class="card"><div class="small fg2">&#10084; Liked ${esc(postAuthor)}'s workout &middot; ${new Date(l.created_at).toLocaleDateString()}</div></div>`
+      });
+    });
+  }
+
+  // Fetch comments
+  console.log('[ProfileFeed] fetching comments...');
+  const{data:comments,error:commentErr}=await sb.from('post_comments').select('*,workout_posts(id,user_id,profiles:user_id(name))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(5);
+  console.log('[ProfileFeed] comments:',comments?.length,'error:',commentErr);
+  if(comments){
+    comments.forEach(c=>{
+      if(!c.workout_posts)return;
+      const postAuthor=c.workout_posts.profiles?.name||'Someone';
+      activities.push({
+        date:new Date(c.created_at),
+        type:'comment',
+        html:`<div class="card"><div class="small fg2">&#128172; Commented on ${esc(postAuthor)}'s workout &middot; ${new Date(c.created_at).toLocaleDateString()}</div><div class="small" style="margin-top:4px">"${esc(c.content.length>80?c.content.slice(0,80)+'...':c.content)}"</div></div>`
+      });
+    });
+  }
+
+  // Sort by date descending
+  activities.sort((a,b)=>b.date-a.date);
+
+  if(!activities.length){
+    container.innerHTML='<p class="fg3 small">No activity yet — complete a workout to get started!</p>';
+    return;
+  }
+  container.innerHTML=activities.slice(0,15).map(a=>a.html).join('');
 }
 
 function setProfUnit(u){
@@ -2446,6 +2544,92 @@ async function saveProfile(){
   document.getElementById('badge-name').textContent=name;
   toast('Profile saved!');
   await renderProfile();
+}
+
+function openMyInfoModal(){
+  if(!currentProfile)return;
+  const p=currentProfile;
+  openModal(`
+    <div class="modal-header"><h2>My Information</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="profile-field"><label>Name</label><input class="input" id="mi-name" value="${esc(p.name)}"></div>
+      <div class="profile-field"><label>Username</label><input class="input" id="mi-username" value="${esc(p.username)}"></div>
+      <div class="profile-field"><label>Email</label><input class="input" id="mi-email" value="${esc(p.email)}" disabled style="opacity:.6"></div>
+      <div class="profile-field"><label>Gender</label>
+        <select class="input" id="mi-gender">
+          <option value="male" ${p.gender==='male'?'selected':''}>Male</option>
+          <option value="female" ${p.gender==='female'?'selected':''}>Female</option>
+          <option value="other" ${p.gender==='other'?'selected':''}>Other</option>
+          <option value="prefer_not_to_say" ${p.gender==='prefer_not_to_say'?'selected':''}>Prefer not to say</option>
+        </select>
+      </div>
+      <div class="profile-field"><label>Bio</label><textarea class="input" id="mi-bio" style="min-height:50px">${esc(p.bio||'')}</textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveMyInfo()">Save</button></div>
+  `);
+}
+
+async function saveMyInfo(){
+  const name=document.getElementById('mi-name').value.trim();
+  const username=document.getElementById('mi-username').value.trim();
+  const gender=document.getElementById('mi-gender').value;
+  const bio=document.getElementById('mi-bio').value.trim();
+  if(!name||!username){toast('Name and username required');return}
+  const{error}=await sb.from('profiles').update({name,username,gender,bio}).eq('id',currentUser.id);
+  if(error){toast(error.message.includes('unique')?'Username already taken':'Error saving');console.error(error);return}
+  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;currentProfile.bio=bio;
+  document.getElementById('badge-name').textContent=name;
+  closeModal();toast('Info updated!');
+  if(currentView==='profile')await renderProfile();
+}
+
+function openPrivacyModal(){
+  if(!currentProfile)return;
+  const p=currentProfile;
+  openModal(`
+    <div class="modal-header"><h2>Privacy Settings</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
+      <div class="privacy-row">
+        <span class="privacy-label">Workout History</span>
+        <label class="toggle-switch"><input type="checkbox" id="pm-workouts" ${p.is_workouts_public?'checked':''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="privacy-row">
+        <span class="privacy-label">Weight History</span>
+        <label class="toggle-switch"><input type="checkbox" id="pm-weight" ${p.is_weight_public?'checked':''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="privacy-row">
+        <span class="privacy-label">Body Fat History</span>
+        <label class="toggle-switch"><input type="checkbox" id="pm-bodyfat" ${p.is_body_fat_public?'checked':''}><span class="toggle-slider"></span></label>
+      </div>
+      <div class="privacy-row">
+        <span class="privacy-label">Progress Photos</span>
+        <label class="toggle-switch"><input type="checkbox" id="pm-photos" ${p.is_photos_public?'checked':''}><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="savePrivacyModal()">Save</button></div>
+  `);
+}
+
+async function savePrivacyModal(){
+  const updates={
+    is_workouts_public:document.getElementById('pm-workouts').checked,
+    is_weight_public:document.getElementById('pm-weight').checked,
+    is_body_fat_public:document.getElementById('pm-bodyfat').checked,
+    is_photos_public:document.getElementById('pm-photos').checked
+  };
+  const{error}=await sb.from('profiles').update(updates).eq('id',currentUser.id);
+  if(error){toast('Error saving');console.error(error);return}
+  Object.assign(currentProfile,updates);
+  closeModal();toast('Privacy updated!');
+  // Update the inline toggles on profile page if visible
+  const el=document.getElementById('priv-workouts');
+  if(el){
+    el.checked=updates.is_workouts_public;
+    document.getElementById('priv-weight').checked=updates.is_weight_public;
+    document.getElementById('priv-bodyfat').checked=updates.is_body_fat_public;
+    document.getElementById('priv-photos').checked=updates.is_photos_public;
+  }
 }
 
 function openLogMetrics(){
@@ -3057,9 +3241,12 @@ function feedSearchUsers(){
   if(feedSearchTimeout)clearTimeout(feedSearchTimeout);
   if(!q){container.innerHTML='';container.classList.remove('open');return}
   feedSearchTimeout=setTimeout(async()=>{
-    const{data}=await sb.rpc('search_users',{query:q,p_limit:10});
+    console.log('[Search] querying profiles for:',q);
+    const{data,error}=await sb.from('profiles').select('id,name,username,avatar_url,bio').or(`name.ilike.%${q}%,username.ilike.%${q}%`).limit(10);
+    console.log('[Search] results:',data,'error:',error);
+    if(error){console.error('[Search] error:',error);container.innerHTML='<p class="fg3 small" style="padding:12px">Search error.</p>';container.classList.add('open');return}
     if(!data||!data.length){container.innerHTML='<p class="fg3 small" style="padding:12px">No users found.</p>';container.classList.add('open');return}
-    container.innerHTML=data.filter(u=>u.user_id!==currentUser.id).map(u=>`<div class="user-card" onclick="closeFeedSearch();openPublicProfile('${u.user_id}')">
+    container.innerHTML=data.map(u=>`<div class="user-card" onclick="closeFeedSearch();openPublicProfile('${u.id}')">
       <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
       <div>
         <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">${esc(u.name)}</div>
