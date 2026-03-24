@@ -3260,6 +3260,33 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
    BOOTSTRAP
    ============================================================= */
 (async function(){
+  // Handle Supabase email confirmation callback
+  // Supabase appends #access_token=...&type=signup to the URL after email confirm
+  if(window.location.hash&&window.location.hash.includes('access_token')){
+    // Let Supabase client pick up the token from the hash automatically
+    const{data:{session},error}=await sb.auth.getSession();
+    if(session&&session.user){
+      // Clear the hash so it doesn't persist in the URL
+      window.history.replaceState(null,'',window.location.pathname);
+      await initApp(session.user);
+      return;
+    }
+    // If getSession didn't work, try exchanging via the hash params
+    const params=new URLSearchParams(window.location.hash.substring(1));
+    const accessToken=params.get('access_token');
+    const refreshToken=params.get('refresh_token');
+    if(accessToken){
+      const{data,error:setErr}=await sb.auth.setSession({access_token:accessToken,refresh_token:refreshToken||''});
+      if(data?.session?.user){
+        window.history.replaceState(null,'',window.location.pathname);
+        await initApp(data.session.user);
+        return;
+      }
+    }
+    // Fallback: clear hash and show login
+    window.history.replaceState(null,'',window.location.pathname);
+  }
+
   const{data:{session}}=await sb.auth.getSession();
   if(session&&session.user){
     await initApp(session.user);
@@ -3274,6 +3301,9 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
       invalidateCache();
       document.getElementById('app-wrapper').style.display='none';
       document.getElementById('auth-view').style.display='flex';
+    }
+    if(event==='SIGNED_IN'&&session?.user&&!currentUser){
+      await initApp(session.user);
     }
   });
 })();
