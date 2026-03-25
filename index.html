@@ -252,6 +252,15 @@ select.input{appearance:none;cursor:pointer;
 .aw-ex-header .drag{cursor:grab;color:var(--fg3);font-size:1rem;user-select:none}
 .aw-ex-header .ex-title{flex:1;font-family:var(--font-display);font-weight:700;font-size:.95rem}
 .aw-ex-header .target{font-size:.75rem;color:var(--fg2);font-family:var(--font-mono)}
+.set-type-badge{display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;font-family:var(--font-body);margin-left:6px}
+.set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
+.set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
+.set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
+.set-type-pyramid-desc{background:rgba(168,85,247,.15);color:#9333ea}
+.set-type-rest-pause{background:rgba(239,68,68,.15);color:#dc2626}
+.superset-group{border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px}
+.superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
+.set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
 .aw-ex-body{padding:10px 14px}
 .set-table{width:100%;border-collapse:collapse}
 .set-table th{
@@ -2142,32 +2151,59 @@ async function renderCreateExercises(){
   const con=document.getElementById('create-exercises');
   con.innerHTML=createExercises.map((ce,i)=>{
     const ex=exs.find(e=>e.id===ce.exerciseId);
-    return `<div class="card flex gap-md between" draggable="true" data-idx="${i}"
+    const st=ce.setType||'standard';
+    const stBadge=st!=='standard'?`<span class="set-type-badge set-type-${st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st}">${st.replace('_',' ')}</span>`:'';
+    return `<div class="card" draggable="true" data-idx="${i}"
       ondragstart="ceDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="ceDrop(event,${i})">
-      <div class="flex gap-sm" style="flex:1;min-width:0">
-        <span class="fg3" style="cursor:grab">&#x2630;</span>
-        <div style="min-width:0">
-          <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex?esc(ex.name):'Unknown'}</div>
-          <div class="flex gap-sm mt-sm" style="flex-wrap:wrap">
-            <input class="input" style="width:50px;padding:6px;height:32px" type="number" min="1" value="${ce.targetSets}" onchange="createExercises[${i}].targetSets=+this.value" placeholder="#">
-            <span class="fg3 small">&times;</span>
-            <input class="input" style="width:70px;padding:6px;height:32px" value="${esc(ce.targetReps)}" onchange="createExercises[${i}].targetReps=this.value" placeholder="8-12">
-            <select class="input" style="width:80px;padding:4px 6px;height:32px;font-size:.75rem" onchange="createExercises[${i}].restTime=+this.value">
-              <option value="0" ${!ce.restTime?'selected':''}>No rest</option>
-              <option value="30" ${ce.restTime===30?'selected':''}>30s</option>
-              <option value="45" ${ce.restTime===45?'selected':''}>45s</option>
-              <option value="60" ${ce.restTime===60?'selected':''}>60s</option>
-              <option value="90" ${ce.restTime===90?'selected':''}>90s</option>
-              <option value="120" ${ce.restTime===120?'selected':''}>2min</option>
-              <option value="180" ${ce.restTime===180?'selected':''}>3min</option>
-              <option value="300" ${ce.restTime===300?'selected':''}>5min</option>
-            </select>
+      <div class="flex gap-md between">
+        <div class="flex gap-sm" style="flex:1;min-width:0">
+          <span class="fg3" style="cursor:grab">&#x2630;</span>
+          <div style="min-width:0">
+            <div class="flex gap-sm" style="align-items:center">
+              <span style="font-family:var(--font-display);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex?esc(ex.name):'Unknown'}</span>
+              ${stBadge}
+            </div>
+            <div class="flex gap-sm mt-sm" style="flex-wrap:wrap">
+              <input class="input" style="width:50px;padding:6px;height:28px" type="number" min="1" value="${ce.targetSets}" onchange="createExercises[${i}].targetSets=+this.value" placeholder="#">
+              <span class="fg3 small">&times;</span>
+              <input class="input" style="width:70px;padding:6px;height:28px" value="${esc(ce.targetReps)}" onchange="createExercises[${i}].targetReps=this.value" placeholder="8-12">
+              <select class="input set-type-select" onchange="createExercises[${i}].setType=this.value;renderCreateExercises()">
+                <option value="standard" ${st==='standard'?'selected':''}>Standard</option>
+                <option value="superset" ${st==='superset'?'selected':''}>Superset</option>
+                <option value="drop" ${st==='drop'?'selected':''}>Drop Set</option>
+                <option value="ascending_pyramid" ${st==='ascending_pyramid'?'selected':''}>Ascending Pyramid</option>
+                <option value="descending_pyramid" ${st==='descending_pyramid'?'selected':''}>Descending Pyramid</option>
+                <option value="rest_pause" ${st==='rest_pause'?'selected':''}>Rest-Pause</option>
+              </select>
+              <select class="input" style="width:80px;padding:4px 6px;height:28px;font-size:.72rem" onchange="createExercises[${i}].restTime=+this.value">
+                <option value="0" ${!ce.restTime?'selected':''}>No rest</option>
+                <option value="30" ${ce.restTime===30?'selected':''}>30s</option>
+                <option value="45" ${ce.restTime===45?'selected':''}>45s</option>
+                <option value="60" ${ce.restTime===60?'selected':''}>60s</option>
+                <option value="90" ${ce.restTime===90?'selected':''}>90s</option>
+                <option value="120" ${ce.restTime===120?'selected':''}>2min</option>
+                <option value="180" ${ce.restTime===180?'selected':''}>3min</option>
+                <option value="300" ${ce.restTime===300?'selected':''}>5min</option>
+              </select>
+            </div>
+            ${st==='drop'?`<div class="flex gap-sm mt-sm"><span class="small fg2">Drops:</span><input class="input" style="width:50px;padding:4px;height:28px" type="number" min="1" max="5" value="${ce.drops||2}" onchange="createExercises[${i}].drops=+this.value"></div>`:''}
+            ${st==='rest_pause'?`<div class="flex gap-sm mt-sm"><span class="small fg2">Rest-pause:</span><input class="input" style="width:60px;padding:4px;height:28px" type="number" min="5" value="${ce.restPauseDuration||15}" onchange="createExercises[${i}].restPauseDuration=+this.value"><span class="small fg3">sec</span></div>`:''}
+            ${st==='ascending_pyramid'?`<div class="small fg2 mt-sm">&#8593; Increase weight each set &middot; Suggested: 12 / 10 / 8 / 6</div>`:''}
+            ${st==='descending_pyramid'?`<div class="small fg2 mt-sm">&#8595; Decrease weight each set &middot; Suggested: 6 / 8 / 10 / 12</div>`:''}
+            ${st==='superset'?`<button class="btn btn-sm btn-ghost mt-sm" onclick="addToSuperset(${i})"><i data-lucide="plus" style="width:12px;height:12px"></i> Add Exercise to Superset</button>`:''}
           </div>
         </div>
+        <button class="btn btn-sm btn-danger" onclick="createExercises.splice(${i},1);renderCreateExercises()">&times;</button>
       </div>
-      <button class="btn btn-sm btn-danger" onclick="createExercises.splice(${i},1);renderCreateExercises()">&times;</button>
+      ${ce.supersetExercises&&ce.supersetExercises.length?`<div class="superset-group mt-sm">${ce.supersetExercises.map((se,si)=>{const sex=exs.find(e=>e.id===se.exerciseId);return`<div class="flex between gap-sm" style="padding:6px 0;border-bottom:1px solid var(--bg4)"><span class="small">${sex?esc(sex.name):'Unknown'}</span><button class="btn btn-sm btn-danger" style="padding:2px 6px;height:24px;font-size:.65rem" onclick="createExercises[${i}].supersetExercises.splice(${si},1);renderCreateExercises()">&times;</button></div>`}).join('')}</div>`:''}
     </div>`;
   }).join('');
+}
+
+let supersetTargetIdx=null;
+function addToSuperset(idx){
+  supersetTargetIdx=idx;
+  openExercisePicker('superset');
 }
 
 let ceDragIdx=null;
@@ -2261,11 +2297,16 @@ async function renderExercisePicker(q){
 async function pickExercise(id){
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===id);if(!ex)return;
-  if(pickerTarget==='create'){
-    createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:'',restTime:90});
+  if(pickerTarget==='superset'&&supersetTargetIdx!==null){
+    if(!createExercises[supersetTargetIdx].supersetExercises)createExercises[supersetTargetIdx].supersetExercises=[];
+    createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id});
+    supersetTargetIdx=null;
+    closeModal();renderCreateExercises();
+  }else if(pickerTarget==='create'){
+    createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:'',restTime:90,setType:'standard'});
     closeModal();renderCreateExercises();
   }else if(pickerTarget==='active'){
-    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,sets:[{weight:0,reps:0,completed:false}]});
+    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,setType:'standard',sets:[{weight:0,reps:0,completed:false}]});
     closeModal();renderActiveWorkout();
   }
 }
@@ -2340,7 +2381,7 @@ async function startFromTemplate(id){
       for(let i=0;i<(we.targetSets||3);i++){
         sets.push({weight:prev[i]?prev[i].weight:0,reps:prev[i]?prev[i].reps:0,completed:false});
       }
-      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,sets};
+      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:we.supersetExercises,sets};
     })
   };
   saveActiveWO(activeWorkout);
@@ -2403,20 +2444,28 @@ async function renderActiveWorkout(){
   con.innerHTML=activeWorkout.exercises.map((ae,ei)=>{
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
     const prev=findPreviousSets(ae.exerciseId,logs);
+    const st=ae.setType||'standard';
+    const stBadge=st!=='standard'?`<span class="set-type-badge set-type-${st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st}">${st.replace('_',' ')}</span>`:'';
+    const setLabel=(si)=>{
+      if(st==='drop')return'Drop '+(si+1);
+      return si+1;
+    };
     return`<div class="aw-exercise ${allDone?'completed':''}" draggable="true" data-ei="${ei}"
       ondragstart="awDragStart(event,${ei})" ondragover="event.preventDefault()" ondrop="awDrop(event,${ei})">
       <div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
         <span class="drag">&#x2630;</span>
-        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}</span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}</span>
         ${ae.targetReps?`<span class="target">${ae.targetSets||''}x${ae.targetReps}</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
       <div class="aw-ex-body">
+        ${st==='ascending_pyramid'?'<div class="small fg2 mb-sm">&#8593; Increase weight each set</div>':''}
+        ${st==='descending_pyramid'?'<div class="small fg2 mb-sm">&#8595; Decrease weight each set</div>':''}
         <table class="set-table">
           <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
-              <td>${si+1}</td>
+              <td>${setLabel(si)}</td>
               <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
               <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value)" placeholder="0"></td>
               <td><input type="number" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0"></td>
@@ -2424,8 +2473,12 @@ async function renderActiveWorkout(){
             </tr>`).join('')}
           </tbody>
         </table>
-        <button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>
+        <div class="flex gap-sm mt-sm">
+          <button class="btn btn-sm btn-ghost grow" onclick="addSet(${ei})">+ Add Set</button>
+          ${st==='drop'?`<button class="btn btn-sm btn-ghost" onclick="addDropSet(${ei})">+ Add Drop</button>`:''}
+        </div>
       </div>
+      ${ae.supersetExercises&&ae.supersetExercises.length?`<div class="superset-group" style="margin:0 14px 10px"><div class="superset-label">Superset with:</div>${ae.supersetExercises.map(se=>`<div class="small" style="padding:4px 0">${esc(se.exerciseName||se.exerciseId)}</div>`).join('')}</div>`:''}
       <div class="rest-timer" id="rest-timer-${ei}" style="display:none">
         <span class="rest-time">0:00</span>
         <button class="skip-rest" onclick="skipRest(${ei})">Skip rest</button>
@@ -2450,15 +2503,34 @@ function updateSet(ei,si,field,val){
 }
 
 function toggleSet(ei,si){
-  const s=activeWorkout.exercises[ei].sets[si];
+  const ae=activeWorkout.exercises[ei];
+  const s=ae.sets[si];
   s.completed=!s.completed;
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
-  // Start rest timer if set was just completed and exercise has rest time
   if(s.completed){
-    const restTime=activeWorkout.exercises[ei].restTime||0;
-    if(restTime>0)startRestTimer(ei,restTime);
+    const st=ae.setType||'standard';
+    if(st==='rest_pause'){
+      const rpDur=ae.restPauseDuration||15;
+      startRestTimer(ei,rpDur);
+    }else if(st==='superset'){
+      // No rest between superset exercises; rest only after all done in round
+      const allInRoundDone=ae.sets.every(ss=>ss.completed);
+      if(allInRoundDone){const restTime=ae.restTime||0;if(restTime>0)startRestTimer(ei,restTime)}
+    }else{
+      const restTime=ae.restTime||0;
+      if(restTime>0)startRestTimer(ei,restTime);
+    }
   }
+}
+
+function addDropSet(ei){
+  const ae=activeWorkout.exercises[ei];
+  const lastSet=ae.sets[ae.sets.length-1];
+  const dropWeight=lastSet?Math.round(lastSet.weight*0.85):0;
+  ae.sets.push({weight:dropWeight,reps:0,completed:false});
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 let restTimers={};
@@ -2600,6 +2672,11 @@ async function finishWorkout(){
 }
 
 function showSummaryModal(dur, totalSets, totalVol, prs){
+  // Count set types
+  const stCounts={};
+  if(activeWorkout){activeWorkout.exercises.forEach(ae=>{const st=ae.setType||'standard';if(st!=='standard'){stCounts[st]=(stCounts[st]||0)+1}})}
+  const stSummary=Object.entries(stCounts).map(([k,v])=>`${v} ${k.replace('_',' ')}${v>1?'s':''}`).join(' · ');
+
   openModal(`
     <div class="modal-header"><h2>Workout Complete!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
@@ -2608,6 +2685,7 @@ function showSummaryModal(dur, totalSets, totalVol, prs){
         <div class="finish-stat"><div class="val">${totalSets}</div><div class="lbl">Sets</div></div>
         <div class="finish-stat"><div class="val">${fmtVolume(totalVol)}</div><div class="lbl">Volume (${getUnit()})</div></div>
       </div>
+      ${stSummary?`<p class="small fg2 mb-md">${stSummary}</p>`:''}
       ${prs.length?`
         <div class="mb-md">
           <h3 style="font-size:.9rem" class="mb-sm">&#127942; Personal Records!</h3>
