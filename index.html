@@ -1609,6 +1609,15 @@ const raw=[
 ["Through Ball Timing Drill",["quads","core","full_body"],"soccer","Practice timing runs with through balls. Runner goes on the pass. Develop attacking chemistry.","sport_run"],
 ["Corner Kick Routine",["shoulders","core","full_body"],"soccer","Practice corner kick delivery and runs. Set pieces can decide games. Rehearse multiple variations.","sport_ball"],
 ["Small Sided Game 3v3",["full_body","core","calves"],"soccer","Play 3v3 in a small area. Develops all skills in a game-like setting. Maximum touches and decision making.","sport_run"],
+// ===== SLANT BOARD SQUATS =====
+["Slant Board Squat (Barbell)",["quads","glutes","calves"],"barbell","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","barbell_squat"],
+["Slant Board Squat (Smith Machine)",["quads","glutes","calves"],"smith_machine","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","smith_squat"],
+["Slant Board Squat (Dumbbell)",["quads","glutes","calves"],"dumbbell","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","db_squat"],
+["Slant Board Squat (Kettlebell)",["quads","glutes","calves"],"kettlebell","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","kb_squat"],
+["Slant Board Squat (Cable)",["quads","glutes","calves"],"cable","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","cable_pull"],
+["Slant Board Squat (Bodyweight)",["quads","glutes","calves"],"bodyweight","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","bw_squat"],
+// ===== MACHINE SHOULDER RAISE =====
+["Machine Shoulder Raise",["shoulders","traps","rear_delts"],"machine","Sit at the shoulder raise machine and grip the handles at your sides. Raise your arms out laterally against the resistance pads until they reach shoulder height. Slowly lower back down with control focusing on the lateral deltoid throughout the movement.","machine_press"],
 ];
 
 // Auto-tag workout type based on equipment
@@ -2288,7 +2297,7 @@ async function renderCreateExercises(){
         </div>
         <button class="btn btn-sm btn-danger" onclick="createExercises.splice(${i},1);renderCreateExercises()">&times;</button>
       </div>
-      ${ce.supersetExercises&&ce.supersetExercises.length?`<div class="superset-group mt-sm">${ce.supersetExercises.map((se,si)=>{const sex=exs.find(e=>e.id===se.exerciseId);return`<div class="flex between gap-sm" style="padding:6px 0;border-bottom:1px solid var(--bg4)"><span class="small">${sex?esc(sex.name):'Unknown'}</span><button class="btn btn-sm btn-danger" style="padding:2px 6px;height:24px;font-size:.65rem" onclick="createExercises[${i}].supersetExercises.splice(${si},1);renderCreateExercises()">&times;</button></div>`}).join('')}</div>`:''}
+      ${ce.supersetExercises&&ce.supersetExercises.length?`<div class="superset-group mt-sm">${ce.supersetExercises.map((se,si)=>{const sex=exs.find(e=>e.id===se.exerciseId);return`<div class="flex between gap-sm" style="padding:6px 0;border-bottom:1px solid var(--bg4)"><div class="flex gap-sm" style="flex:1;align-items:center"><span class="small">${sex?esc(sex.name):'Unknown'}</span><input class="input" style="width:70px;padding:4px;height:24px;font-size:.72rem" value="${esc(se.targetReps||'8-12')}" onchange="createExercises[${i}].supersetExercises[${si}].targetReps=this.value" placeholder="8-12"></div><button class="btn btn-sm btn-danger" style="padding:2px 6px;height:24px;font-size:.65rem" onclick="createExercises[${i}].supersetExercises.splice(${si},1);renderCreateExercises()">&times;</button></div>`}).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -2409,12 +2418,12 @@ async function pickExercise(id){
   const ex=exs.find(e=>e.id===id);if(!ex)return;
   if(pickerTarget==='superset'&&supersetTargetIdx!==null){
     if(!createExercises[supersetTargetIdx].supersetExercises)createExercises[supersetTargetIdx].supersetExercises=[];
-    createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id});
+    createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,targetReps:'8-12'});
     supersetTargetIdx=null;
     closeModal();renderCreateExercises();
   }else if(pickerTarget==='active-superset'&&supersetTargetIdx!==null){
     if(!activeWorkout.exercises[supersetTargetIdx].supersetExercises)activeWorkout.exercises[supersetTargetIdx].supersetExercises=[];
-    activeWorkout.exercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,exerciseName:ex.name,sets:[{weight:0,reps:0,completed:false}]});
+    activeWorkout.exercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,exerciseName:ex.name,targetReps:'8-12',sets:[{weight:0,reps:0,completed:false}]});
     supersetTargetIdx=null;
     saveActiveWO(activeWorkout);
     closeModal();renderActiveWorkout();
@@ -2502,7 +2511,7 @@ async function startFromTemplate(id){
         const seEx=exs.find(e=>e.id===se.exerciseId);
         const seSets=[];
         for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:0,reps:0,completed:false});
-        return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),sets:seSets};
+        return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),targetReps:se.targetReps||'',sets:seSets};
       });
       return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
     })
@@ -2741,7 +2750,7 @@ async function renderActiveWorkout(){
                       <td>${ssi+1}</td>
                       <td class="prev">${sePrev[ssi]?sePrev[ssi].weight+'x'+sePrev[ssi].reps:'—'}</td>
                       <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSupersetSet(${ei},${si},${ssi},'weight',+this.value)" placeholder="0"></td>
-                      <td><input type="number" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="0"></td>
+                      <td><div style="display:flex;align-items:center;gap:4px"><input type="number" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="0">${se.targetReps?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${se.targetReps}</span>`:''}</div></td>
                       <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSupersetSet(${ei},${si},${ssi})">&#10003;</div></td>
                       <td>${se.sets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:2px" onclick="removeSupersetSet(${ei},${si},${ssi})" title="Remove set"><i data-lucide="x" style="width:12px;height:12px"></i></button>`:''}</td>
                     </tr>`).join('')}
