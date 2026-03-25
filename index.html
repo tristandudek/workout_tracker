@@ -626,6 +626,12 @@ select.input{appearance:none;cursor:pointer;
 .challenge-card h3{font-size:.95rem}
 .challenge-progress{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin:8px 0}
 .challenge-progress-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.challenge-post{border:2px solid var(--accent);background:var(--bg)}
+.challenge-post-header{background:linear-gradient(135deg,var(--accent-light),var(--bg));padding:16px;text-align:center;border-bottom:1px solid var(--bg4)}
+.challenge-post-header .trophy{font-size:2rem;margin-bottom:4px}
+.challenge-post-tier{padding:10px 14px}
+.challenge-post-tier h4{font-size:.82rem;margin-bottom:6px}
+.challenge-post-member{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.8rem}
 .challenge-leaderboard{font-size:.8rem}
 .challenge-leaderboard .lb-row{display:flex;align-items:center;gap:8px;padding:4px 0}
 .challenge-leaderboard .lb-rank{font-family:var(--font-mono);color:var(--fg3);min-width:20px}
@@ -1858,6 +1864,9 @@ async function initApp(user){
 
   // Update notification badge
   await updateNotifBadge();
+
+  // Check for ended challenges needing completion posts
+  checkEndedChallenges().catch(e=>console.error('Challenge check error:',e));
 
   // Always land on feed — never auto-resume active workout
   await nav('feed');
@@ -4475,7 +4484,29 @@ async function renderCommunityFeed(communityId, members){
   if(!memberIds.length){container.innerHTML='<p class="fg3 small">No members yet.</p>';return}
   const{data:posts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
   if(!posts||!posts.length){container.innerHTML='<p class="fg3 small">No activity yet in this community.</p>';return}
+  // Sort: pin challenge_completion posts to top
+  posts.sort((a,b)=>{
+    if(a.post_type==='challenge_completion'&&b.post_type!=='challenge_completion')return -1;
+    if(b.post_type==='challenge_completion'&&a.post_type!=='challenge_completion')return 1;
+    return new Date(b.created_at)-new Date(a.created_at);
+  });
   container.innerHTML=posts.map(p=>{
+    // Special rendering for challenge completion posts
+    if(p.post_type==='challenge_completion'){
+      return `<div class="feed-card challenge-post">
+        <div class="challenge-post-header">
+          <div class="trophy">🏆</div>
+          <h3 style="font-size:1rem">Challenge Complete</h3>
+          <div class="feed-time">${timeAgo(p.created_at)}</div>
+        </div>
+        <div class="feed-caption" style="white-space:pre-line">${esc(p.caption||'')}</div>
+        <div class="feed-actions">
+          <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
+          <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
+        </div>
+        <div id="comments-${p.id}" style="display:none"></div>
+      </div>`;
+    }
     const photos=p.photo_urls||[];
     const wl=p.workout_logs;
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
@@ -4491,7 +4522,7 @@ async function renderCommunityFeed(communityId, members){
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${photos.length?`<div class="feed-photos">${photos.map(u=>`<img src="${u}" loading="lazy">`).join('')}</div>`:''}
       <div class="feed-actions">
-        <button class="feed-action ${p.i_liked?'liked':''}" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
+        <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
         <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
       </div>
       <div id="comments-${p.id}" style="display:none"></div>
@@ -4679,6 +4710,7 @@ async function renderChallengeCard(c){
         <span class="mono small fg2" style="margin-left:auto">${l.count}</span>
       </div>`).join('')}
     </div>`:''}
+    ${end<now?`<button class="btn btn-sm btn-primary mt-sm" onclick="manualPostResults('${c.id}')"><i data-lucide="trophy" style="width:14px;height:14px"></i> Post Results</button>`:``}
   </div>`;
 }
 
@@ -4769,6 +4801,99 @@ async function checkChallengeCompletions(workoutLogId, durationMins){
     const{data:comm}=await sb.from('communities').select('name').eq('id',c.community_id).single();
     toast(`Counts toward ${c.name}${comm?' in '+comm.name:''}!`);
   }
+}
+
+/* =============================================================
+   CHALLENGE COMPLETION POSTS
+   ============================================================= */
+async function checkEndedChallenges(){
+  // Check if any challenges ended in the last 24 hours without a completion post
+  const{data:memberships}=await sb.from('community_members').select('community_id').eq('user_id',currentUser.id);
+  if(!memberships||!memberships.length)return;
+  const commIds=memberships.map(m=>m.community_id);
+
+  const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+  const today=new Date().toISOString().split('T')[0];
+
+  const{data:ended}=await sb.from('community_challenges').select('*').in('community_id',commIds).lte('end_date',today).gte('end_date',yesterday);
+  if(!ended||!ended.length)return;
+
+  for(const c of ended){
+    // Check if completion post already exists
+    const{data:existing}=await sb.from('workout_posts').select('id').eq('challenge_id',c.id).eq('post_type','challenge_completion').maybeSingle();
+    if(existing)continue;
+    // Only generate if current user is admin (or first to check)
+    const{data:mem}=await sb.from('community_members').select('role').eq('community_id',c.community_id).eq('user_id',currentUser.id).single();
+    if(mem&&mem.role==='admin'){
+      await generateChallengePost(c);
+    }
+  }
+}
+
+async function generateChallengePost(challenge){
+  const c=challenge;
+  const startD=new Date(c.start_date);
+  const endD=new Date(c.end_date);
+  const weeks=Math.max(1,Math.ceil((endD-startD)/(7*86400000)));
+  const totalRequired=c.workouts_per_week*weeks;
+
+  // Get all members
+  const{data:members}=await sb.from('community_members').select('user_id,profiles:user_id(name,username,avatar_url)').eq('community_id',c.community_id);
+  if(!members)return;
+
+  // Get completions
+  const{data:completions}=await sb.from('challenge_completions').select('user_id').eq('challenge_id',c.id);
+  const counts={};
+  (completions||[]).forEach(co=>{counts[co.user_id]=(counts[co.user_id]||0)+1});
+
+  // Categorize
+  const ironWill=[];const grindApproved=[];const dnf=[];
+  members.forEach(m=>{
+    const done=counts[m.user_id]||0;
+    const missed=Math.max(0,totalRequired-done);
+    const p=m.profiles||{};
+    const entry={name:p.name||'Unknown',username:p.username||'',avatar_url:p.avatar_url,done,total:totalRequired};
+    if(missed===0)ironWill.push(entry);
+    else if(missed<=3)grindApproved.push(entry);
+    else dnf.push(entry);
+  });
+
+  // Build caption
+  let caption=`Challenge: ${c.name}\n${new Date(c.start_date).toLocaleDateString()} — ${new Date(c.end_date).toLocaleDateString()}\n\n`;
+  if(ironWill.length){caption+=`🏆 IRON WILL\n${ironWill.map(e=>`${e.name} — ${e.done}/${e.total} workouts`).join('\n')}\n\n`}
+  if(grindApproved.length){caption+=`💪 GRIND APPROVED\n${grindApproved.map(e=>`${e.name} — ${e.done}/${e.total} workouts`).join('\n')}\n\n`}
+  if(dnf.length){caption+=`❌ DID NOT FINISH\n${dnf.map(e=>`${e.name} — ${e.done}/${e.total} workouts`).join('\n')}\n\n`}
+  caption+=`${ironWill.length} crushed it · ${grindApproved.length} came close · ${dnf.length} fell short`;
+
+  // Create the post
+  await sb.from('workout_posts').insert({
+    user_id:currentUser.id,
+    caption,
+    post_type:'challenge_completion',
+    challenge_id:c.id,
+    is_public:true
+  });
+
+  // Notify all community members
+  for(const m of members){
+    if(m.user_id===currentUser.id)continue;
+    await sb.from('notifications').insert({
+      user_id:m.user_id,
+      type:'challenge_ended',
+      message:`The ${c.name} challenge has ended — see how you did!`,
+      related_id:c.id
+    });
+  }
+}
+
+async function manualPostResults(challengeId){
+  const{data:c}=await sb.from('community_challenges').select('*').eq('id',challengeId).single();
+  if(!c){toast('Challenge not found');return}
+  const{data:existing}=await sb.from('workout_posts').select('id').eq('challenge_id',challengeId).eq('post_type','challenge_completion').maybeSingle();
+  if(existing){toast('Results already posted');return}
+  await generateChallengePost(c);
+  toast('Results posted!');
+  if(viewingCommunityId)await renderChallengesTab(viewingCommunityId);
 }
 
 /* =============================================================
