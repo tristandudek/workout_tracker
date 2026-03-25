@@ -271,7 +271,10 @@ select.input{appearance:none;cursor:pointer;
 .aw-ex-header .drag{cursor:grab;color:var(--fg3);font-size:1rem;user-select:none}
 .aw-ex-header .ex-title{flex:1;font-family:var(--font-display);font-weight:700;font-size:.95rem}
 .aw-ex-header .target{font-size:.75rem;color:var(--fg2);font-family:var(--font-mono)}
-.set-type-badge{display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;font-family:var(--font-body);margin-left:6px}
+.set-type-badge{display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;font-family:var(--font-body);margin-left:6px;position:relative;cursor:help}
+.set-type-badge .st-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:260px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s}
+.set-type-badge .st-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
+.set-type-badge:hover .st-tip{display:block;opacity:1}
 .set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
 .set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
 .set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
@@ -2025,6 +2028,13 @@ function fuzzySearchExercises(exs,q){
 }
 
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+const ST_TIPS={superset:'Two or more exercises performed back-to-back with no rest between them. Rest only after completing all exercises in the group. Great for saving time and increasing intensity.',drop:'Perform a set to near failure, then immediately reduce the weight by 10-25% and continue for more reps. Repeat for each drop. Maximizes muscle fatigue and volume in less time.',ascending_pyramid:'Start with a lighter weight and higher reps, increasing the weight and decreasing reps with each set. Builds towards your heaviest lift while warming up the muscle.',descending_pyramid:'Start with your heaviest weight and lowest reps, decreasing weight and increasing reps each set. Allows maximum effort on the first set when fresh.',rest_pause:'Perform a set to near failure, rest for 10-20 seconds, then continue with the same weight for additional reps. The brief rest allows partial recovery to squeeze out more volume.'};
+function stBadgeHtml(st){
+  if(st==='standard'||!st)return'';
+  const cls=st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st;
+  const tip=ST_TIPS[st]||'';
+  return `<span class="set-type-badge set-type-${cls}">${st.replace('_',' ')}${tip?`<span class="st-tip">${tip}</span>`:''}</span>`;
+}
 
 function fmtDuration(mins){
   if(mins<60)return mins+'m';
@@ -2353,7 +2363,7 @@ async function renderCreateExercises(){
   con.innerHTML=createExercises.map((ce,i)=>{
     const ex=exs.find(e=>e.id===ce.exerciseId);
     const st=ce.setType||'standard';
-    const stBadge=st!=='standard'?`<span class="set-type-badge set-type-${st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st}">${st.replace('_',' ')}</span>`:'';
+    const stBadge=stBadgeHtml(st);
     return `<div class="card" draggable="true" data-idx="${i}"
       ondragstart="ceDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="ceDrop(event,${i})">
       <div class="flex gap-md between">
@@ -2847,7 +2857,7 @@ async function renderActiveWorkout(){
   function renderExCard(ae, ei, prev, isSuperset){
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
     const st=ae.setType||'standard';
-    const stBadge=st!=='standard'&&!isSuperset?`<span class="set-type-badge set-type-${st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st}">${st.replace('_',' ')}</span>`:'';
+    const stBadge=isSuperset?'':stBadgeHtml(st);
     const setLabel=si=>st==='drop'?'Drop '+(si+1):(si+1);
     const targetRep=ae.targetReps||'';
     const targetSetsNum=ae.targetSets||0;
