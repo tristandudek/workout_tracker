@@ -39,7 +39,7 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 /* ============================================================
    LAYOUT
    ============================================================ */
-#app{max-width:900px;margin:0 auto;padding:0 16px 100px;position:relative}
+#app{max-width:900px;margin:0 auto;padding:64px 16px 100px;position:relative}
 .view{display:none;animation:fadeUp .25s ease}
 .view.active{display:block}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -232,7 +232,7 @@ select.input{appearance:none;cursor:pointer;
 
 /* Active Workout */
 .aw-header{
-  position:sticky;top:0;z-index:100;background:var(--bg);
+  position:sticky;top:56px;z-index:50;background:var(--bg2);
   border-bottom:1px solid var(--bg4);padding:12px 0;
   display:flex;align-items:center;justify-content:space-between;
 }
@@ -375,9 +375,11 @@ select.input{appearance:none;cursor:pointer;
    TOP RIGHT BAR
    ============================================================ */
 #profile-badge{
-  position:fixed;top:14px;right:16px;z-index:600;
-  display:flex;align-items:center;gap:10px;
+  position:fixed;top:0;right:0;left:0;z-index:100;height:56px;
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  padding:0 16px;background:var(--bg);border-bottom:1px solid var(--bg4);
 }
+@media(min-width:768px){#profile-badge{left:240px}}
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
@@ -2180,21 +2182,19 @@ function showResumeWorkoutBanner(){
   if(!banner){
     banner=document.createElement('div');
     banner.id='resume-workout-banner';
-    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:650;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-display);font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;height:40px;';
+    banner.style.cssText='position:fixed;top:56px;left:0;right:0;z-index:99;background:var(--accent);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-body);font-size:.82rem;font-weight:600;height:40px;';
+    if(window.innerWidth>=768)banner.style.left='240px';
     document.body.appendChild(banner);
   }
-  banner.innerHTML=`<span>Workout in progress: ${esc(activeWorkout.workoutName)}</span><button style="background:#fff;color:var(--accent);border:none;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.8rem;text-transform:uppercase;cursor:pointer" onclick="beginActiveWorkout()">Resume</button>`;
+  banner.innerHTML=`<span>Workout in progress: ${esc(activeWorkout.workoutName)}</span><button style="background:#fff;color:var(--accent);border:none;padding:6px 14px;font-family:var(--font-body);font-weight:600;font-size:.8rem;cursor:pointer;border-radius:6px" onclick="beginActiveWorkout()">Resume</button>`;
   banner.style.display='flex';
-  // Push content and profile badge down below banner
-  document.getElementById('app').style.paddingTop='48px';
-  document.getElementById('profile-badge').style.top='46px';
+  document.getElementById('app').style.paddingTop='104px';
 }
 
 function hideResumeWorkoutBanner(){
   const banner=document.getElementById('resume-workout-banner');
   if(banner)banner.style.display='none';
-  document.getElementById('app').style.paddingTop='';
-  document.getElementById('profile-badge').style.top='8px';
+  document.getElementById('app').style.paddingTop='64px';
 }
 
 function startTimer(){
