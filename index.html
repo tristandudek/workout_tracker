@@ -271,9 +271,9 @@ select.input{appearance:none;cursor:pointer;
 .superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
 .set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
 .sub-rows{margin-left:24px;border-left:2px solid var(--accent);padding-left:10px;margin-top:4px;margin-bottom:8px}
-.sub-row{display:flex;align-items:center;gap:6px;padding:6px 0;background:var(--bg2);border-radius:var(--radius);padding:6px 8px;margin-bottom:3px;font-size:.82rem}
-.sub-row input[type="number"]{width:60px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
-.sub-row input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.sub-row{display:grid;grid-template-columns:50px 64px 64px 28px 24px;gap:6px;align-items:center;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);margin-bottom:3px;font-size:.82rem}
+.sub-row input[type="number"],.sub-row input[type="text"]{width:64px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:right;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
+.sub-row input[type="number"]:focus,.sub-row input[type="text"]:focus{outline:none;border-color:var(--accent)}
 .sub-row .sub-label{font-size:.7rem;color:var(--fg3);min-width:50px}
 .sub-row .set-check{width:24px;height:24px;font-size:.75rem}
 .set-del{width:24px;height:24px;background:transparent;border:none;border-radius:4px;color:var(--fg3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s}
@@ -312,13 +312,13 @@ select.input{appearance:none;cursor:pointer;
 .set-table td{padding:5px 4px;text-align:center;vertical-align:middle}
 .set-table td:first-child{text-align:left;font-family:var(--font-mono);font-size:.82rem;color:var(--fg2)}
 .set-table .prev{font-size:.75rem;color:var(--fg3);font-family:var(--font-mono)}
-.set-table input[type="number"]{
+.set-table input[type="number"],.set-table input[type="text"]{
   width:64px;padding:6px 4px;background:var(--bg);border:1px solid var(--bg4);
-  color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.85rem;
-  -moz-appearance:textfield;
+  color:var(--fg);text-align:right;font-family:var(--font-mono);font-size:.85rem;
+  -moz-appearance:textfield;border-radius:var(--radius);
 }
-.set-table input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
-.set-table input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.set-table input::-webkit-inner-spin-button{-webkit-appearance:none}
+.set-table input[type="number"]:focus,.set-table input[type="text"]:focus{outline:none;border-color:var(--accent)}
 .set-check{
   width:28px;height:28px;background:var(--bg);border:2px solid var(--bg4);
   cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -1979,6 +1979,24 @@ function toast(msg){
 /* =============================================================
    UTILITY: timeAgo
    ============================================================= */
+function fuzzySearchExercises(exs,q){
+  if(!q)return exs;
+  const term=q.toLowerCase();
+  const words=term.split(/\s+/).filter(w=>w.length>0);
+  return exs.map(e=>{
+    const name=e.name.toLowerCase();
+    let score=0;
+    if(name===term)score=100;
+    else if(name.startsWith(term))score=80;
+    else if(name.includes(term))score=60;
+    else{
+      const matched=words.filter(w=>name.includes(w));
+      if(matched.length)score=20+matched.length*10;
+    }
+    return{...e,_score:score};
+  }).filter(e=>e._score>0).sort((a,b)=>b._score-a._score);
+}
+
 function fmtDuration(mins){
   if(mins<60)return mins+'m';
   const h=Math.floor(mins/60);const m=mins%60;
@@ -2068,7 +2086,7 @@ async function renderDatabase(){
   document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace('_',' ')}</div>`).join('');
   const q=(document.getElementById('db-search').value||'').toLowerCase();
   let exs=await getExercises();
-  if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q));
+  if(q)exs=fuzzySearchExercises(exs,q);
   if(dbMuscleFilter.size)exs=exs.filter(e=>e.muscleGroups.some(m=>dbMuscleFilter.has(m)));
   if(dbEquipFilter.size)exs=exs.filter(e=>dbEquipFilter.has(e.equipment));
   const grid=document.getElementById('db-grid');
@@ -2424,7 +2442,7 @@ function openExercisePicker(target){
 
 async function renderExercisePicker(q){
   let exs=await getExercises();
-  if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
+  if(q)exs=fuzzySearchExercises(exs,q);
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
   if(pickerType)exs=exs.filter(e=>e.workout_type===pickerType);
@@ -4413,19 +4431,34 @@ let pendingPostPhotos=[];
 
 function showShareWorkoutModal(workoutData, onDone){
   pendingPostPhotos=[];
+  const wo=activeWorkout;
+  const dur=wo?Math.round((new Date(wo.endTime)-new Date(wo.startTime))/60000):0;
+  const vol=wo?calcVolume(wo.exercises):0;
+  const exCount=wo?wo.exercises.length:0;
+  const isPublic=currentProfile&&currentProfile.is_workouts_public;
   openModal(`
-    <div class="modal-header"><h2>Share Workout?</h2><button class="modal-close" onclick="closeModal();window._shareOnDone&&window._shareOnDone(false)">&times;</button></div>
+    <div class="modal-header"><h2>Share Your Workout</h2><button class="modal-close" onclick="closeModal();window._shareOnDone&&window._shareOnDone(false)">&times;</button></div>
     <div class="modal-body">
+      <div class="feed-stat-pills mb-md" style="padding:0">
+        <span class="feed-stat-pill"><span class="pill-val">${esc(wo?.workoutName||'Workout')}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
+        <span class="feed-stat-pill"><span class="pill-val">${exCount}</span> exercises</span>
+      </div>
       <textarea class="input mb-sm" id="share-caption" placeholder="Add a caption..." style="min-height:50px"></textarea>
       <div class="photo-upload-area" onclick="document.getElementById('share-photos-input').click()">
-        <p class="fg3 small">Tap to add photos (up to 4)</p>
+        <p class="fg3 small"><i data-lucide="image" style="width:16px;height:16px;vertical-align:middle"></i> Add Photos (up to 4)</p>
         <input type="file" id="share-photos-input" accept="image/*" multiple onchange="previewSharePhotos(event)">
       </div>
       <div id="share-photo-preview" class="share-photo-strip"></div>
+      <div class="flex gap-sm mt-sm" style="align-items:center">
+        <span class="small fg2">Share to Feed</span>
+        <label class="toggle-switch"><input type="checkbox" id="share-toggle" ${isPublic?'checked':''}><span class="toggle-slider"></span></label>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal();window._shareOnDone&&window._shareOnDone(false)">Skip</button>
-      <button class="btn btn-primary" onclick="submitWorkoutPost()">Post & Finish</button>
+      <button class="btn" onclick="closeModal();window._shareOnDone&&window._shareOnDone(false)">Skip & Finish</button>
+      <button class="btn btn-primary" onclick="submitWorkoutPost()"><i data-lucide="send" style="width:14px;height:14px"></i> Post & Finish</button>
     </div>
   `);
   window._shareOnDone=onDone;
@@ -4449,8 +4482,10 @@ async function submitWorkoutPost(){
     if(url)photoUrls.push(url);
   }
 
+  const shareToFeed=document.getElementById('share-toggle')?.checked;
   closeModal();
-  if(window._shareOnDone)window._shareOnDone(true, caption, photoUrls);
+  if(window._shareOnDone)window._shareOnDone(shareToFeed, caption, photoUrls);
+  if(shareToFeed)toast('Workout posted to the feed!');
 }
 
 /* =============================================================
@@ -4584,6 +4619,7 @@ async function openCommunityDetail(communityId){
   const{data:members}=await sb.from('community_members').select('*,profiles(name,username,avatar_url)').eq('community_id',communityId);
   const myMembership=(members||[]).find(m=>m.user_id===currentUser.id);
   const isAdmin=myMembership&&myMembership.role==='admin';
+  console.log('Is admin:',isAdmin,'User:',currentUser.id,'Membership:',myMembership);
 
   const header=document.getElementById('community-detail-header');
   header.innerHTML=`<div class="community-header">
@@ -4668,33 +4704,43 @@ async function renderCommunityFeed(communityId, members){
 
 function renderCommunityMembers(members, isAdmin, communityId){
   const container=document.getElementById('community-members-tab');
-  container.innerHTML=members.map(m=>{
+  // Sort: admins first, then alphabetically
+  const sorted=[...members].sort((a,b)=>{
+    if(a.role==='admin'&&b.role!=='admin')return -1;
+    if(b.role==='admin'&&a.role!=='admin')return 1;
+    return(a.profiles?.name||'').localeCompare(b.profiles?.name||'');
+  });
+  let html=isAdmin?`<button class="btn btn-primary btn-block mb-md" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Invite Athletes to This Community</button>`:'';
+  html+=sorted.map(m=>{
     const p=m.profiles||{};
+    const joinDate=m.joined_at?new Date(m.joined_at).toLocaleDateString():'';
     return `<div class="member-row">
       <div class="feed-avatar">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div>
-      <div class="member-info" style="cursor:pointer" onclick="openPublicProfile('${m.user_id}')">
-        <div class="member-name">${esc(p.name)}</div>
-        <div class="member-user">@${esc(p.username)} &middot; ${m.role}</div>
+      <div class="member-info" style="cursor:pointer;flex:1" onclick="openPublicProfile('${m.user_id}')">
+        <div class="flex gap-sm" style="align-items:center">
+          <span class="member-name">${esc(p.name)}</span>
+          ${m.role==='admin'?'<span class="tag tag-muscle" style="font-size:.55rem;padding:1px 6px">Admin</span>':''}
+        </div>
+        <div class="member-user">@${esc(p.username)}${joinDate?' &middot; Joined '+joinDate:''}</div>
       </div>
       ${isAdmin&&m.user_id!==currentUser.id?`<div class="flex gap-sm">
-        ${m.role==='member'?`<button class="btn btn-sm" onclick="promoteMember('${m.id}','${communityId}')">Promote</button>`:''}
-        <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}','${communityId}')">Remove</button>
+        ${m.role==='member'?`<button class="btn btn-sm" onclick="promoteMember('${m.id}','${communityId}','${esc(p.name)}')">Make Admin</button>`:''}
+        <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}','${communityId}','${esc(p.name)}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
       </div>`:''}
     </div>`;
   }).join('');
-  if(isAdmin){
-    container.innerHTML+=`<button class="btn btn-primary btn-block mt-md" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Invite Athletes</button>`;
-  }
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
-async function promoteMember(membershipId, communityId){
+async function promoteMember(membershipId, communityId, name){
   await sb.from('community_members').update({role:'admin'}).eq('id',membershipId);
-  toast('Promoted to admin');
+  toast((name||'Member')+' is now an admin');
   await openCommunityDetail(communityId);
 }
 
-async function removeMember(membershipId, communityId){
-  if(!confirm('Remove this member?'))return;
+async function removeMember(membershipId, communityId, name){
+  if(!confirm('Remove '+(name||'this member')+' from this community?'))return;
   await sb.from('community_members').delete().eq('id',membershipId);
   toast('Member removed');
   await openCommunityDetail(communityId);
