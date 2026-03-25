@@ -2472,6 +2472,7 @@ async function renderProfile(){
 }
 
 async function renderMetricsChart(){
+  if(typeof Chart!=='undefined')Chart.defaults.font.family='DM Sans';
   const{data,error}=await sb.from('body_metrics').select('*').eq('user_id',currentUser.id).order('recorded_at',{ascending:true});
   const canvas=document.getElementById('metrics-canvas');
   if(!canvas)return;
@@ -2506,7 +2507,7 @@ async function renderMetricsChart(){
     });
     scales.yWeight={
       type:'linear',position:'left',
-      title:{display:true,text:'Weight ('+getUnit()+')',font:{size:11,family:'Barlow Condensed',weight:'700'},color:'#38bdf8'},
+      title:{display:true,text:'Weight ('+getUnit()+')',font:{size:11,family:'Syne',weight:'700'},color:'#38bdf8'},
       grid:{color:'rgba(0,0,0,.06)'},
       ticks:{font:{size:10,family:'JetBrains Mono'},color:'#38bdf8'}
     };
@@ -2527,7 +2528,7 @@ async function renderMetricsChart(){
     });
     scales.yBF={
       type:'linear',position:'right',
-      title:{display:true,text:'Body Fat %',font:{size:11,family:'Barlow Condensed',weight:'700'},color:'#fb923c'},
+      title:{display:true,text:'Body Fat %',font:{size:11,family:'Syne',weight:'700'},color:'#fb923c'},
       grid:{drawOnChartArea:false},
       ticks:{font:{size:10,family:'JetBrains Mono'},color:'#fb923c',callback:v=>v+'%'}
     };
@@ -2541,8 +2542,8 @@ async function renderMetricsChart(){
       maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{display:true,position:'top',labels:{font:{size:11,family:'Barlow Condensed',weight:'600'},usePointStyle:true,pointStyle:'circle',padding:12}},
-        tooltip:{backgroundColor:'#111',titleFont:{family:'Barlow Condensed',weight:'700'},bodyFont:{family:'JetBrains Mono',size:12}}
+        legend:{display:true,position:'top',labels:{font:{size:11,family:'Syne',weight:'600'},usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{backgroundColor:'#111',titleFont:{family:'Syne',weight:'700'},bodyFont:{family:'JetBrains Mono',size:12}}
       },
       scales
     }
