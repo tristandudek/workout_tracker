@@ -241,20 +241,19 @@ select.input{appearance:none;cursor:pointer;
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
 #global-rest-timer{
-  position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:90;
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;
   display:none;align-items:center;gap:10px;
-  padding:10px 20px;background:var(--bg);border:1px solid var(--bg4);
-  border-radius:24px;box-shadow:0 4px 16px rgba(0,0,0,.1);
-  font-family:var(--font-mono);font-size:.9rem;font-weight:600;color:var(--fg);
-  transition:all .2s ease;
+  padding:12px 24px;background:#0a0a0a;border:none;
+  border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);
+  font-family:var(--font-body);font-size:1rem;font-weight:600;color:#fff;
 }
 #global-rest-timer.active{display:flex}
-#global-rest-timer.reached{border-color:var(--success);color:var(--success);animation:restReached .4s ease}
-#global-rest-timer .rest-progress{width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+#global-rest-timer.reached{background:var(--success);animation:restReached .4s ease}
+#global-rest-timer .rest-progress{width:60px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
 #global-rest-timer .rest-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .5s linear}
-#global-rest-timer .rest-progress-bar.full{background:var(--success)}
+#global-rest-timer .rest-progress-bar.full{background:#fff}
 @keyframes restReached{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@media(min-width:768px){#global-rest-timer{bottom:24px;left:50%;margin-left:120px}}
+@media(min-width:768px){#global-rest-timer{margin-left:120px}}
 .aw-ex-header{
   display:flex;align-items:center;gap:10px;padding:12px 14px;
   cursor:pointer;border-bottom:1px solid var(--bg4);
@@ -844,7 +843,7 @@ select.input{appearance:none;cursor:pointer;
 <!-- ============================================================
      ACTIVE WORKOUT VIEW
      ============================================================ -->
-<div class="view" id="view-active" data-view="active">
+<div class="view" id="view-active" data-view="active" style="padding-bottom:100px">
   <div class="aw-header">
     <div>
       <div id="aw-name" style="font-family:var(--font-display);font-weight:700;font-size:1.1rem"></div>
@@ -2602,6 +2601,7 @@ function toggleSet(ei,si){
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
   if(s.completed){
+    console.log('Set completed, starting rest timer');
     const st=ae.setType||'standard';
     let target=0;
     if(st==='rest_pause'){
@@ -2613,6 +2613,7 @@ function toggleSet(ei,si){
     }else{
       target=ae.restTime||0;
     }
+    console.log('Rest timer target:',target,'setType:',st);
     startGlobalRestTimer(target);
   }
 }
@@ -2672,6 +2673,8 @@ function startGlobalRestTimer(targetSeconds){
   const el=document.getElementById('global-rest-timer');
   const txt=document.getElementById('rest-timer-text');
   const bar=document.getElementById('rest-progress-bar');
+  if(!el||!txt||!bar){console.error('Rest timer elements not found in DOM');return}
+  console.log('Starting rest timer, target:',globalRestTarget);
   el.classList.add('active');
   el.classList.remove('reached');
   bar.classList.remove('full');
@@ -2680,6 +2683,7 @@ function startGlobalRestTimer(targetSeconds){
 
   globalRestInterval=setInterval(()=>{
     globalRestElapsed++;
+    if(globalRestElapsed%5===0)console.log('Rest timer:',globalRestElapsed);
     const txt=document.getElementById('rest-timer-text');
     const bar=document.getElementById('rest-progress-bar');
     const el=document.getElementById('global-rest-timer');
