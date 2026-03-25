@@ -2863,9 +2863,12 @@ async function deleteMetric(id){
    FILE UPLOADS
    ============================================================= */
 async function uploadFile(bucket, file, path){
-  const{data,error}=await sb.storage.from(bucket).upload(path,file,{upsert:true});
-  if(error){toast('Upload failed: '+error.message);return null}
-  const{data:urlData}=sb.storage.from(bucket).getPublicUrl(data.path);
+  console.log('[Upload] bucket:',bucket,'path:',path,'file:',file.name,'size:',file.size,'type:',file.type);
+  const{data,error}=await sb.storage.from(bucket).upload(path,file,{upsert:true,contentType:file.type});
+  if(error){console.log('Upload error:',error.message,error.statusCode,error);toast('Upload failed: '+error.message);return null}
+  console.log('[Upload] success:',data);
+  const{data:urlData}=sb.storage.from(bucket).getPublicUrl(path);
+  console.log('[Upload] public URL:',urlData.publicUrl);
   return urlData.publicUrl;
 }
 
@@ -2874,15 +2877,21 @@ async function uploadFile(bucket, file, path){
    ============================================================= */
 async function uploadAvatar(event){
   const file=event.target.files[0];if(!file)return;
+  if(!file.type.startsWith('image/')){toast('Please select an image file');return}
   if(file.size>2*1024*1024){toast('Max file size 2MB');return}
-  const ext=file.name.split('.').pop();
-  const path=`${currentUser.id}/avatar.${ext}`;
-  const url=await uploadFile('avatars',file,path);
+  const filePath=`${currentUser.id}/${currentUser.id}.jpg`;
+  console.log('[Avatar] uploading to:',filePath);
+  const url=await uploadFile('avatars',file,filePath);
   if(!url)return;
-  const{error}=await sb.from('profiles').update({avatar_url:url}).eq('id',currentUser.id);
-  if(error){toast('Error saving avatar');return}
-  currentProfile.avatar_url=url;
+  // Append cache-buster to force refresh
+  const urlWithBust=url+'?t='+Date.now();
+  const{error}=await sb.from('profiles').update({avatar_url:urlWithBust}).eq('id',currentUser.id);
+  if(error){console.log('[Avatar] profile update error:',error);toast('Error saving avatar');return}
+  currentProfile.avatar_url=urlWithBust;
   toast('Avatar updated!');
+  // Update top-right avatar
+  const avatarBtn=document.getElementById('badge-avatar-icon');
+  if(avatarBtn)avatarBtn.innerHTML=`<img src="${urlWithBust}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   await renderProfile();
 }
 
