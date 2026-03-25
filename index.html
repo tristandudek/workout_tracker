@@ -275,6 +275,11 @@ select.input{appearance:none;cursor:pointer;
 .set-type-badge .st-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:260px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s}
 .set-type-badge .st-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
 .set-type-badge:hover .st-tip{display:block;opacity:1}
+.ex-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:12px;color:var(--fg3);cursor:pointer;border-radius:50%;transition:color .15s;position:relative}
+.ex-info-btn:hover{color:var(--accent)}
+.ex-info-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:280px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s;text-align:left}
+.ex-info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
+.ex-info-btn:hover .ex-info-tip{display:block;opacity:1}
 .set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
 .set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
 .set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
@@ -1701,6 +1706,28 @@ const raw=[
 ["Slant Board Squat (Bodyweight)",["quads","glutes","calves"],"bodyweight","Stand on a slant board with heels elevated, feet shoulder width apart. Keeping your torso upright, bend your knees and lower into a deep squat driving knees forward over toes. The elevated heel position increases quad activation and allows greater knee flexion and depth.","bw_squat"],
 // ===== MACHINE SHOULDER RAISE =====
 ["Machine Shoulder Raise",["shoulders","traps","rear_delts"],"machine","Sit at the shoulder raise machine and grip the handles at your sides. Raise your arms out laterally against the resistance pads until they reach shoulder height. Slowly lower back down with control focusing on the lateral deltoid throughout the movement.","machine_press"],
+// ===== RUNNING / CARDIO =====
+["1 Mile Run",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 1 mile at a steady pace. Focus on consistent breathing and cadence. Great baseline fitness test and cardio exercise.","sport_run"],
+["2 Mile Run",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 2 miles at a steady moderate pace. Build aerobic endurance and mental toughness.","sport_run"],
+["5K Run",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 3.1 miles. A standard road race distance. Mix of aerobic endurance and tempo effort.","sport_run"],
+["10K Run",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 6.2 miles. Extended endurance effort requiring pacing strategy and fueling.","sport_run"],
+["Half Marathon",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 13.1 miles. Major endurance event requiring training buildup, pacing, and nutrition planning.","sport_run"],
+["Marathon",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Run 26.2 miles. Ultimate endurance challenge requiring months of training and race day strategy.","sport_run"],
+["400m Sprint",["quads","hamstrings","calves","cardio"],"bodyweight","Sprint one full lap of a standard track. Maximum effort anaerobic power and speed endurance.","sport_run"],
+["200m Sprint",["quads","hamstrings","calves","cardio"],"bodyweight","Sprint half a track lap. Explosive speed with anaerobic power. Drive hard through the curve.","sport_run"],
+["100m Sprint",["quads","hamstrings","calves","cardio"],"bodyweight","All-out sprint for 100 meters. Pure explosive speed. Drive from blocks, accelerate, and maintain top speed.","sport_run"],
+["800m Run",["quads","hamstrings","calves","cardio"],"bodyweight","Run two laps of a standard track. Brutal mix of speed and endurance. Requires pacing strategy.","sport_run"],
+["1 Mile Walk",["quads","calves","full_body"],"bodyweight","Walk one mile at a brisk pace. Low impact cardio suitable for active recovery or beginners.","sport_run"],
+["Trail Run",["quads","hamstrings","calves","cardio","full_body","core"],"bodyweight","Run on natural terrain with varying elevation. Builds ankle stability, balance, and mental resilience.","sport_run"],
+["Sprint Intervals",["quads","hamstrings","calves","cardio","full_body"],"bodyweight","Alternate between all-out sprints and rest periods. E.g. 30 seconds sprint, 30 seconds walk. Maximum fat burning and conditioning.","sport_run"],
+["Tempo Run",["quads","hamstrings","calves","cardio"],"bodyweight","Run at a comfortably hard pace you could sustain for 20-40 minutes. Builds lactate threshold and race fitness.","sport_run"],
+["Easy Jog",["quads","calves","full_body"],"bodyweight","Light jogging at conversational pace. Active recovery, base building, and easy aerobic conditioning.","sport_run"],
+["Treadmill Run",["quads","hamstrings","calves","cardio"],"cardio_machine","Run on a treadmill at your chosen pace and incline. Controlled environment for speed and hill training.","sport_run"],
+["Stair Climb",["quads","glutes","calves","cardio"],"cardio_machine","Climb stairs on a stair machine or real stairs. Excellent lower body and cardio workout. Keep upright posture.","sport_run"],
+["Rowing Machine",["back","full_body","cardio","quads"],"cardio_machine","Row on an erg with proper form: legs drive first, then lean back, then pull arms. Full body cardio and strength.","sport_run"],
+["Assault Bike",["quads","full_body","cardio","shoulders"],"cardio_machine","Pedal and push/pull handles simultaneously on an air resistance bike. Total body cardio conditioning.","sport_run"],
+["Ski Erg",["lats","shoulders","core","cardio"],"cardio_machine","Pull down on handles mimicking Nordic skiing motion. Great for upper body cardio and lat endurance.","sport_run"],
+["Elliptical",["quads","glutes","calves","cardio"],"cardio_machine","Low impact cardio on elliptical machine. Smooth motion that is easy on joints while building endurance.","sport_run"],
 ];
 
 // Auto-tag workout type based on equipment
@@ -1708,10 +1735,19 @@ const cardioExercises=new Set(['Burpee','Mountain Climber','Jump Squat','Box Jum
 function getWorkoutType(equip,name){
   if(equip==='yoga')return'yoga';
   if(['basketball','football','baseball','tennis','golf','soccer','other_sports'].includes(equip))return'sport';
-  if(equip==='jump_rope')return'cardio';
+  if(equip==='jump_rope'||equip==='cardio_machine')return'cardio';
   if(cardioExercises.has(name))return'cardio';
   if(['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','resistance_band'].includes(equip))return'resistance_training';
   return'other';
+}
+
+const timeExercises=new Set(['Plank','Side Plank','L-Sit','Wall Sit','Hollow Body Hold','Superman Hold','Dragon Flag','Dead Bug','Bird Dog','Sprint Intervals','Tempo Run','Easy Jog','Treadmill Run','Stair Climb','Rowing Machine','Assault Bike','Ski Erg','Elliptical']);
+const distanceExercises=new Set(['1 Mile Run','2 Mile Run','5K Run','10K Run','Half Marathon','Marathon','400m Sprint','200m Sprint','100m Sprint','800m Run','1 Mile Walk','Trail Run']);
+function getTrackingType(equip,name){
+  if(equip==='yoga')return'time';
+  if(timeExercises.has(name))return'time';
+  if(distanceExercises.has(name))return'distance';
+  return'reps';
 }
 
 return raw.map((r,i)=>({
@@ -1722,6 +1758,7 @@ return raw.map((r,i)=>({
   instructions:r[3],
   diagram:diag[r[4]]||SVG.press(),
   workout_type:getWorkoutType(r[2],r[0]),
+  tracking_type:getTrackingType(r[2],r[0]),
   custom:false
 }));
 }
@@ -1748,7 +1785,7 @@ async function getExercises(){
   _exerciseCache=data.map(r=>({
     id:r.id,name:r.name,muscleGroups:r.muscle_groups,equipment:r.equipment,
     instructions:r.instructions,diagram:r.diagram,custom:r.is_custom,
-    photo_url:r.photo_url,video_url:r.video_url,workout_type:r.workout_type
+    photo_url:r.photo_url,video_url:r.video_url,workout_type:r.workout_type,tracking_type:r.tracking_type||'reps'
   }));
   return _exerciseCache;
 }
@@ -1797,7 +1834,7 @@ async function seedExercisesIfNeeded(){
     // First time: seed everything
     const rows=allExs.map(e=>({
       name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
-      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,is_custom:false,created_by_user_id:null
+      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,tracking_type:e.tracking_type,is_custom:false,created_by_user_id:null
     }));
     for(let i=0;i<rows.length;i+=50){
       const chunk=rows.slice(i,i+50);
@@ -1822,7 +1859,7 @@ async function seedExercisesIfNeeded(){
   if(missing.length){
     const rows=missing.map(e=>({
       name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
-      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,is_custom:false,created_by_user_id:null
+      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,tracking_type:e.tracking_type,is_custom:false,created_by_user_id:null
     }));
     for(let i=0;i<rows.length;i+=50){
       const chunk=rows.slice(i,i+50);
@@ -2127,8 +2164,8 @@ async function renderHome(){
    DATABASE
    ============================================================= */
 let dbMuscleFilter=new Set(), dbEquipFilter=new Set();
-const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body','flexibility','hips'];
-const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','yoga','basketball','football','baseball','tennis','golf','soccer','other_sports','other'];
+const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body','flexibility','hips','cardio'];
+const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','cardio_machine','yoga','basketball','football','baseball','tennis','golf','soccer','other_sports','other'];
 
 async function renderDatabase(){
   document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
@@ -2482,10 +2519,10 @@ async function saveWorkoutTemplate(){
    EXERCISE PICKER MODAL
    ============================================================= */
 let pickerTarget='create';
-let pickerMuscle='', pickerEquip='', pickerType='';
+let pickerMuscle='', pickerEquip='', pickerType='', pickerTrack='';
 
 function openExercisePicker(target){
-  pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';
+  pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';pickerTrack='';
   renderExercisePicker('');
 }
 
@@ -2495,6 +2532,7 @@ async function renderExercisePicker(q){
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
   if(pickerType)exs=exs.filter(e=>e.workout_type===pickerType);
+  if(pickerTrack)exs=exs.filter(e=>(e.tracking_type||'reps')===pickerTrack);
   openModal(`
     <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
@@ -2516,6 +2554,12 @@ async function renderExercisePicker(q){
           <option value="">All Equipment</option>
           ${ALL_EQUIP.map(e=>`<option value="${e}" ${pickerEquip===e?'selected':''}>${e.replace('_',' ')}</option>`).join('')}
         </select>
+      </div>
+      <div class="filter-bar" style="margin:0 0 8px">
+        <div class="chip ${!pickerTrack?'active':''}" onclick="pickerTrack='';renderExercisePicker(document.getElementById('picker-search')?.value||'')">All</div>
+        <div class="chip ${pickerTrack==='reps'?'active':''}" onclick="pickerTrack='reps';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Reps</div>
+        <div class="chip ${pickerTrack==='time'?'active':''}" onclick="pickerTrack='time';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Time</div>
+        <div class="chip ${pickerTrack==='distance'?'active':''}" onclick="pickerTrack='distance';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Distance</div>
       </div>
       <div style="max-height:350px;overflow-y:auto">
         ${exs.slice(0,60).map(e=>`<div class="ex-card" style="margin-bottom:4px" onclick="pickExercise('${e.id}')">
@@ -2550,7 +2594,7 @@ async function pickExercise(id){
     createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:'',restTime:90,setType:'standard'});
     closeModal();renderCreateExercises();
   }else if(pickerTarget==='active'){
-    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,setType:'standard',sets:[{weight:0,reps:0,completed:false}]});
+    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,instructions:ex.instructions||'',tracking_type:ex.tracking_type||'reps',setType:'standard',sets:[{weight:0,reps:0,completed:false}]});
     closeModal();renderActiveWorkout();
   }
 }
@@ -2692,7 +2736,7 @@ async function startFromTemplate(id){
         for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:0,reps:0,completed:false});
         return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),targetReps:se.targetReps||'',sets:seSets};
       });
-      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
+      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',instructions:ex?ex.instructions:'',tracking_type:ex?ex.tracking_type:'reps',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
     })
   };
   saveActiveWO(activeWorkout);
@@ -2873,7 +2917,7 @@ async function renderActiveWorkout(){
     const targetSetsNum=ae.targetSets||0;
     return `<div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
         <span class="drag">&#x2630;</span>
-        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}</span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()">&#8505;<span class="ex-info-tip">${esc(ae.instructions||'No description available')}</span></span></span>
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
@@ -2882,13 +2926,13 @@ async function renderActiveWorkout(){
           :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
           :st==='drop'?renderDropSetBody(ae,ei,prev,targetRep)
           :`<table class="set-table">${SET_COLS}
-          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
+          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>${ae.tracking_type==='time'?'Time':ae.tracking_type==='distance'?'Distance':'Reps'}</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
               <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
-              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
-              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="${targetRep||'reps'}"></td>
+              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="${ae.tracking_type==='distance'?'—':'0'}"></td>
+              <td><input type="text" inputmode="${ae.tracking_type==='time'?'text':'numeric'}" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',this.value)" placeholder="${ae.tracking_type==='time'?'0:00':ae.tracking_type==='distance'?'dist':targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
               <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:``}</td>
             </tr>`).join('')}
