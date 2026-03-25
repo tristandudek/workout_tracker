@@ -68,6 +68,15 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 .sidebar .sidebar-link.active{color:var(--accent);background:var(--accent-light);border-left-color:var(--accent)}
 .sidebar .sidebar-link .sidebar-icon{width:20px;display:flex;align-items:center;justify-content:center}
 .sidebar .sidebar-spacer{flex:1}
+.sidebar-sub-list{padding-left:20px}
+.sidebar-sub-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:.8rem;color:var(--fg2);border-radius:var(--radius);transition:all .12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-sub-item:hover{background:var(--bg2);color:var(--fg)}
+.sidebar-sub-item.active{color:var(--accent);background:var(--accent-light)}
+.sidebar-sub-item .sub-avatar{width:24px;height:24px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--accent);flex-shrink:0;overflow:hidden}
+.sidebar-sub-item .sub-avatar img{width:100%;height:100%;object-fit:cover}
+.sidebar-sub-link{display:block;padding:6px 12px;font-size:.72rem;color:var(--accent);cursor:pointer}
+.sidebar-sub-link:hover{text-decoration:underline}
+.sidebar-chevron.expanded{transform:rotate(180deg)}
 
 /* Feed search dropdown */
 .feed-search-wrap{position:relative;margin-bottom:16px}
@@ -765,7 +774,13 @@ select.input{appearance:none;cursor:pointer;
   <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>The Gym Floor</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon"><i data-lucide="dumbbell" style="width:18px;height:18px"></i></span>My Workouts</button>
   <button class="sidebar-link" data-nav="plans-library" onclick="nav('plans-library')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>Plans</button>
-  <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
+  <div class="sidebar-expand-section">
+    <div class="sidebar-link" data-nav="communities" style="display:flex;justify-content:space-between;padding-right:8px">
+      <span style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="nav('communities')"><span class="sidebar-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span>Communities</span>
+      <button class="sidebar-chevron" onclick="event.stopPropagation();toggleSidebarCommunities()" id="sidebar-comm-chevron" style="background:none;border:none;cursor:pointer;color:var(--fg3);transition:transform .2s"><i data-lucide="chevron-down" style="width:16px;height:16px"></i></button>
+    </div>
+    <div class="sidebar-sub-list" id="sidebar-comm-list" style="max-height:0;overflow:hidden;transition:max-height .25s ease"></div>
+  </div>
 </div>
 
 <!-- TOP RIGHT BAR -->
@@ -1933,6 +1948,7 @@ async function initApp(user){
   // Update notification and message badges
   await updateNotifBadge();
   if(typeof updateMsgBadge==='function')await updateMsgBadge();
+  if(typeof loadSidebarCommunities==='function')loadSidebarCommunities().catch(e=>console.error(e));
 
   // Check for ended challenges needing completion posts
   checkEndedChallenges().catch(e=>console.error('Challenge check error:',e));
@@ -4648,6 +4664,53 @@ function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/<
 let feedCommunityFilter=null; // null = all, uuid = community_id
 let viewingCommunityId=null;
 
+async function loadSidebarCommunities(){
+  const{data:memberships}=await sb.from('community_members').select('community_id,communities(id,name,avatar_url)').eq('user_id',currentUser.id);
+  const list=document.getElementById('sidebar-comm-list');
+  if(!list)return;
+  let html='';
+  if(memberships&&memberships.length){
+    html=memberships.map(m=>{
+      const c=m.communities;if(!c)return'';
+      return `<div class="sidebar-sub-item" onclick="openCommunityDetail('${c.id}')">
+        <div class="sub-avatar">${c.avatar_url?`<img src="${c.avatar_url}">`:(c.name||'?')[0].toUpperCase()}</div>
+        <span>${esc(c.name)}</span>
+      </div>`;
+    }).join('');
+  }
+  html+=`<div class="sidebar-sub-link" onclick="openCreateCommunity()">+ New Community</div>`;
+  list.innerHTML=html;
+  // Auto-expand if has communities and was previously expanded or first load
+  const wasExpanded=localStorage.getItem('sidebar_comm_expanded');
+  if(wasExpanded==='true'||(wasExpanded===null&&memberships&&memberships.length)){
+    expandSidebarCommunities();
+  }
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function toggleSidebarCommunities(){
+  const list=document.getElementById('sidebar-comm-list');
+  const chevron=document.getElementById('sidebar-comm-chevron');
+  if(!list)return;
+  const isExpanded=list.style.maxHeight&&list.style.maxHeight!=='0px';
+  if(isExpanded){
+    list.style.maxHeight='0px';
+    chevron.classList.remove('expanded');
+    localStorage.setItem('sidebar_comm_expanded','false');
+  }else{
+    expandSidebarCommunities();
+  }
+}
+
+function expandSidebarCommunities(){
+  const list=document.getElementById('sidebar-comm-list');
+  const chevron=document.getElementById('sidebar-comm-chevron');
+  if(!list)return;
+  list.style.maxHeight=list.scrollHeight+50+'px';
+  if(chevron)chevron.classList.add('expanded');
+  localStorage.setItem('sidebar_comm_expanded','true');
+}
+
 async function renderCommunities(){
   // Search
   document.getElementById('community-search-input').value='';
@@ -4715,6 +4778,7 @@ async function joinCommunity(communityId){
   if(error){toast(error.message.includes('duplicate')?'Already a member':'Error joining');return}
   toast('Joined!');
   await renderCommunities();
+  loadSidebarCommunities();
 }
 
 function openCreateCommunity(){
@@ -4743,6 +4807,7 @@ async function saveCreateCommunity(){
   await sb.from('community_members').insert({community_id:data.id,user_id:currentUser.id,role:'admin'});
   closeModal();toast('Community created!');
   await renderCommunities();
+  loadSidebarCommunities();
 }
 
 async function openCommunityDetail(communityId){
