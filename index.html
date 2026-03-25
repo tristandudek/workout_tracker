@@ -454,6 +454,9 @@ select.input{appearance:none;cursor:pointer;
 .feed-time{font-size:.68rem;color:var(--fg3)}
 .feed-summary{padding:0 14px 10px;font-size:.82rem;color:var(--fg2)}
 .feed-summary .mono{color:var(--accent)}
+.feed-stat-pills{display:flex;gap:6px;padding:0 14px 10px;flex-wrap:wrap}
+.feed-stat-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg2);border:1px solid var(--bg4);border-radius:20px;font-size:.75rem;font-family:var(--font-body);color:var(--fg2);font-weight:500}
+.feed-stat-pill .pill-val{font-family:var(--font-mono);font-weight:600;color:var(--fg)}
 .feed-caption{padding:0 14px 10px;font-size:.88rem;line-height:1.5}
 .feed-photos{display:flex;gap:4px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none}
 .feed-photos::-webkit-scrollbar{display:none}
@@ -1618,6 +1621,20 @@ function toast(msg){
 /* =============================================================
    UTILITY: timeAgo
    ============================================================= */
+function fmtDuration(mins){
+  if(mins<60)return mins+'m';
+  const h=Math.floor(mins/60);const m=mins%60;
+  return m?h+'h '+m+'m':h+'h';
+}
+function fmtVolume(vol){
+  if(vol>=1000000)return(vol/1000000).toFixed(1)+'M';
+  if(vol>=1000)return(vol/1000).toFixed(1)+'k';
+  return vol.toLocaleString();
+}
+function calcVolume(exercises){
+  let v=0;(exercises||[]).forEach(e=>(e.sets||[]).forEach(s=>{if(s.completed)v+=s.weight*s.reps}));return v;
+}
+
 function timeAgo(dateStr){
   const now=Date.now();
   const d=new Date(dateStr).getTime();
@@ -2314,6 +2331,8 @@ async function finishWorkout(){
     }
   });
 
+  activeWorkout._totalVol=totalVol;
+
   // If public, show share option first
   if(currentProfile&&currentProfile.is_workouts_public){
     showShareWorkoutModal(null, (shared, caption, photoUrls)=>{
@@ -2332,9 +2351,9 @@ function showSummaryModal(dur, totalSets, totalVol, prs){
     <div class="modal-header"><h2>Workout Complete!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
       <div class="flex gap-sm mb-md">
-        <div class="finish-stat"><div class="val">${dur}</div><div class="lbl">Minutes</div></div>
+        <div class="finish-stat"><div class="val">${fmtDuration(dur)}</div><div class="lbl">Duration</div></div>
         <div class="finish-stat"><div class="val">${totalSets}</div><div class="lbl">Sets</div></div>
-        <div class="finish-stat"><div class="val">${totalVol>=1000?(totalVol/1000).toFixed(1)+'k':totalVol}</div><div class="lbl">Volume (${getUnit()})</div></div>
+        <div class="finish-stat"><div class="val">${fmtVolume(totalVol)}</div><div class="lbl">Volume (${getUnit()})</div></div>
       </div>
       ${prs.length?`
         <div class="mb-md">
@@ -2409,23 +2428,19 @@ async function renderHistory(){
   con.innerHTML=logs.map(l=>{
     const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
     const d=new Date(l.startTime);
-    const totalSets=l.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.completed).length,0);
-    let vol=0;l.exercises.forEach(e=>e.sets.forEach(s=>{if(s.completed)vol+=s.weight*s.reps}));
+    const vol=calcVolume(l.exercises);
     return`<div class="card" style="cursor:pointer" onclick="openLogDetail('${l.id}')">
       <div class="flex between mb-sm">
         <div>
-          <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase">${esc(l.workoutName)}</div>
-          <div class="small fg2">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+          <div style="font-family:var(--font-display);font-weight:700">${esc(l.workoutName)}</div>
+          <div class="small fg3">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
         </div>
-        <div class="flex gap-sm" style="align-items:flex-start">
-          <div class="mono accent">${dur}m</div>
-          <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();deleteWorkoutLog('${l.id}')">&times;</button>
-        </div>
+        <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();deleteWorkoutLog('${l.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
       </div>
-      <div class="flex gap-md small fg2">
-        <span>${l.exercises.length} exercises</span>
-        <span>${totalSets} sets</span>
-        <span>${vol.toLocaleString()} ${getUnit()} volume</span>
+      <div class="feed-stat-pills" style="padding:0">
+        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
+        <span class="feed-stat-pill"><span class="pill-val">${l.exercises.length}</span> exercises</span>
       </div>
     </div>`;
   }).join('');
@@ -2759,17 +2774,18 @@ async function renderProfileActivityFeed(){
     logs.forEach(l=>{
       const dur=l.end_time?Math.round((new Date(l.end_time)-new Date(l.start_time))/60000):0;
       const exCount=l.exercises?l.exercises.length:0;
+      const vol=calcVolume(l.exercises);
       activities.push({
         date:new Date(l.start_time),
         type:'workout',
         html:`<div class="card" style="cursor:pointer" onclick="openLogDetail('${l.id}')">
-          <div class="flex between">
-            <div>
-              <div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">&#127947; ${esc(l.workout_name)}</div>
-              <div class="small fg2">${new Date(l.start_time).toLocaleDateString()} &middot; ${dur}m &middot; ${exCount} exercises</div>
-            </div>
-            <div class="mono accent">${dur}m</div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:.88rem;margin-bottom:6px">${esc(l.workout_name)}</div>
+          <div class="feed-stat-pills" style="padding:0;margin-bottom:4px">
+            <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+            <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
+            <span class="feed-stat-pill"><span class="pill-val">${exCount}</span> exercises</span>
           </div>
+          <div class="small fg3">${new Date(l.start_time).toLocaleDateString()}</div>
         </div>`
       });
     });
@@ -3215,10 +3231,11 @@ async function renderFeed(){
           <div class="feed-time">${timeAgo(p.post_created_at)}</div>
         </div>
       </div>
-      <div class="feed-summary">
-        <strong>${esc(p.workout_name||'Workout')}</strong> &middot;
-        <span class="mono">${p.workout_duration||0}m</span> &middot;
-        ${p.workout_exercise_count} exercises
+      <div class="feed-summary"><strong>${esc(p.workout_name||'Workout')}</strong></div>
+      <div class="feed-stat-pills">
+        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(p.workout_duration||0)}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${p.workout_exercise_count}</span> exercises</span>
+        ${p.workout_volume?`<span class="feed-stat-pill"><span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
       </div>
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${photos.length?`<div class="feed-photos">${photos.map(u=>`<img src="${u}" loading="lazy">`).join('')}</div>`:''}
