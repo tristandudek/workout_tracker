@@ -4199,20 +4199,18 @@ async function renderFeed(){
       });
     }else{data=[]}
   }else if(feedActiveTab==='following'){
-    // Your Feed: posts from people you follow
+    // Your Feed: own posts + posts from people you follow
     const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
-    const followIds=(myFollows||[]).map(f=>f.following_id);
-    if(followIds.length){
-      const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',followIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
-      data=(res.data||[]).map(p=>{
-        const wl=p.workout_logs;
-        const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
-      });
-    }else{data=[]}
+    const feedUserIds=[currentUser.id,...(myFollows||[]).map(f=>f.following_id)];
+    const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',feedUserIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
+    data=(res.data||[]).map(p=>{
+      const wl=p.workout_logs;
+      const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
+    });
   }else{
-    // Suggested: all public posts — direct query (no RPC dependency)
-    const res=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('is_public',true).order('created_at',{ascending:false}).limit(50);
+    // Suggested: all public posts except own
+    const res=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
     console.log('Feed posts:',res.data?.length,'error:',res.error);
     data=(res.data||[]).map(p=>{
       const wl=p.workout_logs;
