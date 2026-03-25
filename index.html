@@ -3243,18 +3243,29 @@ async function finishWorkout(){
   });
 
   activeWorkout._totalVol=totalVol;
+  activeWorkout._dur=dur;
+  activeWorkout._totalSets=totalSets;
+  activeWorkout._prs=prs;
 
-  // If public, show share option first
-  if(currentProfile&&currentProfile.is_workouts_public){
-    showShareWorkoutModal(null, (shared, caption, photoUrls)=>{
-      activeWorkout._shared=shared;
-      activeWorkout._shareCaption=caption;
-      activeWorkout._sharePhotos=photoUrls;
-      showSummaryModal(dur, totalSets, totalVol, prs);
-    });
-  }else{
-    showSummaryModal(dur, totalSets, totalVol, prs);
-  }
+  // Step 1: Save workout log to DB first
+  console.log('Saving workout log...');
+  const{data:logData,error:logErr}=await sb.from('workout_logs').insert({
+    user_id:currentUser.id,
+    workout_name:activeWorkout.workoutName,
+    start_time:activeWorkout.startTime,
+    end_time:activeWorkout.endTime,
+    exercises:activeWorkout.exercises
+  }).select().single();
+  if(logErr){toast('Error saving workout');console.error('Log save error:',logErr);return}
+  console.log('Workout saved, log id:',logData.id);
+  activeWorkout._logId=logData.id;
+
+  // Check challenge completions
+  await checkChallengeCompletions(logData.id,dur);
+
+  // Step 2: Always show share modal
+  console.log('Showing share workout modal');
+  showShareWorkoutModalV2(dur,totalSets,totalVol);
 }
 
 function showSummaryModal(dur, totalSets, totalVol, prs){
@@ -3305,41 +3316,9 @@ async function saveAsTemplate(){
 }
 
 async function confirmFinish(){
-  const{data:logData,error}=await sb.from('workout_logs').insert({
-    user_id:currentUser.id,
-    workout_name:activeWorkout.workoutName,
-    start_time:activeWorkout.startTime,
-    end_time:activeWorkout.endTime,
-    exercises:activeWorkout.exercises
-  }).select().single();
-  if(error){toast('Error saving workout');console.error(error);return}
-
-  // Create post if shared
-  if(activeWorkout._shared && logData){
-    await sb.from('workout_posts').insert({
-      user_id:currentUser.id,
-      workout_log_id:logData.id,
-      caption:activeWorkout._shareCaption||null,
-      photo_urls:activeWorkout._sharePhotos||[],
-      is_public:true
-    });
-  }
-
-  // Check challenge completions
-  if(logData){
-    const dur=Math.round((new Date(activeWorkout.endTime)-new Date(activeWorkout.startTime))/60000);
-    await checkChallengeCompletions(logData.id,dur);
-  }
-
-  invalidateCache('logs');
-  saveActiveWO(null);
-  activeWorkout=null;
-  if(timerInterval)clearInterval(timerInterval);
-  stopGlobalRestTimer();
-  hideResumeWorkoutBanner();
+  // Legacy — cleanup is now handled by finishCleanup
   closeModal();
-  toast('Workout saved!');
-  await nav('feed');
+  finishCleanup();
 }
 
 /* =============================================================
@@ -3368,6 +3347,26 @@ async function renderHistory(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function deleteWorkoutAndPost(logId){
+  if(!confirm('Delete this workout? This will also remove the associated post if one exists.'))return;
+  // Delete associated post and photos
+  const{data:post}=await sb.from('workout_posts').select('id,photo_urls').eq('workout_log_id',logId).maybeSingle();
+  if(post){
+    if(post.photo_urls&&post.photo_urls.length){
+      for(const url of post.photo_urls){
+        try{const path=new URL(url).pathname.split('/storage/v1/object/public/post-photos/')[1];if(path)await sb.storage.from('post-photos').remove([path])}catch(e){}
+      }
+    }
+    await sb.from('workout_posts').delete().eq('id',post.id);
+  }
+  await sb.from('workout_logs').delete().eq('id',logId);
+  invalidateCache('logs');
+  const el=document.getElementById('log-'+logId);if(el)el.remove();
+  toast('Workout deleted');
+  if(currentView==='history')await renderHistory();
+  if(currentView==='profile')await renderProfileActivityFeed();
 }
 
 async function deleteWorkoutLog(id){
@@ -3707,7 +3706,13 @@ async function renderProfileActivityFeed(){
       activities.push({
         date:new Date(l.start_time),
         type:'workout',
-        html:`<div class="card" style="cursor:pointer" onclick="openLogDetail('${l.id}')">
+        html:`<div class="card" style="cursor:pointer;position:relative" id="log-${l.id}" onclick="openLogDetail('${l.id}')">
+          <div class="post-menu-wrap" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation()">
+            <button class="post-menu-btn" onclick="togglePostMenu('log-${l.id}')">&#8943;</button>
+            <div class="post-menu" id="post-menu-log-${l.id}">
+              <button class="post-menu-item" onclick="deleteWorkoutAndPost('${l.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Workout</button>
+            </div>
+          </div>
           <div style="font-family:var(--font-display);font-weight:700;font-size:.88rem;margin-bottom:6px">${esc(l.workout_name)}</div>
           <div class="feed-stat-pills" style="padding:0;margin-bottom:4px">
             <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
@@ -4158,9 +4163,15 @@ async function renderFeed(){
       });
     }else{data=[]}
   }else{
-    // Suggested: all public posts
-    const res=await sb.rpc('get_feed',{p_limit:30,p_offset:0});
-    data=res.data;error=res.error;
+    // Suggested: all public posts — direct query (no RPC dependency)
+    const res=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('is_public',true).order('created_at',{ascending:false}).limit(50);
+    console.log('Feed posts:',res.data?.length,'error:',res.error);
+    data=(res.data||[]).map(p=>{
+      const wl=p.workout_logs;
+      const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_volume:0,i_liked:false};
+    });
+    error=res.error;
   }
 
   const list=document.getElementById('feed-list');
@@ -4639,6 +4650,79 @@ async function submitWorkoutPost(){
   closeModal();
   if(window._shareOnDone)window._shareOnDone(shareToFeed, caption, photoUrls);
   if(shareToFeed)toast('Workout posted to the feed!');
+}
+
+function showShareWorkoutModalV2(dur,totalSets,totalVol){
+  pendingPostPhotos=[];
+  const wo=activeWorkout;
+  openModal(`
+    <div class="modal-header"><h2>Share Your Workout 💪</h2><button class="modal-close" onclick="closeModal();finishCleanup()">&times;</button></div>
+    <div class="modal-body">
+      <div class="feed-stat-pills mb-md" style="padding:0">
+        <span class="feed-stat-pill"><span class="pill-val">${esc(wo?.workoutName||'Workout')}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${totalSets}</span> sets</span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(totalVol)}</span> ${getUnit()}</span>
+      </div>
+      <textarea class="input mb-sm" id="share-caption-v2" placeholder="How did it go? Add a caption..." style="min-height:50px"></textarea>
+      <button class="btn btn-block mb-sm" onclick="document.getElementById('share-photos-v2').click()" style="height:44px">📷 Add Photos</button>
+      <input type="file" id="share-photos-v2" accept="image/*" multiple style="display:none" onchange="previewSharePhotosV2(event)">
+      <div id="share-preview-v2" class="share-photo-strip"></div>
+      <div class="flex gap-sm mt-sm" style="align-items:center">
+        <label class="toggle-switch"><input type="checkbox" id="share-toggle-v2" checked><span class="toggle-slider"></span></label>
+        <span class="small fg2">Post to The Gym Floor</span>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn btn-primary btn-block" onclick="submitPostV2()">Post & Finish</button>
+      <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
+    </div>
+  `);
+}
+
+function previewSharePhotosV2(event){
+  const files=Array.from(event.target.files).slice(0,4);
+  pendingPostPhotos=files;
+  document.getElementById('share-preview-v2').innerHTML=files.map(f=>`<img class="share-thumb" src="${URL.createObjectURL(f)}">`).join('');
+}
+
+async function submitPostV2(){
+  const caption=document.getElementById('share-caption-v2').value.trim();
+  const shareToFeed=document.getElementById('share-toggle-v2')?.checked;
+  const photoUrls=[];
+  if(pendingPostPhotos.length){
+    for(const file of pendingPostPhotos){
+      const ext=file.name.split('.').pop();
+      const path=`${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const url=await uploadFile('post-photos',file,path);
+      if(url)photoUrls.push(url);
+    }
+  }
+  if(shareToFeed&&activeWorkout&&activeWorkout._logId){
+    console.log('Creating post for log:',activeWorkout._logId);
+    const{data:post,error:postErr}=await sb.from('workout_posts').insert({
+      user_id:currentUser.id,
+      workout_log_id:activeWorkout._logId,
+      caption:caption||null,
+      photo_urls:photoUrls,
+      is_public:true
+    }).select().single();
+    if(postErr){console.error('Post error:',postErr);toast('Error posting')}
+    else{console.log('Post created:',post);toast('Workout posted to the feed!')}
+  }
+  closeModal();
+  finishCleanup();
+}
+
+function finishCleanup(){
+  invalidateCache('logs');
+  saveActiveWO(null);
+  activeWorkout=null;
+  if(timerInterval)clearInterval(timerInterval);
+  stopGlobalRestTimer();
+  hideResumeWorkoutBanner();
+  toast('Workout saved!');
+  nav('feed');
 }
 
 /* =============================================================
