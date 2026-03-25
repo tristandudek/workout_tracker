@@ -858,6 +858,7 @@ select.input{appearance:none;cursor:pointer;
     </div>
     <h2 id="profile-display-name"></h2>
     <p class="fg2 small" id="profile-username-display"></p>
+    <p class="fg3" id="profile-member-number" style="font-size:.7rem;margin-top:4px"></p>
     <p class="fg2 small mt-sm" id="profile-bio-display" style="max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5"></p>
   </div>
 
@@ -2494,6 +2495,7 @@ async function renderProfile(){
 
   document.getElementById('profile-display-name').textContent=p.name;
   document.getElementById('profile-username-display').textContent='@'+p.username;
+  document.getElementById('profile-member-number').textContent=p.member_number?'Member #'+p.member_number:'';
   document.getElementById('profile-bio-display').textContent=p.bio||'';
 
   // Stats row
@@ -3409,6 +3411,7 @@ async function openPublicProfile(userId){
     <div class="pub-avatar">${profile.avatar_url?`<img src="${profile.avatar_url}">`:(profile.name||'?')[0].toUpperCase()}</div>
     <h2>${esc(profile.name)}</h2>
     <p class="fg2 small">@${esc(profile.username)}</p>
+    ${profile.member_number?`<p class="fg3" style="font-size:.7rem;margin-top:4px">Member #${profile.member_number}</p>`:''}
     ${profile.bio?`<p class="pub-bio">${esc(profile.bio)}</p>`:''}
     <div style="margin-top:12px">
       <button class="btn btn-sm ${isFollowing?'btn-danger':'btn-primary'}" data-following="${isFollowing}" onclick="toggleFollow('${userId}',this)">${isFollowing?'Unfollow':'Follow'}</button>
