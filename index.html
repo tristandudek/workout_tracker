@@ -2432,7 +2432,14 @@ async function startFromTemplate(id){
       for(let i=0;i<(we.targetSets||3);i++){
         sets.push({weight:prev[i]?prev[i].weight:0,reps:prev[i]?prev[i].reps:0,completed:false});
       }
-      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:we.supersetExercises,sets};
+      // Resolve superset exercise names and create matching sets
+      const ssExs=(we.supersetExercises||[]).map(se=>{
+        const seEx=exs.find(e=>e.id===se.exerciseId);
+        const seSets=[];
+        for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:0,reps:0,completed:false});
+        return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),sets:seSets};
+      });
+      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
     })
   };
   saveActiveWO(activeWorkout);
@@ -2491,7 +2498,27 @@ function startTimer(){
 async function renderActiveWorkout(){
   if(!activeWorkout)return;
   const logs=await getLogs();
+  const allExs=await getExercises();
   const con=document.getElementById('aw-exercises');
+
+  // Resolve missing superset exercise names and sync set counts
+  activeWorkout.exercises.forEach(ae=>{
+    if(ae.setType==='superset'&&ae.supersetExercises){
+      const mainSetCount=ae.sets.length;
+      ae.supersetExercises.forEach(se=>{
+        // Resolve name if missing or looks like a UUID
+        if(!se.exerciseName||se.exerciseName.length>30&&se.exerciseName.includes('-')){
+          const found=allExs.find(e=>e.id===se.exerciseId);
+          if(found)se.exerciseName=found.name;
+        }
+        // Ensure sets array exists and matches main exercise count
+        if(!se.sets)se.sets=[];
+        while(se.sets.length<mainSetCount)se.sets.push({weight:0,reps:0,completed:false});
+        while(se.sets.length>mainSetCount)se.sets.pop();
+      });
+    }
+  });
+
   function renderExCard(ae, ei, prev, isSuperset){
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
     const st=ae.setType||'standard';
@@ -2721,7 +2748,15 @@ function fmtRestTime(s){
 }
 
 function addSet(ei){
-  activeWorkout.exercises[ei].sets.push({weight:0,reps:0,completed:false});
+  const ae=activeWorkout.exercises[ei];
+  ae.sets.push({weight:0,reps:0,completed:false});
+  // Sync superset exercise set counts
+  if(ae.setType==='superset'&&ae.supersetExercises){
+    ae.supersetExercises.forEach(se=>{
+      if(!se.sets)se.sets=[];
+      while(se.sets.length<ae.sets.length)se.sets.push({weight:0,reps:0,completed:false});
+    });
+  }
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
