@@ -616,6 +616,19 @@ select.input{appearance:none;cursor:pointer;
 .active-plan-card .apc-meta{font-size:.78rem;color:var(--fg2);margin-top:2px}
 
 /* Community cards */
+.wtype-pill{display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:600;border-radius:20px;font-family:var(--font-body);margin-right:3px}
+.wtype-resistance_training{background:rgba(56,189,248,.12);color:#0ea5e9}
+.wtype-cardio{background:rgba(251,146,60,.12);color:#f97316}
+.wtype-yoga{background:rgba(34,197,94,.12);color:#16a34a}
+.wtype-sport{background:rgba(168,85,247,.12);color:#9333ea}
+.wtype-other{background:rgba(107,114,128,.12);color:#6b7280}
+.challenge-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;border-radius:var(--radius2);box-shadow:var(--shadow);margin-bottom:10px}
+.challenge-card h3{font-size:.95rem}
+.challenge-progress{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin:8px 0}
+.challenge-progress-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .3s}
+.challenge-leaderboard{font-size:.8rem}
+.challenge-leaderboard .lb-row{display:flex;align-items:center;gap:8px;padding:4px 0}
+.challenge-leaderboard .lb-rank{font-family:var(--font-mono);color:var(--fg3);min-width:20px}
 .community-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;text-align:center;cursor:pointer;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease}
 .community-card:hover{box-shadow:var(--shadow-hover)}
 .community-card .comm-avatar{width:48px;height:48px;border-radius:50%;background:var(--bg4);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--accent);overflow:hidden}
@@ -1034,9 +1047,11 @@ select.input{appearance:none;cursor:pointer;
   <div class="filter-bar mb-sm">
     <div class="chip active" onclick="showCommunityTab('feed',this)">Feed</div>
     <div class="chip" onclick="showCommunityTab('members',this)">Members</div>
+    <div class="chip" onclick="showCommunityTab('challenges',this)">Challenges</div>
   </div>
   <div id="community-feed-tab"></div>
   <div id="community-members-tab" style="display:none"></div>
+  <div id="community-challenges-tab" style="display:none"></div>
 </div>
 
 </div><!-- #app -->
@@ -1590,6 +1605,17 @@ const raw=[
 ["Small Sided Game 3v3",["full_body","core","calves"],"soccer","Play 3v3 in a small area. Develops all skills in a game-like setting. Maximum touches and decision making.","sport_run"],
 ];
 
+// Auto-tag workout type based on equipment
+const cardioExercises=new Set(['Burpee','Mountain Climber','Jump Squat','Box Jump','Broad Jump','Tuck Jump','Suicide Sprints']);
+function getWorkoutType(equip,name){
+  if(equip==='yoga')return'yoga';
+  if(['basketball','football','baseball','tennis','golf','soccer','other_sports'].includes(equip))return'sport';
+  if(equip==='jump_rope')return'cardio';
+  if(cardioExercises.has(name))return'cardio';
+  if(['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','resistance_band'].includes(equip))return'resistance_training';
+  return'other';
+}
+
 return raw.map((r,i)=>({
   id:'ex_'+i,
   name:r[0],
@@ -1597,6 +1623,7 @@ return raw.map((r,i)=>({
   equipment:r[2],
   instructions:r[3],
   diagram:diag[r[4]]||SVG.press(),
+  workout_type:getWorkoutType(r[2],r[0]),
   custom:false
 }));
 }
@@ -1623,7 +1650,7 @@ async function getExercises(){
   _exerciseCache=data.map(r=>({
     id:r.id,name:r.name,muscleGroups:r.muscle_groups,equipment:r.equipment,
     instructions:r.instructions,diagram:r.diagram,custom:r.is_custom,
-    photo_url:r.photo_url,video_url:r.video_url
+    photo_url:r.photo_url,video_url:r.video_url,workout_type:r.workout_type
   }));
   return _exerciseCache;
 }
@@ -1635,7 +1662,7 @@ async function getWorkouts(){
   if(error){toast('Error loading workouts');console.error(error);return[]}
   _workoutCache=data.map(r=>({
     id:r.id,name:r.name,description:r.description,exercises:r.exercises,
-    createdAt:r.created_at,source_plan_id:r.source_plan_id
+    workout_types:r.workout_types,createdAt:r.created_at,source_plan_id:r.source_plan_id
   }));
   return _workoutCache;
 }
@@ -1672,7 +1699,7 @@ async function seedExercisesIfNeeded(){
     // First time: seed everything
     const rows=allExs.map(e=>({
       name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
-      instructions:e.instructions,diagram:e.diagram,is_custom:false,created_by_user_id:null
+      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,is_custom:false,created_by_user_id:null
     }));
     for(let i=0;i<rows.length;i+=50){
       const chunk=rows.slice(i,i+50);
@@ -1697,7 +1724,7 @@ async function seedExercisesIfNeeded(){
   if(missing.length){
     const rows=missing.map(e=>({
       name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
-      instructions:e.instructions,diagram:e.diagram,is_custom:false,created_by_user_id:null
+      instructions:e.instructions,diagram:e.diagram,workout_type:e.workout_type,is_custom:false,created_by_user_id:null
     }));
     for(let i=0;i<rows.length;i+=50){
       const chunk=rows.slice(i,i+50);
@@ -2155,6 +2182,7 @@ async function renderWorkouts(){
       <div class="wo-name">${esc(w.name)}</div>
       ${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}
       <div class="wo-meta">${w.exercises.length} exercises &middot; ~${w.exercises.length*5}min</div>
+      ${(w.workout_types||[]).length?`<div style="margin-top:4px">${w.workout_types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}</div>`:''}
     </div>
     <div class="wo-actions">
       <button class="btn btn-sm btn-primary" onclick="startFromTemplate('${w.id}')">Start</button>
@@ -2277,12 +2305,20 @@ async function saveWorkoutTemplate(){
   const description=document.getElementById('create-desc').value.trim()||null;
   if(!name){toast('Enter a workout name');return}
   if(!createExercises.length){toast('Add at least one exercise');return}
+  // Auto-tag workout types
+  const allExs=await getExercises();
+  const types=new Set();
+  createExercises.forEach(ce=>{
+    const ex=allExs.find(e=>e.id===ce.exerciseId);
+    if(ex&&ex.workout_type)types.add(ex.workout_type);
+  });
+  const workout_types=[...types];
   if(editingWorkoutId){
-    const{error}=await sb.from('workout_templates').update({name,description,exercises:createExercises}).eq('id',editingWorkoutId);
+    const{error}=await sb.from('workout_templates').update({name,description,exercises:createExercises,workout_types}).eq('id',editingWorkoutId);
     if(error){toast('Error saving');console.error(error);return}
   }else{
     const{error}=await sb.from('workout_templates').insert({
-      user_id:currentUser.id,name,description,exercises:createExercises
+      user_id:currentUser.id,name,description,exercises:createExercises,workout_types
     });
     if(error){toast('Error saving');console.error(error);return}
   }
@@ -2309,10 +2345,10 @@ async function saveWorkoutTemplate(){
    EXERCISE PICKER MODAL
    ============================================================= */
 let pickerTarget='create';
-let pickerMuscle='', pickerEquip='';
+let pickerMuscle='', pickerEquip='', pickerType='';
 
 function openExercisePicker(target){
-  pickerTarget=target;pickerMuscle='';pickerEquip='';
+  pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';
   renderExercisePicker('');
 }
 
@@ -2321,17 +2357,26 @@ async function renderExercisePicker(q){
   if(q)exs=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
+  if(pickerType)exs=exs.filter(e=>e.workout_type===pickerType);
   openModal(`
     <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
       <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." value="${esc(q||'')}" oninput="renderExercisePicker(this.value)"></div>
-      <div class="flex gap-sm mb-sm">
-        <select class="input" style="font-size:.8rem" onchange="pickerMuscle=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
+      <div class="flex gap-sm mb-sm" style="flex-wrap:wrap">
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerType=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
+          <option value="">All Types</option>
+          <option value="resistance_training" ${pickerType==='resistance_training'?'selected':''}>Resistance</option>
+          <option value="cardio" ${pickerType==='cardio'?'selected':''}>Cardio</option>
+          <option value="yoga" ${pickerType==='yoga'?'selected':''}>Yoga</option>
+          <option value="sport" ${pickerType==='sport'?'selected':''}>Sport</option>
+          <option value="other" ${pickerType==='other'?'selected':''}>Other</option>
+        </select>
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerMuscle=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
           <option value="">All Muscles</option>
           ${ALL_MUSCLES.map(m=>`<option value="${m}" ${pickerMuscle===m?'selected':''}>${m.replace('_',' ')}</option>`).join('')}
         </select>
-        <select class="input" style="font-size:.8rem" onchange="pickerEquip=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
-          <option value="">All Equipment / Type</option>
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerEquip=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
+          <option value="">All Equipment</option>
           ${ALL_EQUIP.map(e=>`<option value="${e}" ${pickerEquip===e?'selected':''}>${e.replace('_',' ')}</option>`).join('')}
         </select>
       </div>
@@ -3050,6 +3095,12 @@ async function confirmFinish(){
       photo_urls:activeWorkout._sharePhotos||[],
       is_public:true
     });
+  }
+
+  // Check challenge completions
+  if(logData){
+    const dur=Math.round((new Date(activeWorkout.endTime)-new Date(activeWorkout.startTime))/60000);
+    await checkChallengeCompletions(logData.id,dur);
   }
 
   invalidateCache('logs');
@@ -4414,6 +4465,8 @@ function showCommunityTab(tab, el){
   el.classList.add('active');
   document.getElementById('community-feed-tab').style.display=tab==='feed'?'block':'none';
   document.getElementById('community-members-tab').style.display=tab==='members'?'block':'none';
+  document.getElementById('community-challenges-tab').style.display=tab==='challenges'?'block':'none';
+  if(tab==='challenges'&&viewingCommunityId)renderChallengesTab(viewingCommunityId);
 }
 
 async function renderCommunityFeed(communityId, members){
@@ -4548,6 +4601,174 @@ async function acceptInvite(inviteId, communityId){
 async function declineInvite(inviteId){
   await sb.from('community_invites').update({status:'declined'}).eq('id',inviteId);
   closeModal();toast('Invite declined');
+}
+
+/* =============================================================
+   COMMUNITY CHALLENGES
+   ============================================================= */
+async function renderChallengesTab(communityId){
+  const container=document.getElementById('community-challenges-tab');
+  const{data:membership}=await sb.from('community_members').select('role').eq('community_id',communityId).eq('user_id',currentUser.id).single();
+  const isAdmin=membership&&membership.role==='admin';
+  const now=new Date().toISOString().split('T')[0];
+
+  const{data:challenges}=await sb.from('community_challenges').select('*').eq('community_id',communityId).order('start_date',{ascending:false});
+  if(!challenges){container.innerHTML='<p class="fg3 small">Could not load challenges.</p>';return}
+
+  const active=challenges.filter(c=>c.start_date<=now&&c.end_date>=now);
+  const upcoming=challenges.filter(c=>c.start_date>now);
+  const past=challenges.filter(c=>c.end_date<now);
+
+  let html=isAdmin?`<button class="btn btn-sm btn-primary mb-md" onclick="openCreateChallenge('${communityId}')"><i data-lucide="plus" style="width:14px;height:14px"></i> Create Challenge</button>`:'';
+
+  if(active.length){
+    html+='<h3 class="mb-sm" style="font-size:.88rem">Active</h3>';
+    for(const c of active)html+=await renderChallengeCard(c);
+  }
+  if(upcoming.length){
+    html+='<h3 class="mb-sm mt-md" style="font-size:.88rem">Upcoming</h3>';
+    for(const c of upcoming)html+=await renderChallengeCard(c);
+  }
+  if(past.length){
+    html+='<h3 class="mb-sm mt-md fg3" style="font-size:.88rem">Past</h3>';
+    for(const c of past)html+=await renderChallengeCard(c);
+  }
+  if(!challenges.length)html+='<p class="fg3 small">No challenges yet.</p>';
+
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function renderChallengeCard(c){
+  const now=new Date();
+  const start=new Date(c.start_date);
+  const end=new Date(c.end_date);
+  const isActive=start<=now&&end>=now;
+
+  // Get completions for leaderboard
+  const{data:completions}=await sb.from('challenge_completions').select('user_id,profiles:user_id(name,username,avatar_url)').eq('challenge_id',c.id);
+  const userCounts={};
+  (completions||[]).forEach(comp=>{
+    userCounts[comp.user_id]=(userCounts[comp.user_id]||0)+1;
+  });
+  const leaderboard=Object.entries(userCounts).map(([uid,count])=>{
+    const p=(completions||[]).find(co=>co.user_id===uid)?.profiles||{};
+    return{uid,count,name:p.name||'Unknown',username:p.username||'',avatar_url:p.avatar_url};
+  }).sort((a,b)=>b.count-a.count).slice(0,5);
+
+  // My progress this week
+  const myCompletions=(completions||[]).filter(co=>co.user_id===currentUser.id).length;
+  const weekTarget=c.workouts_per_week||3;
+  const pct=Math.min(100,Math.round((myCompletions/weekTarget)*100));
+
+  const types=(c.allowed_workout_types||[]);
+
+  return `<div class="challenge-card">
+    <h3>${esc(c.name)}</h3>
+    ${c.description?`<p class="small fg2" style="margin-top:4px">${esc(c.description)}</p>`:''}
+    <div class="small fg3 mt-sm">${new Date(c.start_date).toLocaleDateString()} — ${new Date(c.end_date).toLocaleDateString()}</div>
+    <div class="small fg2 mt-sm">${c.workouts_per_week} workouts/week &middot; min ${c.min_workout_minutes}min</div>
+    ${types.length?`<div style="margin-top:6px">${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}</div>`:'<div class="small fg3 mt-sm">All workout types count</div>'}
+    ${isActive?`<div style="margin-top:10px"><div class="small fg2">Your progress: ${myCompletions}/${weekTarget}</div><div class="challenge-progress"><div class="challenge-progress-bar" style="width:${pct}%"></div></div></div>`:''}
+    ${leaderboard.length?`<div class="challenge-leaderboard mt-sm">
+      <div class="small fg3 mb-sm">Leaderboard</div>
+      ${leaderboard.map((l,i)=>`<div class="lb-row">
+        <span class="lb-rank">${i+1}</span>
+        <div class="feed-avatar" style="width:22px;height:22px;font-size:.55rem">${l.avatar_url?`<img src="${l.avatar_url}">`:(l.name||'?')[0].toUpperCase()}</div>
+        <span class="small">${esc(l.name)}</span>
+        <span class="mono small fg2" style="margin-left:auto">${l.count}</span>
+      </div>`).join('')}
+    </div>`:''}
+  </div>`;
+}
+
+function openCreateChallenge(communityId){
+  openModal(`
+    <div class="modal-header"><h2>Create Challenge</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="profile-field"><label>Challenge Name</label><input class="input" id="ch-name"></div>
+      <div class="profile-field"><label>Description</label><textarea class="input" id="ch-desc" style="min-height:50px"></textarea></div>
+      <div class="flex gap-sm">
+        <div class="profile-field grow"><label>Start Date</label><input class="input" id="ch-start" type="date"></div>
+        <div class="profile-field grow"><label>End Date</label><input class="input" id="ch-end" type="date"></div>
+      </div>
+      <div class="flex gap-sm">
+        <div class="profile-field grow"><label>Workouts/Week</label><input class="input" id="ch-wpw" type="number" value="3" min="1"></div>
+        <div class="profile-field grow"><label>Min Minutes</label><input class="input" id="ch-min" type="number" value="30" min="1"></div>
+      </div>
+      <div class="profile-field">
+        <label>Allowed Workout Types (none = all count)</label>
+        <div class="flex gap-sm wrap mt-sm">
+          <label class="small flex gap-sm"><input type="checkbox" value="resistance_training" class="ch-type"> Resistance</label>
+          <label class="small flex gap-sm"><input type="checkbox" value="cardio" class="ch-type"> Cardio</label>
+          <label class="small flex gap-sm"><input type="checkbox" value="yoga" class="ch-type"> Yoga</label>
+          <label class="small flex gap-sm"><input type="checkbox" value="sport" class="ch-type"> Sport</label>
+          <label class="small flex gap-sm"><input type="checkbox" value="other" class="ch-type"> Other</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveChallenge('${communityId}')">Save Challenge</button></div>
+  `);
+}
+
+async function saveChallenge(communityId){
+  const name=document.getElementById('ch-name').value.trim();
+  if(!name){toast('Name required');return}
+  const description=document.getElementById('ch-desc').value.trim()||null;
+  const start_date=document.getElementById('ch-start').value;
+  const end_date=document.getElementById('ch-end').value;
+  if(!start_date||!end_date){toast('Dates required');return}
+  const workouts_per_week=+document.getElementById('ch-wpw').value||3;
+  const min_workout_minutes=+document.getElementById('ch-min').value||30;
+  const types=[...document.querySelectorAll('.ch-type:checked')].map(el=>el.value);
+
+  const{error}=await sb.from('community_challenges').insert({
+    community_id:communityId,created_by:currentUser.id,name,description,
+    start_date,end_date,workouts_per_week,min_workout_minutes,
+    allowed_workout_types:types
+  });
+  if(error){toast('Error creating challenge');console.error(error);return}
+  closeModal();toast('Challenge created!');
+  await renderChallengesTab(communityId);
+}
+
+async function checkChallengeCompletions(workoutLogId, durationMins){
+  // Check all communities the user belongs to
+  const{data:memberships}=await sb.from('community_members').select('community_id').eq('user_id',currentUser.id);
+  if(!memberships||!memberships.length)return;
+  const commIds=memberships.map(m=>m.community_id);
+  const now=new Date().toISOString().split('T')[0];
+
+  const{data:challenges}=await sb.from('community_challenges').select('*').in('community_id',commIds).lte('start_date',now).gte('end_date',now);
+  if(!challenges||!challenges.length)return;
+
+  // Determine workout types from the log
+  const logTypes=new Set();
+  if(activeWorkout){
+    const allExs=await getExercises();
+    activeWorkout.exercises.forEach(ae=>{
+      const ex=allExs.find(e=>e.id===ae.exerciseId);
+      if(ex&&ex.workout_type)logTypes.add(ex.workout_type);
+    });
+  }
+
+  for(const c of challenges){
+    // Check duration
+    if(durationMins<(c.min_workout_minutes||0))continue;
+    // Check types
+    const allowed=c.allowed_workout_types||[];
+    if(allowed.length){
+      const match=[...logTypes].some(t=>allowed.includes(t));
+      if(!match)continue;
+    }
+    // Create completion
+    await sb.from('challenge_completions').insert({
+      challenge_id:c.id,user_id:currentUser.id,workout_log_id:workoutLogId
+    });
+    // Get community name
+    const{data:comm}=await sb.from('communities').select('name').eq('id',c.community_id).single();
+    toast(`Counts toward ${c.name}${comm?' in '+comm.name:''}!`);
+  }
 }
 
 /* =============================================================
