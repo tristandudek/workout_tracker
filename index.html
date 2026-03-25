@@ -4751,28 +4751,38 @@ async function openCommunityDetail(communityId){
   const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
   if(!comm){toast('Community not found');return}
   const{data:members}=await sb.from('community_members').select('*,profiles(name,username,avatar_url)').eq('community_id',communityId);
-  const myMembership=(members||[]).find(m=>m.user_id===currentUser.id);
-  const isAdmin=myMembership&&myMembership.role==='admin';
-  console.log('Is admin:',isAdmin,'User:',currentUser.id,'Membership:',myMembership);
+
+  // Direct query for own membership to avoid RLS issues
+  let{data:myRecord,error:myErr}=await sb.from('community_members').select('*').eq('community_id',communityId).eq('user_id',currentUser.id).maybeSingle();
+  console.log('Member record:',myRecord,'error:',myErr);
+  // Also check if user is the creator (should always be admin)
+  const isCreator=comm.created_by===currentUser.id;
+  // If creator but no membership record, fix it
+  if(isCreator&&!myRecord){
+    console.log('Creator missing membership, inserting as admin');
+    const{data:inserted}=await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'admin'}).select().single();
+    myRecord=inserted;
+  }
+  const isAdmin=myRecord&&myRecord.role==='admin';
+  const isMember=!!myRecord;
+  const showAdminTools=isAdmin||isCreator;
+  console.log('Is admin:',isAdmin,'Is creator:',isCreator,'Show admin tools:',showAdminTools);
 
   const header=document.getElementById('community-detail-header');
   header.innerHTML=`<div class="community-header">
-    <div class="flex between" style="align-items:flex-start">
-      <div>
-        <h2>${esc(comm.name)}</h2>
-        <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
-      </div>
-      <div class="flex gap-sm">
-        ${isAdmin?`<button class="btn btn-sm btn-primary" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Invite</button>`:''}
-        ${myMembership&&!isAdmin?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave</button>`:''}
-      </div>
+    <h2>${esc(comm.name)}</h2>
+    <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
+    <div class="flex gap-sm mt-sm">
+      ${showAdminTools?`<button class="btn btn-sm btn-primary" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Invite Members</button><button class="btn btn-sm" onclick="toast('Edit coming soon')"><i data-lucide="pencil" style="width:14px;height:14px"></i> Edit Community</button>`:''}
+      ${isMember&&!showAdminTools?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave Community</button>`:''}
     </div>
   </div>`;
 
+  if(typeof lucide!=='undefined')lucide.createIcons();
   // Render feed tab
   await renderCommunityFeed(communityId, members||[]);
   // Render members tab
-  renderCommunityMembers(members||[], isAdmin, communityId);
+  renderCommunityMembers(members||[], showAdminTools, communityId);
 }
 
 function showCommunityTab(tab, el){
