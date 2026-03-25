@@ -5200,11 +5200,14 @@ async function declineInvite(inviteId){
    ============================================================= */
 async function renderChallengesTab(communityId){
   const container=document.getElementById('community-challenges-tab');
-  const{data:membership}=await sb.from('community_members').select('role').eq('community_id',communityId).eq('user_id',currentUser.id).single();
+  console.log('Loading challenges for community:',communityId);
+  const{data:membership}=await sb.from('community_members').select('role').eq('community_id',communityId).eq('user_id',currentUser.id).maybeSingle();
   const isAdmin=membership&&membership.role==='admin';
   const now=new Date().toISOString().split('T')[0];
 
-  const{data:challenges}=await sb.from('community_challenges').select('*').eq('community_id',communityId).order('start_date',{ascending:false});
+  const{data:challenges,error:chErr}=await sb.from('community_challenges').select('*').eq('community_id',communityId).order('start_date',{ascending:false});
+  console.log('Challenges result:',challenges,'Error:',chErr);
+  if(chErr){container.innerHTML=`<p class="fg3 small">Could not load challenges: ${esc(chErr.message)}</p>`;return}
   if(!challenges){container.innerHTML='<p class="fg3 small">Could not load challenges.</p>';return}
 
   const active=challenges.filter(c=>c.start_date<=now&&c.end_date>=now);
@@ -5215,15 +5218,15 @@ async function renderChallengesTab(communityId){
 
   if(active.length){
     html+='<h3 class="mb-sm" style="font-size:.88rem">Active</h3>';
-    for(const c of active)html+=await renderChallengeCard(c);
+    for(const c of active)html+=await renderChallengeCard(c,isAdmin);
   }
   if(upcoming.length){
     html+='<h3 class="mb-sm mt-md" style="font-size:.88rem">Upcoming</h3>';
-    for(const c of upcoming)html+=await renderChallengeCard(c);
+    for(const c of upcoming)html+=await renderChallengeCard(c,isAdmin);
   }
   if(past.length){
     html+='<h3 class="mb-sm mt-md fg3" style="font-size:.88rem">Past</h3>';
-    for(const c of past)html+=await renderChallengeCard(c);
+    for(const c of past)html+=await renderChallengeCard(c,isAdmin);
   }
   if(!challenges.length)html+='<p class="fg3 small">No challenges yet.</p>';
 
@@ -5231,48 +5234,56 @@ async function renderChallengesTab(communityId){
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
-async function renderChallengeCard(c){
+async function renderChallengeCard(c, isAdmin){
   const now=new Date();
   const start=new Date(c.start_date);
   const end=new Date(c.end_date);
   const isActive=start<=now&&end>=now;
+  const isUpcoming=start>now;
+  const isEnded=end<now;
+  const statusBadge=isActive?'<span style="display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;background:rgba(34,197,94,.12);color:#16a34a">ACTIVE</span>'
+    :isUpcoming?'<span style="display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;background:rgba(56,189,248,.12);color:#0ea5e9">UPCOMING</span>'
+    :'<span style="display:inline-block;padding:2px 8px;font-size:.6rem;font-weight:700;border-radius:20px;background:var(--bg3);color:var(--fg3)">ENDED</span>';
 
-  // Get completions for leaderboard
-  const{data:completions}=await sb.from('challenge_completions').select('user_id,profiles:user_id(name,username,avatar_url)').eq('challenge_id',c.id);
+  const startStr=start.toLocaleDateString([],{month:'short',day:'numeric'});
+  const endStr=end.toLocaleDateString([],{month:'short',day:'numeric'});
+
+  // Get completions
+  const{data:completions}=await sb.from('challenge_completions').select('user_id').eq('challenge_id',c.id);
   const userCounts={};
-  (completions||[]).forEach(comp=>{
-    userCounts[comp.user_id]=(userCounts[comp.user_id]||0)+1;
-  });
-  const leaderboard=Object.entries(userCounts).map(([uid,count])=>{
-    const p=(completions||[]).find(co=>co.user_id===uid)?.profiles||{};
-    return{uid,count,name:p.name||'Unknown',username:p.username||'',avatar_url:p.avatar_url};
-  }).sort((a,b)=>b.count-a.count).slice(0,5);
+  (completions||[]).forEach(comp=>{userCounts[comp.user_id]=(userCounts[comp.user_id]||0)+1});
 
-  // My progress this week
-  const myCompletions=(completions||[]).filter(co=>co.user_id===currentUser.id).length;
+  const myCompletions=userCounts[currentUser.id]||0;
   const weekTarget=c.workouts_per_week||3;
   const pct=Math.min(100,Math.round((myCompletions/weekTarget)*100));
-
-  const types=(c.allowed_workout_types||[]);
+  const types=c.allowed_workout_types||[];
 
   return `<div class="challenge-card">
-    <h3>${esc(c.name)}</h3>
-    ${c.description?`<p class="small fg2" style="margin-top:4px">${esc(c.description)}</p>`:''}
-    <div class="small fg3 mt-sm">${new Date(c.start_date).toLocaleDateString()} — ${new Date(c.end_date).toLocaleDateString()}</div>
-    <div class="small fg2 mt-sm">${c.workouts_per_week} workouts/week &middot; min ${c.min_workout_minutes}min</div>
-    ${types.length?`<div style="margin-top:6px">${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}</div>`:'<div class="small fg3 mt-sm">All workout types count</div>'}
-    ${isActive?`<div style="margin-top:10px"><div class="small fg2">Your progress: ${myCompletions}/${weekTarget}</div><div class="challenge-progress"><div class="challenge-progress-bar" style="width:${pct}%"></div></div></div>`:''}
-    ${leaderboard.length?`<div class="challenge-leaderboard mt-sm">
-      <div class="small fg3 mb-sm">Leaderboard</div>
-      ${leaderboard.map((l,i)=>`<div class="lb-row">
-        <span class="lb-rank">${i+1}</span>
-        <div class="feed-avatar" style="width:22px;height:22px;font-size:.55rem">${l.avatar_url?`<img src="${l.avatar_url}">`:(l.name||'?')[0].toUpperCase()}</div>
-        <span class="small">${esc(l.name)}</span>
-        <span class="mono small fg2" style="margin-left:auto">${l.count}</span>
-      </div>`).join('')}
+    <div class="flex between" style="align-items:flex-start">
+      <div><h3 style="font-size:.95rem">${esc(c.name)}</h3></div>
+      ${statusBadge}
+    </div>
+    ${c.description?`<p class="small fg2" style="margin-top:4px;line-height:1.4">${esc(c.description)}</p>`:''}
+    <div class="small fg3 mt-sm">${startStr} → ${endStr}</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
+      <span class="feed-stat-pill"><span class="pill-val">${c.workouts_per_week||3}x</span> / week</span>
+      ${c.min_workout_minutes?`<span class="feed-stat-pill"><span class="pill-val">${c.min_workout_minutes}</span> min</span>`:''}
+      ${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}
+      ${!types.length?'<span class="feed-stat-pill">All types</span>':''}
+    </div>
+    ${isActive?`<div style="margin-top:10px"><div class="small fg2">Your progress: <strong>${myCompletions}</strong> / ${weekTarget} this week</div><div class="challenge-progress"><div class="challenge-progress-bar" style="width:${pct}%"></div></div></div>`:''}
+    ${isAdmin?`<div class="flex gap-sm mt-sm">
+      ${isEnded?`<button class="btn btn-sm btn-primary" onclick="manualPostResults('${c.id}')"><i data-lucide="trophy" style="width:12px;height:12px"></i> Post Results</button>`:''}
+      <button class="btn btn-sm btn-danger" onclick="deleteChallenge('${c.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
     </div>`:''}
-    ${end<now?`<button class="btn btn-sm btn-primary mt-sm" onclick="manualPostResults('${c.id}')"><i data-lucide="trophy" style="width:14px;height:14px"></i> Post Results</button>`:``}
   </div>`;
+}
+
+async function deleteChallenge(id){
+  if(!confirm('Delete this challenge?'))return;
+  await sb.from('community_challenges').delete().eq('id',id);
+  toast('Challenge deleted');
+  if(viewingCommunityId)await renderChallengesTab(viewingCommunityId);
 }
 
 function openCreateChallenge(communityId){
