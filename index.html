@@ -1639,18 +1639,48 @@ function saveActiveWO(wo){if(wo)localStorage.setItem(ACTIVE_WO_KEY,JSON.stringif
 async function seedExercisesIfNeeded(){
   const{count,error}=await sb.from('exercises').select('*',{count:'exact',head:true}).is('created_by_user_id',null);
   if(error){console.error('Seed check error:',error);return}
-  if(count>0)return;
-  const exs=generateExerciseDB();
-  const rows=exs.map(e=>({
-    name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
-    instructions:e.instructions,diagram:e.diagram,is_custom:false,created_by_user_id:null
-  }));
-  for(let i=0;i<rows.length;i+=50){
-    const chunk=rows.slice(i,i+50);
-    const{error:insertErr}=await sb.from('exercises').insert(chunk);
-    if(insertErr){console.error('Seed error at chunk',i,insertErr);return}
+
+  const allExs=generateExerciseDB();
+
+  if(!count||count===0){
+    // First time: seed everything
+    const rows=allExs.map(e=>({
+      name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
+      instructions:e.instructions,diagram:e.diagram,is_custom:false,created_by_user_id:null
+    }));
+    for(let i=0;i<rows.length;i+=50){
+      const chunk=rows.slice(i,i+50);
+      const{error:insertErr}=await sb.from('exercises').insert(chunk);
+      if(insertErr){console.error('Seed error at chunk',i,insertErr);return}
+    }
+    console.log('Seeded',rows.length,'exercises');
+    return;
   }
-  console.log('Seeded',rows.length,'exercises');
+
+  // Check for missing exercises by name (handles new categories added after first seed)
+  const{data:existing}=await sb.from('exercises').select('name').is('created_by_user_id',null);
+  const existingNames=new Set((existing||[]).map(e=>e.name));
+  const missing=allExs.filter(e=>!existingNames.has(e.name));
+
+  // Log equipment type counts for debugging
+  const eqCounts={};
+  allExs.forEach(e=>{eqCounts[e.equipment]=(eqCounts[e.equipment]||0)+1});
+  console.log('[Seed] Exercise counts by equipment/type:',eqCounts);
+  console.log('[Seed] Existing in DB:',count,'| Generated:',allExs.length,'| Missing:',missing.length);
+
+  if(missing.length){
+    const rows=missing.map(e=>({
+      name:e.name,muscle_groups:e.muscleGroups,equipment:e.equipment,
+      instructions:e.instructions,diagram:e.diagram,is_custom:false,created_by_user_id:null
+    }));
+    for(let i=0;i<rows.length;i+=50){
+      const chunk=rows.slice(i,i+50);
+      const{error:insertErr}=await sb.from('exercises').insert(chunk);
+      if(insertErr){console.error('Seed missing error at chunk',i,insertErr);return}
+    }
+    console.log('[Seed] Added',missing.length,'missing exercises');
+    invalidateCache('exercises');
+  }
 }
 
 /* =============================================================
@@ -1908,7 +1938,7 @@ async function renderHome(){
    ============================================================= */
 let dbMuscleFilter=new Set(), dbEquipFilter=new Set();
 const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body','flexibility','hips'];
-const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','yoga','basketball','football','baseball','tennis','golf','soccer','sports_drill','other'];
+const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','yoga','basketball','football','baseball','tennis','golf','soccer','other_sports','other'];
 
 async function renderDatabase(){
   document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
