@@ -213,9 +213,9 @@ select.input{appearance:none;cursor:pointer;
 .ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
 
 /* Stats Strip */
-.stats-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:16px 0;width:100%}
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:16px 0;width:100%}
 .stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow);overflow:hidden}
-.stat-box .val{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-box .val{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Workout Card */
@@ -278,6 +278,24 @@ select.input{appearance:none;cursor:pointer;
 .sub-row .set-check{width:24px;height:24px;font-size:.75rem}
 .set-del{width:24px;height:24px;background:transparent;border:none;border-radius:4px;color:var(--fg3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color .15s}
 .set-del:hover{color:var(--red)}
+
+/* DM / Messages */
+.convo-list{list-style:none}
+.convo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bg4);cursor:pointer;transition:background .12s}
+.convo-item:hover{background:var(--bg2)}
+.convo-item .convo-preview{flex:1;min-width:0}
+.convo-item .convo-name{font-family:var(--font-display);font-weight:700;font-size:.88rem}
+.convo-item .convo-last{font-size:.78rem;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.convo-item .convo-time{font-size:.68rem;color:var(--fg3);flex-shrink:0}
+.convo-item .convo-unread{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.chat-messages{display:flex;flex-direction:column;gap:6px;padding:12px 0;max-height:60vh;overflow-y:auto}
+.chat-bubble{max-width:75%;padding:10px 14px;border-radius:16px;font-size:.88rem;line-height:1.5;word-wrap:break-word}
+.chat-bubble.mine{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.theirs{align-self:flex-start;background:var(--bg2);color:var(--fg);border-bottom-left-radius:4px}
+.chat-bubble .chat-time{font-size:.6rem;opacity:.6;margin-top:4px}
+.chat-input-row{display:flex;gap:8px;padding:12px 0;border-top:1px solid var(--bg4)}
+.chat-input-row .input{flex:1}
+.msg-request-banner{background:var(--accent-light);padding:10px 14px;border-radius:var(--radius);margin-bottom:12px;font-size:.82rem;color:var(--accent);text-align:center}
 .primary-set-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:.88rem;font-weight:600}
 .primary-set-row .set-num{font-family:var(--font-mono);color:var(--fg2);min-width:28px}
 .primary-set-row .set-hint{font-size:.72rem;color:var(--fg3);font-weight:400}
@@ -743,6 +761,10 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- TOP RIGHT BAR -->
 <div id="profile-badge">
+  <button class="notif-bell" onclick="nav('messages')" style="position:relative">
+    <i data-lucide="message-square" style="width:18px;height:18px"></i>
+    <span class="notif-badge hidden" id="msg-count" style="position:absolute;top:-2px;right:-4px">0</span>
+  </button>
   <div class="notif-wrap">
     <button class="notif-bell" onclick="toggleNotifications()">
       <i data-lucide="bell" style="width:18px;height:18px"></i>
@@ -1060,6 +1082,32 @@ select.input{appearance:none;cursor:pointer;
   <div id="community-feed-tab"></div>
   <div id="community-members-tab" style="display:none"></div>
   <div id="community-challenges-tab" style="display:none"></div>
+</div>
+
+<!-- ============================================================
+     MESSAGES VIEW
+     ============================================================ -->
+<div class="view" id="view-messages" data-view="messages">
+  <h2 class="mt-md mb-md">Messages</h2>
+  <div id="msg-requests" class="mb-md"></div>
+  <div id="msg-conversations" class="convo-list"></div>
+  <div id="msg-empty" class="text-center mt-lg hidden">
+    <p class="fg3">No messages yet. Start a conversation from someone's profile.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     CHAT VIEW
+     ============================================================ -->
+<div class="view" id="view-chat" data-view="chat">
+  <button class="btn btn-sm btn-ghost mb-sm mt-md" onclick="nav('messages')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back</button>
+  <div id="chat-header" class="flex gap-sm mb-sm" style="align-items:center"></div>
+  <div id="chat-request-banner"></div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-input-row" id="chat-input-row">
+    <input class="input" id="chat-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMessage()">
+    <button class="btn btn-primary btn-sm" onclick="sendMessage()"><i data-lucide="send" style="width:14px;height:14px"></i></button>
+  </div>
 </div>
 
 </div><!-- #app -->
@@ -1873,8 +1921,9 @@ async function initApp(user){
   document.getElementById('app-wrapper').style.display='block';
   document.getElementById('loading-overlay').classList.add('hidden');
 
-  // Update notification badge
+  // Update notification and message badges
   await updateNotifBadge();
+  if(typeof updateMsgBadge==='function')await updateMsgBadge();
 
   // Check for ended challenges needing completion posts
   checkEndedChallenges().catch(e=>console.error('Challenge check error:',e));
@@ -1912,6 +1961,7 @@ async function nav(view){
   if(view==='my-info')await renderMyInfo();
   if(view==='privacy')await renderPrivacy();
   if(view==='communities')await renderCommunities();
+  if(view==='messages')await renderMessages();
   if(view==='plans-library')await renderPlansLibrary();
   window.scrollTo(0,0);
   if(typeof lucide!=='undefined')lucide.createIcons();
@@ -3285,6 +3335,7 @@ async function renderProfile(){
   const{count:followersCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',currentUser.id);
   const{count:followingCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',currentUser.id);
   const{count:othersDoneCount}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',currentUser.id).neq('user_id',currentUser.id);
+  const{count:savedPlansCount}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
 
   document.getElementById('profile-stats').innerHTML=`
     <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
@@ -3293,6 +3344,7 @@ async function renderProfile(){
     <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Completed by Followers</div></div>
     <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
     <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
+    <div class="stat-box"><div class="val">${savedPlansCount||0}</div><div class="lbl">Saved Plans</div></div>
   `;
 
   // Body metrics chart (Chart.js dual axis)
@@ -3386,36 +3438,26 @@ async function renderMetricsChart(){
 
 async function renderPlansLibrary(){
   const grid=document.getElementById('plans-library-grid');
-  // Fetch all public plans from all users
-  const{data:plans}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('is_public',true).order('created_at',{ascending:false}).limit(50);
-  // Also fetch user's own private plans
-  const{data:myPrivate}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('user_id',currentUser.id).eq('is_public',false).order('created_at',{ascending:false});
-  const allPlans=[...(myPrivate||[]),...(plans||[])];
-  // Dedupe by id
-  const seen=new Set();
-  const unique=allPlans.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true});
+  // My creations
+  const{data:myPlans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  // Saved plans
+  const{data:savedPlanRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*,profiles(id,name,username,avatar_url))').eq('user_id',currentUser.id);
+  const savedPlans=(savedPlanRows||[]).map(sp=>sp.workout_plans).filter(Boolean);
+  // All public for discovery
+  const{data:allPublic}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
 
   // Get adoption counts
-  const planIds=unique.map(p=>p.id);
+  const allIds=[...(myPlans||[]).map(p=>p.id),...savedPlans.map(p=>p.id),...(allPublic||[]).map(p=>p.id)];
+  const uniqueIds=[...new Set(allIds)];
   let adoptCounts={};
-  if(planIds.length){
-    const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
+  if(uniqueIds.length){
+    const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',uniqueIds);
     (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
   }
-  // Check which plans current user has adopted
-  let adopted=new Set();
-  if(planIds.length){
-    const{data:myAdoptions}=await sb.from('plan_adoptions').select('plan_id').eq('adopted_by_user_id',currentUser.id).in('plan_id',planIds);
-    adopted=new Set((myAdoptions||[]).map(a=>a.plan_id));
-  }
+  // Check saved
+  const savedIds=new Set(savedPlans.map(p=>p.id));
 
-  let html=`<div class="plan-create-tile" onclick="openCreatePlan()">
-    <i data-lucide="plus" style="width:32px;height:32px"></i>
-    <span style="font-family:var(--font-body);font-weight:600;font-size:.9rem">Create New Plan</span>
-  </div>`;
-
-  html+=unique.map(p=>{
-    const isOwn=p.user_id===currentUser.id;
+  function planCard(p, isOwn, isSaved){
     const creator=p.profiles||{};
     return `<div class="plan-card">
       ${isOwn?'<div class="plan-badge">Your Plan</div>':''}
@@ -3423,16 +3465,29 @@ async function renderPlansLibrary(){
       ${p.description?`<div class="small fg2" style="margin-top:4px;line-height:1.4">${esc(p.description)}</div>`:''}
       <div class="plan-meta" style="margin-top:8px">${(p.workouts||[]).length} workouts</div>
       <div class="plan-adopters">${adoptCounts[p.id]||0} followers</div>
-      <div class="plan-creator">
-        <div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div>
-        <span>${esc(creator.name||'Unknown')}</span>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:6px">
+      ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
         ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
-          :(adopted.has(p.id)?'<span class="tag tag-muscle">Using this plan</span>':`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use This Plan</button>`)}
+          :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use Plan</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save</button>`}`}
       </div>
     </div>`;
-  }).join('');
+  }
+
+  let html='<h3 class="mb-sm" style="grid-column:1/-1">My Creations</h3>';
+  html+=`<div class="plan-create-tile" onclick="openCreatePlan()"><i data-lucide="plus" style="width:32px;height:32px"></i><span style="font-family:var(--font-body);font-weight:600;font-size:.9rem">Create New Plan</span></div>`;
+  html+=(myPlans||[]).map(p=>planCard(p,true,false)).join('');
+
+  if(savedPlans.length){
+    html+='<h3 class="mb-sm mt-md" style="grid-column:1/-1">Saved Plans</h3>';
+    html+=savedPlans.map(p=>planCard(p,false,true)).join('');
+  }
+
+  html+='<h3 class="mb-sm mt-md" style="grid-column:1/-1">Discover Plans</h3>';
+  if(allPublic&&allPublic.length){
+    html+=allPublic.filter(p=>!savedIds.has(p.id)).map(p=>planCard(p,false,false)).join('');
+  }else{
+    html+='<p class="fg3 small" style="grid-column:1/-1">No public plans to discover yet.</p>';
+  }
 
   grid.innerHTML=html;
   if(typeof lucide!=='undefined')lucide.createIcons();
@@ -4180,18 +4235,23 @@ async function openPublicProfile(userId){
     <p class="fg2 small">@${esc(profile.username)}</p>
     ${profile.member_number?`<p class="fg3" style="font-size:.7rem;margin-top:4px">Member #${profile.member_number}</p>`:''}
     ${profile.bio?`<p class="pub-bio">${esc(profile.bio)}</p>`:''}
-    <div style="margin-top:12px">
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
       <button class="btn btn-sm ${isFollowing?'btn-danger':'btn-primary'}" data-following="${isFollowing}" onclick="toggleFollow('${userId}',this)">${isFollowing?'Unfollow':'Follow'}</button>
-    </div>
-    <div style="display:flex;gap:16px;justify-content:center;margin-top:12px">
-      <span class="small"><strong>${pubFollowers||0}</strong> <span class="fg2">followers</span></span>
-      <span class="small"><strong>${pubFollowing||0}</strong> <span class="fg2">following</span></span>
+      <button class="btn btn-sm" onclick="openOrCreateConversation('${userId}')"><i data-lucide="message-square" style="width:14px;height:14px"></i> Message</button>
     </div>
   </div>`;
 
+  // Compute public stats
+  const{count:pubWorkouts}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('user_id',userId);
+  const{count:pubCompletedByFollowers}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',userId).neq('user_id',userId);
+  const{count:pubSavedPlans}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',userId);
+
   html+=`<div class="stats-strip">
+    <div class="stat-box"><div class="val">${pubWorkouts||0}</div><div class="lbl">Workouts</div></div>
+    <div class="stat-box"><div class="val">${pubCompletedByFollowers||0}</div><div class="lbl">Completed by Followers</div></div>
     <div class="stat-box"><div class="val">${pubFollowers||0}</div><div class="lbl">Followers</div></div>
     <div class="stat-box"><div class="val">${pubFollowing||0}</div><div class="lbl">Following</div></div>
+    <div class="stat-box"><div class="val">${pubSavedPlans||0}</div><div class="lbl">Saved Plans</div></div>
   </div>`;
 
   if(profile.is_workouts_public){
@@ -4328,6 +4388,13 @@ async function handleNotifClick(notifId, type, relatedId){
     await nav('profile');
   }else if(type==='challenge_ended'&&relatedId){
     await nav('communities');
+  }else if((type==='message'||type==='message_request')&&relatedId){
+    // relatedId is conversation_id, find the other participant
+    const{data:convo}=await sb.from('conversations').select('participant_1,participant_2').eq('id',relatedId).single();
+    if(convo){
+      const otherId=convo.participant_1===currentUser.id?convo.participant_2:convo.participant_1;
+      await openChat(relatedId,otherId);
+    }else{await nav('messages')}
   }
   await updateNotifBadge();
 }
@@ -5079,6 +5146,154 @@ function switchFeedTab(tab){
   document.getElementById('feed-tab-following').classList.toggle('active',tab==='following');
   document.getElementById('feed-tab-suggested').classList.toggle('active',tab==='suggested');
   renderFeed();
+}
+
+/* =============================================================
+   DIRECT MESSAGES
+   ============================================================= */
+let currentConversationId=null;
+
+async function renderMessages(){
+  const{data:convos}=await sb.from('conversations').select('*').or(`participant_1.eq.${currentUser.id},participant_2.eq.${currentUser.id}`).order('last_message_at',{ascending:false});
+  const list=document.getElementById('msg-conversations');
+  const empty=document.getElementById('msg-empty');
+  const reqContainer=document.getElementById('msg-requests');
+
+  if(!convos||!convos.length){
+    list.innerHTML='';reqContainer.innerHTML='';empty.classList.remove('hidden');return;
+  }
+  empty.classList.add('hidden');
+
+  // Get profiles for all participants
+  const otherIds=[...new Set((convos||[]).map(c=>c.participant_1===currentUser.id?c.participant_2:c.participant_1))];
+  const{data:profiles}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',otherIds);
+  const pMap={};(profiles||[]).forEach(p=>pMap[p.id]=p);
+
+  // Get last message for each conversation
+  const pending=[];const accepted=[];
+  for(const c of convos){
+    const otherId=c.participant_1===currentUser.id?c.participant_2:c.participant_1;
+    const p=pMap[otherId]||{};
+    const{data:msgs}=await sb.from('messages').select('content,created_at,sender_id,is_read').eq('conversation_id',c.id).order('created_at',{ascending:false}).limit(1);
+    const last=msgs&&msgs[0];
+    const unread=last&&last.sender_id!==currentUser.id&&!last.is_read;
+    const item=`<div class="convo-item" onclick="openChat('${c.id}','${otherId}')">
+      <div class="feed-avatar">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div>
+      <div class="convo-preview"><div class="convo-name">${esc(p.name||'User')}</div><div class="convo-last">${last?esc(last.content.slice(0,50)):'No messages yet'}</div></div>
+      <div style="text-align:right"><div class="convo-time">${last?timeAgo(last.created_at):''}</div>${unread?'<div class="convo-unread" style="margin-left:auto;margin-top:4px"></div>':''}</div>
+    </div>`;
+    if(c.request_status==='pending'&&c.participant_2===currentUser.id)pending.push(item);
+    else accepted.push(item);
+  }
+  reqContainer.innerHTML=pending.length?`<div class="mb-md"><h3 class="small fg2 mb-sm">Message Requests</h3>${pending.join('')}</div>`:'';
+  list.innerHTML=accepted.join('')||'<p class="fg3 small">No conversations yet.</p>';
+  await updateMsgBadge();
+}
+
+async function updateMsgBadge(){
+  const{count}=await sb.from('messages').select('*',{count:'exact',head:true}).neq('sender_id',currentUser.id).eq('is_read',false);
+  const badge=document.getElementById('msg-count');
+  if(count>0){badge.textContent=count>99?'99+':count;badge.classList.remove('hidden')}
+  else{badge.classList.add('hidden')}
+}
+
+async function openChat(conversationId, otherUserId){
+  currentConversationId=conversationId;
+  currentView='chat';
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-chat').classList.add('active');
+
+  const{data:profile}=await sb.from('profiles').select('name,username,avatar_url').eq('id',otherUserId).single();
+  const{data:convo}=await sb.from('conversations').select('request_status,participant_1,participant_2').eq('id',conversationId).single();
+
+  document.getElementById('chat-header').innerHTML=`
+    <div class="feed-avatar" onclick="openPublicProfile('${otherUserId}')" style="cursor:pointer">${profile?.avatar_url?`<img src="${profile.avatar_url}">`:(profile?.name||'?')[0].toUpperCase()}</div>
+    <div><div style="font-family:var(--font-display);font-weight:700;font-size:.9rem">${esc(profile?.name||'User')}</div><div class="small fg2">@${esc(profile?.username||'')}</div></div>
+  `;
+
+  const isPending=convo&&convo.request_status==='pending';
+  const isRecipient=convo&&convo.participant_2===currentUser.id;
+  if(isPending&&isRecipient){
+    document.getElementById('chat-request-banner').innerHTML=`<div class="msg-request-banner">This is a message request. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="acceptConversation('${conversationId}')">Accept</button> <button class="btn btn-sm" style="margin-left:4px" onclick="declineConversation('${conversationId}')">Decline</button></div>`;
+  }else{
+    document.getElementById('chat-request-banner').innerHTML='';
+  }
+
+  // Mark messages as read
+  await sb.from('messages').update({is_read:true}).eq('conversation_id',conversationId).neq('sender_id',currentUser.id);
+
+  // Load messages
+  const{data:msgs}=await sb.from('messages').select('*').eq('conversation_id',conversationId).order('created_at');
+  const container=document.getElementById('chat-messages');
+  container.innerHTML=(msgs||[]).map(m=>`<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
+    ${esc(m.content)}
+    <div class="chat-time">${timeAgo(m.created_at)}</div>
+  </div>`).join('');
+  container.scrollTop=container.scrollHeight;
+
+  // Hide input if declined
+  document.getElementById('chat-input-row').style.display=convo&&convo.request_status==='declined'?'none':'flex';
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  await updateMsgBadge();
+}
+
+async function sendMessage(){
+  if(!currentConversationId)return;
+  const input=document.getElementById('chat-input');
+  const content=input.value.trim();
+  if(!content)return;
+  await sb.from('messages').insert({conversation_id:currentConversationId,sender_id:currentUser.id,content});
+  input.value='';
+  // Re-render chat
+  const container=document.getElementById('chat-messages');
+  container.innerHTML+=`<div class="chat-bubble mine">${esc(content)}<div class="chat-time">just now</div></div>`;
+  container.scrollTop=container.scrollHeight;
+}
+
+async function openOrCreateConversation(otherUserId){
+  if(otherUserId===currentUser.id){toast('Cannot message yourself');return}
+  // Check for existing conversation
+  const{data:existing}=await sb.from('conversations').select('id').or(`and(participant_1.eq.${currentUser.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${currentUser.id})`).maybeSingle();
+  if(existing){
+    await openChat(existing.id,otherUserId);return;
+  }
+  // Check mutual follow
+  const{data:f1}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',otherUserId).maybeSingle();
+  const{data:f2}=await sb.from('follows').select('id').eq('follower_id',otherUserId).eq('following_id',currentUser.id).maybeSingle();
+  const mutual=!!f1&&!!f2;
+  const status=mutual?'accepted':'pending';
+
+  const{data:newConvo,error}=await sb.from('conversations').insert({participant_1:currentUser.id,participant_2:otherUserId,request_status:status}).select().single();
+  if(error){toast('Error creating conversation');console.error(error);return}
+  await openChat(newConvo.id,otherUserId);
+}
+
+async function acceptConversation(conversationId){
+  await sb.from('conversations').update({request_status:'accepted'}).eq('id',conversationId);
+  document.getElementById('chat-request-banner').innerHTML='';
+  toast('Request accepted!');
+}
+
+async function declineConversation(conversationId){
+  await sb.from('conversations').update({request_status:'declined'}).eq('id',conversationId);
+  document.getElementById('chat-input-row').style.display='none';
+  document.getElementById('chat-request-banner').innerHTML='<div class="msg-request-banner" style="color:var(--fg3)">This conversation was declined.</div>';
+  toast('Request declined');
+}
+
+/* =============================================================
+   SAVED PLANS
+   ============================================================= */
+async function savePlanToLibrary(planId){
+  const{error}=await sb.from('saved_plans').insert({user_id:currentUser.id,plan_id:planId});
+  if(error){toast(error.message.includes('duplicate')?'Already saved':'Error saving');return}
+  toast('Plan saved!');
+}
+
+async function unsavePlan(planId){
+  await sb.from('saved_plans').delete().eq('user_id',currentUser.id).eq('plan_id',planId);
+  toast('Plan removed');
+  if(currentView==='plans-library')await renderPlansLibrary();
 }
 
 /* =============================================================
