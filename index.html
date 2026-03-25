@@ -270,7 +270,7 @@ select.input{appearance:none;cursor:pointer;
 .superset-group{border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px}
 .superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
 .set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
-.sub-rows{background:#f3f4f6;border-radius:0 0 8px 8px;padding:4px 0;margin-bottom:10px}
+.sub-rows{background:#f3f4f6;border-radius:0 0 8px 8px;padding:0;margin:0 0 10px 0}
 .sub-row{display:flex;align-items:center;gap:0;padding:0;background:none;border-radius:0;margin-bottom:0;font-size:.82rem;border-bottom:1px solid var(--bg4)}
 .sub-row:last-of-type{border-bottom:none}
 .sub-row input[type="number"],.sub-row input[type="text"]{width:64px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
@@ -304,7 +304,7 @@ select.input{appearance:none;cursor:pointer;
 .add-sub-link:hover{text-decoration:underline}
 .aw-ex-body{padding:10px 14px}
 .set-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.set-table col.c-set{width:50px}.set-table col.c-prev{width:80px}.set-table col.c-wt{width:74px}.set-table col.c-reps{width:74px}.set-table col.c-check{width:34px}.set-table col.c-del{width:30px}
+.set-table col.c-set{width:60px}.set-table col.c-prev{width:80px}.set-table col.c-wt{width:80px}.set-table col.c-reps{width:80px}.set-table col.c-check{width:40px}.set-table col.c-del{width:30px}
 .set-table th{
   font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;
   font-family:var(--font-display);font-weight:600;padding:4px 4px;text-align:center;
@@ -2761,7 +2761,7 @@ async function renderActiveWorkout(){
           <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
         </tr>`).join('')}
         </tbody></table>
-        <button class="add-sub-link" style="padding:6px 0" onclick="addSubSet(${ei},${si})">+ Add sub-set</button>
+        <button class="add-sub-link" style="padding:6px 4px" onclick="addSubSet(${ei},${si})">+ Add sub-set</button>
       </div>`;
     }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addPyramidSet(${ei})">+ Add Set</button>`;
   }
@@ -2792,7 +2792,7 @@ async function renderActiveWorkout(){
           <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
         </tr>`).join('')}
         </tbody></table>
-        <button class="add-sub-link" style="padding:6px 0" onclick="addDropSubSet(${ei},${si})">+ Add drop</button>
+        <button class="add-sub-link" style="padding:6px 4px" onclick="addDropSubSet(${ei},${si})">+ Add drop</button>
       </div>
     `).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
   }
@@ -2821,7 +2821,7 @@ async function renderActiveWorkout(){
           <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
         </tr>`).join('')}
         </tbody></table>
-        <button class="add-sub-link" style="padding:6px 0" onclick="addSubSet(${ei},${si})">+ Add pause set</button>
+        <button class="add-sub-link" style="padding:6px 4px" onclick="addSubSet(${ei},${si})">+ Add pause set</button>
       </div>
     `).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
   }
