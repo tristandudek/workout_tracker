@@ -532,7 +532,11 @@ select.input{appearance:none;cursor:pointer;
 .feed-caption{padding:0 14px 10px;font-size:.88rem;line-height:1.5}
 .feed-photos{display:flex;gap:4px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none}
 .feed-photos::-webkit-scrollbar{display:none}
-.feed-photos img{height:180px;border-radius:var(--radius);object-fit:cover;flex-shrink:0}
+.feed-photos{display:grid;gap:4px;padding:0 14px 10px}
+.feed-photos.ph-1{grid-template-columns:1fr}
+.feed-photos.ph-2{grid-template-columns:1fr 1fr}
+.feed-photos.ph-3,.feed-photos.ph-4{grid-template-columns:1fr 1fr}
+.feed-photos img{width:100%;max-height:400px;border-radius:8px;object-fit:cover}
 .feed-actions{display:flex;gap:16px;padding:10px 14px;border-top:1px solid var(--bg4)}
 .post-menu-wrap{position:relative;margin-left:auto}
 .post-menu-btn{background:none;border:none;color:var(--fg3);cursor:pointer;font-size:1.2rem;padding:4px 8px;border-radius:var(--radius);line-height:1}
@@ -2028,6 +2032,12 @@ function fuzzySearchExercises(exs,q){
 }
 
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+function renderFeedPhotos(raw){
+  let photos=raw;
+  if(typeof photos==='string'){try{photos=JSON.parse(photos)}catch(e){photos=[]}}
+  if(!Array.isArray(photos)||!photos.length)return'';
+  return `<div class="feed-photos ph-${Math.min(photos.length,4)}">${photos.map(u=>`<img src="${u}" loading="lazy" onerror="console.log('Image failed:',this.src);this.style.display='none'">`).join('')}</div>`;
+}
 const ST_TIPS={superset:'Two or more exercises performed back-to-back with no rest between them. Rest only after completing all exercises in the group. Great for saving time and increasing intensity.',drop:'Perform a set to near failure, then immediately reduce the weight by 10-25% and continue for more reps. Repeat for each drop. Maximizes muscle fatigue and volume in less time.',ascending_pyramid:'Start with a lighter weight and higher reps, increasing the weight and decreasing reps with each set. Builds towards your heaviest lift while warming up the muscle.',descending_pyramid:'Start with your heaviest weight and lowest reps, decreasing weight and increasing reps each set. Allows maximum effort on the first set when fresh.',rest_pause:'Perform a set to near failure, rest for 10-20 seconds, then continue with the same weight for additional reps. The brief rest allows partial recovery to squeeze out more volume.'};
 function stBadgeHtml(st){
   if(st==='standard'||!st)return'';
@@ -4276,7 +4286,7 @@ async function renderFeed(){
         ${p.workout_volume?`<span class="feed-stat-pill"><span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
       </div>
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
-      ${photos.length?`<div class="feed-photos">${photos.map(u=>`<img src="${u}" loading="lazy">`).join('')}</div>`:''}
+      ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action ${p.i_liked?'liked':''}" onclick="toggleLike('${p.post_id}',this)">
           ${p.i_liked?'&#10084;':'&#9825;'} <span class="count">${p.likes_count}</span>
@@ -4763,14 +4773,21 @@ async function submitPostV2(){
   const caption=document.getElementById('share-caption-v2').value.trim();
   const shareToFeed=document.getElementById('share-toggle-v2')?.checked;
   const photoUrls=[];
+  console.log('Starting photo upload, files:',pendingPostPhotos.length);
   if(pendingPostPhotos.length){
     for(const file of pendingPostPhotos){
-      const ext=file.name.split('.').pop();
-      const path=`${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-      const url=await uploadFile('post-photos',file,path);
-      if(url)photoUrls.push(url);
+      console.log('Uploading file:',file.name,file.size,file.type);
+      const filePath=`${currentUser.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'')}`;
+      const{data:upData,error:upErr}=await sb.storage.from('post-photos').upload(filePath,file,{upsert:true,contentType:file.type});
+      console.log('Upload result:',upData,'error:',upErr);
+      if(upErr){console.log('Upload failed:',upErr.message,upErr);continue}
+      const{data:urlData}=sb.storage.from('post-photos').getPublicUrl(filePath);
+      const publicUrl=urlData?.publicUrl;
+      console.log('Public URL:',publicUrl);
+      if(publicUrl)photoUrls.push(publicUrl);
     }
   }
+  console.log('All photo URLs:',photoUrls);
   if(shareToFeed&&activeWorkout&&activeWorkout._logId){
     console.log('Creating post for log:',activeWorkout._logId);
     const{data:post,error:postErr}=await sb.from('workout_posts').insert({
@@ -5062,7 +5079,7 @@ async function renderCommunityFeed(communityId, members){
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
-      ${photos.length?`<div class="feed-photos">${photos.map(u=>`<img src="${u}" loading="lazy">`).join('')}</div>`:''}
+      ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
         <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
