@@ -270,7 +270,7 @@ select.input{appearance:none;cursor:pointer;
 .superset-group{border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px}
 .superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
 .set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
-.sub-rows{background:#f3f4f6;border-radius:0 0 8px 8px;padding:8px;margin-bottom:10px}
+.sub-rows{background:#f3f4f6;border-radius:0 0 8px 8px;padding:4px 0;margin-bottom:10px}
 .sub-row{display:flex;align-items:center;gap:0;padding:0;background:none;border-radius:0;margin-bottom:0;font-size:.82rem;border-bottom:1px solid var(--bg4)}
 .sub-row:last-of-type{border-bottom:none}
 .sub-row input[type="number"],.sub-row input[type="text"]{width:64px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
@@ -303,15 +303,16 @@ select.input{appearance:none;cursor:pointer;
 .add-sub-link{font-size:.72rem;color:var(--accent);cursor:pointer;background:none;border:none;font-family:var(--font-body);padding:2px 0;margin-top:2px}
 .add-sub-link:hover{text-decoration:underline}
 .aw-ex-body{padding:10px 14px}
-.set-table{width:100%;border-collapse:collapse}
+.set-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.set-table col.c-set{width:50px}.set-table col.c-prev{width:80px}.set-table col.c-wt{width:74px}.set-table col.c-reps{width:74px}.set-table col.c-check{width:34px}.set-table col.c-del{width:30px}
 .set-table th{
   font-size:.65rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;
-  font-family:var(--font-display);font-weight:600;padding:4px 6px;text-align:center;
+  font-family:var(--font-display);font-weight:600;padding:4px 4px;text-align:center;
   border-bottom:1px solid var(--bg4);
 }
-.set-table th:first-child{text-align:left;width:36px}
-.set-table td{padding:5px 4px;text-align:center;vertical-align:middle}
-.set-table td:first-child{text-align:left;font-family:var(--font-mono);font-size:.82rem;color:var(--fg2)}
+.set-table th:first-child{text-align:left}
+.set-table td{padding:5px 4px;text-align:center;vertical-align:middle;overflow:hidden}
+.set-table td:first-child{text-align:left;font-family:var(--font-mono);font-size:.78rem;color:var(--fg2)}
 .set-table .prev{font-size:.75rem;color:var(--fg3);font-family:var(--font-mono)}
 .set-table input[type="number"],.set-table input[type="text"]{
   width:64px;padding:6px 4px;background:var(--bg);border:1px solid var(--bg4);
@@ -2005,6 +2006,8 @@ function fuzzySearchExercises(exs,q){
   }).filter(e=>e._score>0).sort((a,b)=>b._score-a._score);
 }
 
+const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+
 function fmtDuration(mins){
   if(mins<60)return mins+'m';
   const h=Math.floor(mins/60);const m=mins%60;
@@ -2735,11 +2738,11 @@ async function renderActiveWorkout(){
     const isAsc=st==='ascending_pyramid';
     const repScheme=isAsc?[12,10,8,6]:[6,8,10,12];
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:0,reps:0,completed:false}]});
-    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>{
       const suggestedReps=repScheme[si]||repScheme[repScheme.length-1];
       return `
-      <table class="set-table"><tbody><tr>
+      <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
@@ -2748,7 +2751,7 @@ async function renderActiveWorkout(){
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
       <div class="sub-rows">
-        <table class="set-table" style="margin:0"><tbody>
+        <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Sub ${subi+1}</td>
           <td class="prev">—</td>
@@ -2768,9 +2771,9 @@ async function renderActiveWorkout(){
     ae.sets.forEach((s,si)=>{
       if(!s.subSets){s.subSets=[];for(let d=0;d<numDrops;d++){s.subSets.push({weight:s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0,reps:0,completed:false})}}
     });
-    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
-      <table class="set-table"><tbody><tr>
+      <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
@@ -2779,7 +2782,7 @@ async function renderActiveWorkout(){
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
       <div class="sub-rows">
-        <table class="set-table" style="margin:0"><tbody>
+        <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Drop ${subi+1}</td>
           <td class="prev">—</td>
@@ -2797,9 +2800,9 @@ async function renderActiveWorkout(){
   function renderRestPauseBody(ae,ei,prev,targetRep){
     const rpDur=ae.restPauseDuration||15;
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
-    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
-      <table class="set-table"><tbody><tr>
+      <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
@@ -2808,7 +2811,7 @@ async function renderActiveWorkout(){
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
       <div class="sub-rows">
-        <table class="set-table" style="margin:0"><tbody>
+        <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Pause ${subi+1}</td>
           <td class="prev">—</td>
@@ -2840,7 +2843,7 @@ async function renderActiveWorkout(){
         ${(st==='ascending_pyramid'||st==='descending_pyramid')?renderPyramidBody(ae,ei,prev,st,targetRep)
           :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
           :st==='drop'?renderDropSetBody(ae,ei,prev,targetRep)
-          :`<table class="set-table">
+          :`<table class="set-table">${SET_COLS}
           <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
@@ -2882,7 +2885,7 @@ async function renderActiveWorkout(){
                 <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:.65rem" onclick="activeWorkout.exercises[${ei}].supersetExercises.splice(${si},1);renderActiveWorkout()">&times;</button>
               </div>
               <div class="aw-ex-body">
-                <table class="set-table">
+                <table class="set-table">${SET_COLS}
                   <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
                   <tbody>
                     ${se.sets.map((s,ssi)=>`<tr>
