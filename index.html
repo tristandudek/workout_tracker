@@ -1964,7 +1964,20 @@ async function saveWorkoutTemplate(){
   invalidateCache('workouts');
   toast(editingWorkoutId?'Workout updated!':'Workout saved!');
   editingWorkoutId=null;
-  await nav('workouts');
+
+  if(_returnToPlanAfterCreate){
+    _returnToPlanAfterCreate=false;
+    // Find the newly created workout and add it to the plan
+    const freshWos=await getWorkouts();
+    if(freshWos.length){
+      const newest=freshWos[0]; // sorted by created_at desc
+      planWorkouts.push({workout_template_id:newest.id,week:1,day:planWorkouts.length+1});
+    }
+    await nav('plan-edit');
+    renderPlanWorkouts();
+  }else{
+    await nav('workouts');
+  }
 }
 
 /* =============================================================
@@ -3013,17 +3026,27 @@ async function renderPlanWorkouts(){
   }).join('');
 }
 
+let _returnToPlanAfterCreate=false;
+
 async function addWorkoutToPlan(){
   const wos=await getWorkouts();
-  if(!wos.length){toast('Create workout templates first');return}
+  const woList=wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();planWorkouts.push({workout_template_id:'${w.id}',week:1,day:${planWorkouts.length+1}});renderPlanWorkouts()">
+    <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+  </div>`).join('');
+
   openModal(`
     <div class="modal-header"><h2>Select Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      ${wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();planWorkouts.push({workout_template_id:'${w.id}',week:1,day:${planWorkouts.length+1}});renderPlanWorkouts()">
-        <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
-      </div>`).join('')}
+      ${wos.length?woList:'<p class="fg2 small mb-md">You have no saved workouts yet.</p>'}
+      <div class="divider"></div>
+      <button class="btn btn-primary btn-block mt-sm" onclick="closeModal();createWorkoutFromPlan()"><i data-lucide="plus" style="width:14px;height:14px"></i> Create New Workout</button>
     </div>
   `);
+}
+
+function createWorkoutFromPlan(){
+  _returnToPlanAfterCreate=true;
+  openCreateWorkout();
 }
 
 async function savePlan(){
