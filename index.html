@@ -799,7 +799,11 @@ select.input{appearance:none;cursor:pointer;
   <div class="flex between mb-md mt-md">
     <h2 id="create-title">Create Workout</h2>
   </div>
-  <input class="input mb-md" id="create-name" placeholder="Workout name (e.g., Push Day A)">
+  <input class="input mb-sm" id="create-name" placeholder="Workout name (e.g., Push Day A)">
+  <div style="position:relative;margin-bottom:16px">
+    <textarea class="input" id="create-desc" placeholder="Add a description, instructions, or notes for this workout..." style="min-height:60px" oninput="document.getElementById('create-desc-count').textContent=this.value.length"></textarea>
+    <span id="create-desc-count" style="position:absolute;bottom:6px;right:10px;font-size:.65rem;color:var(--fg3)">0</span>
+  </div>
   <div id="create-exercises"></div>
   <button class="btn btn-block mt-sm" onclick="openExercisePicker('create')">+ Add Exercise</button>
   <div class="flex gap-sm mt-md">
@@ -1396,8 +1400,8 @@ async function getWorkouts(){
     .eq('user_id',currentUser.id).order('created_at',{ascending:false});
   if(error){toast('Error loading workouts');console.error(error);return[]}
   _workoutCache=data.map(r=>({
-    id:r.id,name:r.name,exercises:r.exercises,createdAt:r.created_at,
-    source_plan_id:r.source_plan_id
+    id:r.id,name:r.name,description:r.description,exercises:r.exercises,
+    createdAt:r.created_at,source_plan_id:r.source_plan_id
   }));
   return _workoutCache;
 }
@@ -1871,6 +1875,7 @@ async function renderWorkouts(){
   list.innerHTML=wos.map(w=>`<div class="wo-card">
     <div class="wo-info">
       <div class="wo-name">${esc(w.name)}</div>
+      ${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}
       <div class="wo-meta">${w.exercises.length} exercises &middot; ~${w.exercises.length*5}min</div>
     </div>
     <div class="wo-actions">
@@ -1898,6 +1903,8 @@ function openCreateWorkout(){
   createExercises=[];editingWorkoutId=null;
   document.getElementById('create-title').textContent='Create Workout';
   document.getElementById('create-name').value='';
+  document.getElementById('create-desc').value='';
+  document.getElementById('create-desc-count').textContent='0';
   document.getElementById('create-save-btn').textContent='Save Workout';
   renderCreateExercises();
   nav('create');
@@ -1909,6 +1916,8 @@ async function editWorkoutTemplate(id){
   editingWorkoutId=id;
   createExercises=w.exercises.map(e=>({...e}));
   document.getElementById('create-title').textContent='Edit Workout';
+  document.getElementById('create-desc').value=w.description||'';
+  document.getElementById('create-desc-count').textContent=(w.description||'').length;
   document.getElementById('create-name').value=w.name;
   document.getElementById('create-save-btn').textContent='Save Changes';
   renderCreateExercises();
@@ -1950,14 +1959,15 @@ function ceDrop(e,i){
 
 async function saveWorkoutTemplate(){
   const name=document.getElementById('create-name').value.trim();
+  const description=document.getElementById('create-desc').value.trim()||null;
   if(!name){toast('Enter a workout name');return}
   if(!createExercises.length){toast('Add at least one exercise');return}
   if(editingWorkoutId){
-    const{error}=await sb.from('workout_templates').update({name,exercises:createExercises}).eq('id',editingWorkoutId);
+    const{error}=await sb.from('workout_templates').update({name,description,exercises:createExercises}).eq('id',editingWorkoutId);
     if(error){toast('Error saving');console.error(error);return}
   }else{
     const{error}=await sb.from('workout_templates').insert({
-      user_id:currentUser.id,name,exercises:createExercises
+      user_id:currentUser.id,name,description,exercises:createExercises
     });
     if(error){toast('Error saving');console.error(error);return}
   }
@@ -2068,7 +2078,7 @@ async function startWorkoutFlow(){
   if(wos.length){
     html+=`<h3 class="mb-sm fg2" style="font-size:.85rem">Start from a Workout</h3>`;
     html+=wos.map(w=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${w.id}')">
-      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises</div></div>
       <span class="accent" style="font-size:1.2rem">&#9654;</span>
     </div>`).join('');
     html+=`<div class="divider"></div>`;
@@ -3031,7 +3041,7 @@ let _returnToPlanAfterCreate=false;
 async function addWorkoutToPlan(){
   const wos=await getWorkouts();
   const woList=wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();planWorkouts.push({workout_template_id:'${w.id}',week:1,day:${planWorkouts.length+1}});renderPlanWorkouts()">
-    <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+    <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises</div></div>
   </div>`).join('');
 
   openModal(`
