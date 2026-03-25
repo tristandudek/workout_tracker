@@ -270,6 +270,17 @@ select.input{appearance:none;cursor:pointer;
 .superset-group{border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px}
 .superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
 .set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
+.sub-rows{margin-left:24px;border-left:2px solid var(--accent);padding-left:10px;margin-top:4px;margin-bottom:8px}
+.sub-row{display:flex;align-items:center;gap:6px;padding:6px 0;background:var(--bg2);border-radius:var(--radius);padding:6px 8px;margin-bottom:3px;font-size:.82rem}
+.sub-row input[type="number"]{width:60px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
+.sub-row input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.sub-row .sub-label{font-size:.7rem;color:var(--fg3);min-width:50px}
+.sub-row .set-check{width:24px;height:24px;font-size:.75rem}
+.primary-set-row{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:.88rem;font-weight:600}
+.primary-set-row .set-num{font-family:var(--font-mono);color:var(--fg2);min-width:28px}
+.primary-set-row .set-hint{font-size:.72rem;color:var(--fg3);font-weight:400}
+.add-sub-link{font-size:.72rem;color:var(--accent);cursor:pointer;background:none;border:none;font-family:var(--font-body);padding:2px 0;margin-top:2px}
+.add-sub-link:hover{text-decoration:underline}
 .aw-ex-body{padding:10px 14px}
 .set-table{width:100%;border-collapse:collapse}
 .set-table th{
@@ -2519,6 +2530,58 @@ async function renderActiveWorkout(){
     }
   });
 
+  function renderPyramidBody(ae,ei,prev,st,targetRep){
+    const isAsc=st==='ascending_pyramid';
+    const repScheme=isAsc?[12,10,8,6]:[6,8,10,12];
+    // Ensure each set has subSets
+    ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:0,reps:0,completed:false}]});
+    return ae.sets.map((s,si)=>{
+      const suggestedReps=repScheme[si]||repScheme[repScheme.length-1];
+      return `<div class="primary-set-row">
+        <span class="set-num">${si+1}</span>
+        <span>${isAsc?'&#8593;':'&#8595;'} Target: ${suggestedReps} reps</span>
+        <span class="set-hint">${isAsc?'Increase weight':'Decrease weight'}</span>
+      </div>
+      <div class="sub-rows">
+        ${s.subSets.map((sub,subi)=>`<div class="sub-row">
+          <input type="number" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
+          <input type="number" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
+          <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
+          ${s.subSets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;padding:2px" onclick="removeSubSet(${ei},${si},${subi})"><i data-lucide="x" style="width:11px;height:11px"></i></button>`:''}
+        </div>`).join('')}
+        <button class="add-sub-link" onclick="addSubSet(${ei},${si})">+ Add sub-set</button>
+      </div>`;
+    }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addPyramidSet(${ei})">+ Add Set</button>`;
+  }
+
+  function renderRestPauseBody(ae,ei,prev,targetRep){
+    const rpDur=ae.restPauseDuration||15;
+    ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
+    return ae.sets.map((s,si)=>{
+      return `<div style="padding:6px 0;border-bottom:1px solid var(--bg4)">
+        <div class="flex gap-sm" style="align-items:center;padding:4px 0">
+          <span style="font-family:var(--font-mono);color:var(--fg2);min-width:28px;font-weight:600">${si+1}</span>
+          <input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value)" placeholder="wt" style="width:64px;padding:4px;height:30px;text-align:center;font-family:var(--font-mono);font-size:.85rem;border:1px solid var(--bg4);border-radius:var(--radius);background:var(--bg);color:var(--fg)">
+          <input type="number" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="reps" style="width:64px;padding:4px;height:30px;text-align:center;font-family:var(--font-mono);font-size:.85rem;border:1px solid var(--bg4);border-radius:var(--radius);background:var(--bg);color:var(--fg)">
+          ${targetRep?`<span style="font-size:.65rem;color:var(--fg3)">${targetRep}</span>`:''}
+          <div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div>
+          ${ae.sets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;padding:2px" onclick="removeSet(${ei},${si})"><i data-lucide="x" style="width:12px;height:12px"></i></button>`:''}
+          <span style="font-size:.65rem;color:var(--fg3);margin-left:auto">${rpDur}s pause</span>
+        </div>
+        <div class="sub-rows">
+          ${s.subSets.map((sub,subi)=>`<div class="sub-row">
+            <span class="sub-label">Pause ${subi+1}</span>
+            <input type="number" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
+            <input type="number" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
+            <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
+            ${s.subSets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;padding:2px" onclick="removeSubSet(${ei},${si},${subi})"><i data-lucide="x" style="width:11px;height:11px"></i></button>`:''}
+          </div>`).join('')}
+          <button class="add-sub-link" onclick="addSubSet(${ei},${si})">+ Add pause set</button>
+        </div>
+      </div>`;
+    }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
+  }
+
   function renderExCard(ae, ei, prev, isSuperset){
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
     const st=ae.setType||'standard';
@@ -2533,9 +2596,9 @@ async function renderActiveWorkout(){
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
       <div class="aw-ex-body">
-        ${st==='ascending_pyramid'?'<div class="small fg2 mb-sm">&#8593; Increase weight each set</div>':''}
-        ${st==='descending_pyramid'?'<div class="small fg2 mb-sm">&#8595; Decrease weight each set</div>':''}
-        <table class="set-table">
+        ${(st==='ascending_pyramid'||st==='descending_pyramid')?renderPyramidBody(ae,ei,prev,st,targetRep)
+          :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
+          :`<table class="set-table">
           <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
@@ -2551,7 +2614,7 @@ async function renderActiveWorkout(){
         <div class="flex gap-sm mt-sm">
           <button class="btn btn-sm btn-ghost grow" onclick="addSet(${ei})">+ Add Set</button>
           ${st==='drop'?`<button class="btn btn-sm btn-ghost" onclick="addDropSet(${ei})">+ Add Drop</button>`:''}
-        </div>
+        </div>`}
       </div>`;
   }
 
@@ -2747,6 +2810,49 @@ document.addEventListener('focusin',e=>{
 function fmtRestTime(s){
   const m=Math.floor(s/60);const sec=s%60;
   return m?`${m}:${sec.toString().padStart(2,'0')}`:`0:${sec.toString().padStart(2,'0')}`;
+}
+
+function updateSubSet(ei,si,subi,field,val){
+  if(!activeWorkout.exercises[ei].sets[si].subSets)return;
+  activeWorkout.exercises[ei].sets[si].subSets[subi][field]=val;
+  saveActiveWO(activeWorkout);
+}
+
+function toggleSubSet(ei,si,subi){
+  const sub=activeWorkout.exercises[ei].sets[si].subSets[subi];
+  sub.completed=!sub.completed;
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+  if(sub.completed){
+    const ae=activeWorkout.exercises[ei];
+    const st=ae.setType||'standard';
+    if(st==='rest_pause'){
+      startGlobalRestTimer(ae.restPauseDuration||15);
+    }
+  }
+}
+
+function addSubSet(ei,si){
+  const s=activeWorkout.exercises[ei].sets[si];
+  if(!s.subSets)s.subSets=[];
+  const lastSub=s.subSets[s.subSets.length-1];
+  s.subSets.push({weight:lastSub?lastSub.weight:s.weight||0,reps:0,completed:false});
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function removeSubSet(ei,si,subi){
+  const s=activeWorkout.exercises[ei].sets[si];
+  if(!s.subSets||s.subSets.length<=1)return;
+  s.subSets.splice(subi,1);
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function addPyramidSet(ei){
+  activeWorkout.exercises[ei].sets.push({weight:0,reps:0,completed:false,subSets:[{weight:0,reps:0,completed:false}]});
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 function removeSet(ei,si){
