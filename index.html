@@ -2536,7 +2536,7 @@ async function renderActiveWorkout(){
         ${st==='ascending_pyramid'?'<div class="small fg2 mb-sm">&#8593; Increase weight each set</div>':''}
         ${st==='descending_pyramid'?'<div class="small fg2 mb-sm">&#8595; Decrease weight each set</div>':''}
         <table class="set-table">
-          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th></tr></thead>
+          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
@@ -2544,6 +2544,7 @@ async function renderActiveWorkout(){
               <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value)" placeholder="0"></td>
               <td><div style="display:flex;align-items:center;gap:4px"><input type="number" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+              <td>${ae.sets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:2px" onclick="removeSet(${ei},${si})" title="Remove set"><i data-lucide="x" style="width:12px;height:12px"></i></button>`:''}</td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -2578,7 +2579,7 @@ async function renderActiveWorkout(){
               </div>
               <div class="aw-ex-body">
                 <table class="set-table">
-                  <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th></tr></thead>
+                  <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
                   <tbody>
                     ${se.sets.map((s,ssi)=>`<tr>
                       <td>${ssi+1}</td>
@@ -2586,6 +2587,7 @@ async function renderActiveWorkout(){
                       <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSupersetSet(${ei},${si},${ssi},'weight',+this.value)" placeholder="0"></td>
                       <td><input type="number" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="0"></td>
                       <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSupersetSet(${ei},${si},${ssi})">&#10003;</div></td>
+                      <td>${se.sets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:2px" onclick="removeSupersetSet(${ei},${si},${ssi})" title="Remove set"><i data-lucide="x" style="width:12px;height:12px"></i></button>`:''}</td>
                     </tr>`).join('')}
                   </tbody>
                 </table>
@@ -2745,6 +2747,28 @@ document.addEventListener('focusin',e=>{
 function fmtRestTime(s){
   const m=Math.floor(s/60);const sec=s%60;
   return m?`${m}:${sec.toString().padStart(2,'0')}`:`0:${sec.toString().padStart(2,'0')}`;
+}
+
+function removeSet(ei,si){
+  const ae=activeWorkout.exercises[ei];
+  if(ae.sets.length<=1)return;
+  ae.sets.splice(si,1);
+  // Sync superset set counts
+  if(ae.setType==='superset'&&ae.supersetExercises){
+    ae.supersetExercises.forEach(se=>{
+      if(se.sets&&se.sets.length>ae.sets.length)se.sets.splice(ae.sets.length);
+    });
+  }
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function removeSupersetSet(ei,si,ssi){
+  const se=activeWorkout.exercises[ei].supersetExercises[si];
+  if(!se||!se.sets||se.sets.length<=1)return;
+  se.sets.splice(ssi,1);
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 function addSet(ei){
