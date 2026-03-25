@@ -520,9 +520,18 @@ select.input{appearance:none;cursor:pointer;
 .photo-upload-area input[type="file"]{display:none}
 
 /* Plans */
-.plan-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;margin-bottom:8px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:900px){.plans-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.plans-grid{grid-template-columns:1fr}}
+.plan-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease;position:relative;display:flex;flex-direction:column}
 .plan-card:hover{box-shadow:var(--shadow-hover)}
 .plan-card .plan-name{font-family:var(--font-display);font-weight:700;font-size:1rem}
+.plan-card .plan-badge{position:absolute;top:10px;right:10px;background:var(--accent);color:#fff;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--font-body)}
+.plan-card .plan-creator{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--bg4);font-size:.78rem;color:var(--fg2)}
+.plan-card .plan-creator-avatar{width:24px;height:24px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0}
+.plan-card .plan-creator-avatar img{width:100%;height:100%;object-fit:cover}
+.plan-create-tile{background:var(--bg);border:2px dashed var(--bg4);padding:16px;border-radius:var(--radius2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s ease;min-height:180px;color:var(--fg3)}
+.plan-create-tile:hover{border-color:var(--accent);color:var(--accent)}
 .plan-card .plan-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
 .plan-card .plan-adopters{font-size:.72rem;color:var(--accent);margin-top:4px}
 .plan-workout-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--bg4);margin-bottom:4px}
@@ -668,7 +677,7 @@ select.input{appearance:none;cursor:pointer;
   <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:16px;height:16px"></i> Start Workout</button>
   <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>Action on the Floor</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon"><i data-lucide="dumbbell" style="width:18px;height:18px"></i></span>My Workouts</button>
-  <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>My Plans</button>
+  <button class="sidebar-link" data-nav="plans-library" onclick="nav('plans-library')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>Plans</button>
   <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
 </div>
 
@@ -945,6 +954,14 @@ select.input{appearance:none;cursor:pointer;
     <button class="btn btn-primary grow" onclick="savePlan()">Save Plan</button>
     <button class="btn grow" onclick="nav('profile')">Cancel</button>
   </div>
+</div>
+
+<!-- ============================================================
+     PLANS LIBRARY VIEW
+     ============================================================ -->
+<div class="view" id="view-plans-library" data-view="plans-library">
+  <h2 class="mt-md mb-md">Plans</h2>
+  <div class="plans-grid" id="plans-library-grid"></div>
 </div>
 
 <!-- ============================================================
@@ -1580,6 +1597,7 @@ async function nav(view){
   if(view==='my-info')await renderMyInfo();
   if(view==='privacy')await renderPrivacy();
   if(view==='communities')await renderCommunities();
+  if(view==='plans-library')await renderPlansLibrary();
   window.scrollTo(0,0);
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
@@ -2557,6 +2575,60 @@ async function renderMetricsChart(){
       scales
     }
   });
+}
+
+async function renderPlansLibrary(){
+  const grid=document.getElementById('plans-library-grid');
+  // Fetch all public plans from all users
+  const{data:plans}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('is_public',true).order('created_at',{ascending:false}).limit(50);
+  // Also fetch user's own private plans
+  const{data:myPrivate}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('user_id',currentUser.id).eq('is_public',false).order('created_at',{ascending:false});
+  const allPlans=[...(myPrivate||[]),...(plans||[])];
+  // Dedupe by id
+  const seen=new Set();
+  const unique=allPlans.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true});
+
+  // Get adoption counts
+  const planIds=unique.map(p=>p.id);
+  let adoptCounts={};
+  if(planIds.length){
+    const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
+    (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
+  }
+  // Check which plans current user has adopted
+  let adopted=new Set();
+  if(planIds.length){
+    const{data:myAdoptions}=await sb.from('plan_adoptions').select('plan_id').eq('adopted_by_user_id',currentUser.id).in('plan_id',planIds);
+    adopted=new Set((myAdoptions||[]).map(a=>a.plan_id));
+  }
+
+  let html=`<div class="plan-create-tile" onclick="openCreatePlan()">
+    <i data-lucide="plus" style="width:32px;height:32px"></i>
+    <span style="font-family:var(--font-body);font-weight:600;font-size:.9rem">Create New Plan</span>
+  </div>`;
+
+  html+=unique.map(p=>{
+    const isOwn=p.user_id===currentUser.id;
+    const creator=p.profiles||{};
+    return `<div class="plan-card">
+      ${isOwn?'<div class="plan-badge">Your Plan</div>':''}
+      <div class="plan-name">${esc(p.name)}</div>
+      ${p.description?`<div class="small fg2" style="margin-top:4px;line-height:1.4">${esc(p.description)}</div>`:''}
+      <div class="plan-meta" style="margin-top:8px">${(p.workouts||[]).length} workouts</div>
+      <div class="plan-adopters">${adoptCounts[p.id]||0} followers</div>
+      <div class="plan-creator">
+        <div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div>
+        <span>${esc(creator.name||'Unknown')}</span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px">
+        ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
+          :(adopted.has(p.id)?'<span class="tag tag-muscle">Using this plan</span>':`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use This Plan</button>`)}
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
 async function renderProfilePlans(userId, isOwn){
