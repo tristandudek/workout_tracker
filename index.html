@@ -222,7 +222,8 @@ select.input{appearance:none;cursor:pointer;
 .ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
 
 /* Stats Strip */
-.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:16px 0;width:100%}
+.stats-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg3);font-family:var(--font-body);font-weight:600;margin-bottom:6px}
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0 0 8px 0;width:100%}
 .stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow);overflow:hidden}
 .stat-box .val{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -967,7 +968,7 @@ select.input{appearance:none;cursor:pointer;
   </div>
 
   <!-- Stats Row -->
-  <div id="profile-stats" class="stats-strip"></div>
+  <div id="profile-stats"></div>
 
   <!-- Body Metrics Graph (Chart.js dual axis) -->
   <div class="profile-section">
@@ -3489,15 +3490,23 @@ async function renderProfile(){
   const{count:followingCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',currentUser.id);
   const{count:othersDoneCount}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',currentUser.id).neq('user_id',currentUser.id);
   const{count:savedPlansCount}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
+  const{count:plansCreatedCount}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
 
   document.getElementById('profile-stats').innerHTML=`
-    <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
-    <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
-    <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
-    <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Completed by Followers</div></div>
-    <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
-    <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
-    <div class="stat-box"><div class="val">${savedPlansCount||0}</div><div class="lbl">Saved Plans</div></div>
+    <div class="stats-section-label">Workout Metrics</div>
+    <div class="stats-strip">
+      <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
+      <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
+      <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
+      <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
+      <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
+    </div>
+    <div class="stats-section-label" style="margin-top:24px">Engagement Metrics</div>
+    <div class="stats-strip">
+      <div class="stat-box"><div class="val">${plansCreatedCount||0}</div><div class="lbl">Plans Created</div></div>
+      <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Completed by Followers</div></div>
+      <div class="stat-box"><div class="val">${savedPlansCount||0}</div><div class="lbl">Saved Plans</div></div>
+    </div>
   `;
 
   // Body metrics chart (Chart.js dual axis)
@@ -4473,14 +4482,22 @@ async function openPublicProfile(userId){
   const{count:pubWorkouts}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('user_id',userId);
   const{count:pubCompletedByFollowers}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',userId).neq('user_id',userId);
   const{count:pubSavedPlans}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',userId);
+  const{count:pubPlansCreated}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',userId).eq('is_public',true);
 
-  html+=`<div class="stats-strip">
-    <div class="stat-box"><div class="val">${pubWorkouts||0}</div><div class="lbl">Workouts</div></div>
-    <div class="stat-box"><div class="val">${pubCompletedByFollowers||0}</div><div class="lbl">Completed by Followers</div></div>
-    <div class="stat-box"><div class="val">${pubFollowers||0}</div><div class="lbl">Followers</div></div>
-    <div class="stat-box"><div class="val">${pubFollowing||0}</div><div class="lbl">Following</div></div>
-    <div class="stat-box"><div class="val">${pubSavedPlans||0}</div><div class="lbl">Saved Plans</div></div>
-  </div>`;
+  html+=`
+    <div class="stats-section-label">Workout Metrics</div>
+    <div class="stats-strip">
+      <div class="stat-box"><div class="val">${pubWorkouts||0}</div><div class="lbl">Workouts</div></div>
+      <div class="stat-box"><div class="val">${pubFollowers||0}</div><div class="lbl">Followers</div></div>
+      <div class="stat-box"><div class="val">${pubFollowing||0}</div><div class="lbl">Following</div></div>
+    </div>
+    <div class="stats-section-label" style="margin-top:24px">Engagement Metrics</div>
+    <div class="stats-strip">
+      <div class="stat-box"><div class="val">${pubPlansCreated||0}</div><div class="lbl">Plans Created</div></div>
+      <div class="stat-box"><div class="val">${pubCompletedByFollowers||0}</div><div class="lbl">Completed by Followers</div></div>
+      <div class="stat-box"><div class="val">${pubSavedPlans||0}</div><div class="lbl">Saved Plans</div></div>
+    </div>
+  `;
 
   if(profile.is_workouts_public){
     const{data:logs}=await sb.from('workout_logs').select('*').eq('user_id',userId).order('start_time',{ascending:false}).limit(10);
