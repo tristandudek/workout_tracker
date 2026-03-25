@@ -568,6 +568,22 @@ select.input{appearance:none;cursor:pointer;
 .active-plan-card .apc-title{font-family:var(--font-display);font-weight:800;text-transform:uppercase;font-size:.9rem;color:var(--accent)}
 .active-plan-card .apc-meta{font-size:.78rem;color:var(--fg2);margin-top:2px}
 
+/* Community cards */
+.community-card{background:var(--bg2);border:1px solid var(--bg4);padding:14px;text-align:center;cursor:pointer;transition:border-color .15s}
+.community-card:hover{border-color:var(--accent)}
+.community-card .comm-avatar{width:48px;height:48px;border-radius:50%;background:var(--bg4);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--accent);overflow:hidden}
+.community-card .comm-avatar img{width:100%;height:100%;object-fit:cover}
+.community-card .comm-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.community-card .comm-meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
+.community-card .comm-role{display:inline-block;padding:1px 6px;font-size:.6rem;font-weight:700;background:var(--accent);color:#fff;font-family:var(--font-display);letter-spacing:.04em;margin-top:4px;text-transform:uppercase}
+.community-header{padding:16px 0;margin-bottom:12px}
+.community-header h2{margin-bottom:4px}
+.member-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg4)}
+.member-row:last-child{border:none}
+.member-row .member-info{flex:1}
+.member-row .member-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem}
+.member-row .member-user{font-size:.72rem;color:var(--fg2)}
+
 @media(max-width:500px){
   .ex-grid{grid-template-columns:1fr}
   .stats-strip{flex-wrap:wrap}
@@ -654,6 +670,7 @@ select.input{appearance:none;cursor:pointer;
   <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon">&#128240;</span>Feed</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon">&#128203;</span>My Workouts</button>
   <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon">&#128221;</span>My Plans</button>
+  <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon">&#127968;</span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
 </div>
 
 <!-- TOP RIGHT BAR -->
@@ -718,6 +735,7 @@ select.input{appearance:none;cursor:pointer;
     </div>
     <div class="feed-search-results" id="feed-search-results"></div>
   </div>
+  <div class="filter-bar" id="feed-community-filters" style="margin-top:8px"></div>
   <div id="feed-list"></div>
   <div id="feed-empty" class="text-center mt-lg hidden">
     <p class="fg3">No posts yet. Complete a workout and share it!</p>
@@ -874,6 +892,7 @@ select.input{appearance:none;cursor:pointer;
         <option value="prefer_not_to_say">Prefer not to say</option>
       </select>
     </div>
+    <div class="profile-field"><label>Bio <span class="fg3 small">(max 160 characters)</span></label><textarea class="input" id="mi-bio" maxlength="160" placeholder="Tell us about yourself..." style="min-height:50px"></textarea></div>
     <button class="btn btn-primary mt-md" onclick="saveMyInfoPage()">Save Changes</button>
   </div>
 </div>
@@ -925,6 +944,37 @@ select.input{appearance:none;cursor:pointer;
     <button class="btn btn-primary grow" onclick="savePlan()">Save Plan</button>
     <button class="btn grow" onclick="nav('profile')">Cancel</button>
   </div>
+</div>
+
+<!-- ============================================================
+     COMMUNITIES VIEW
+     ============================================================ -->
+<div class="view" id="view-communities" data-view="communities">
+  <h2 class="mt-md mb-md">Communities</h2>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input class="input" id="community-search-input" placeholder="Find a community..." oninput="searchCommunities()">
+  </div>
+  <div id="community-search-results" class="mb-md"></div>
+  <div class="flex between mb-sm">
+    <h3 class="fg2" style="font-size:.85rem">My Communities</h3>
+    <button class="btn btn-sm btn-primary" onclick="openCreateCommunity()">+ Create</button>
+  </div>
+  <div id="my-communities-grid" class="user-grid"></div>
+</div>
+
+<!-- ============================================================
+     COMMUNITY DETAIL VIEW
+     ============================================================ -->
+<div class="view" id="view-community-detail" data-view="community-detail">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('communities')">&larr; Back</button>
+  <div id="community-detail-header"></div>
+  <div class="filter-bar mb-sm">
+    <div class="chip active" onclick="showCommunityTab('feed',this)">Feed</div>
+    <div class="chip" onclick="showCommunityTab('members',this)">Members</div>
+  </div>
+  <div id="community-feed-tab"></div>
+  <div id="community-members-tab" style="display:none"></div>
 </div>
 
 </div><!-- #app -->
@@ -1528,6 +1578,7 @@ async function nav(view){
   if(view==='profile')await renderProfile();
   if(view==='my-info')await renderMyInfo();
   if(view==='privacy')await renderPrivacy();
+  if(view==='communities')await renderCommunities();
   window.scrollTo(0,0);
 }
 
@@ -2556,16 +2607,18 @@ async function renderMyInfo(){
   document.getElementById('mi-username').value=p.username;
   document.getElementById('mi-email').value=p.email;
   document.getElementById('mi-gender').value=p.gender;
+  document.getElementById('mi-bio').value=p.bio||'';
 }
 
 async function saveMyInfoPage(){
   const name=document.getElementById('mi-name').value.trim();
   const username=document.getElementById('mi-username').value.trim();
   const gender=document.getElementById('mi-gender').value;
+  const bio=document.getElementById('mi-bio').value.trim().slice(0,160);
   if(!name||!username){toast('Name and username required');return}
-  const{error}=await sb.from('profiles').update({name,username,gender}).eq('id',currentUser.id);
+  const{error}=await sb.from('profiles').update({name,username,gender,bio}).eq('id',currentUser.id);
   if(error){toast(error.message.includes('unique')?'Username already taken':'Error saving');console.error(error);return}
-  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;
+  currentProfile.name=name;currentProfile.username=username;currentProfile.gender=gender;currentProfile.bio=bio;
   document.getElementById('badge-name').textContent=name;
   toast('Information saved!');
 }
@@ -2979,7 +3032,24 @@ async function renderProfileHistory(){
    FEED
    ============================================================= */
 async function renderFeed(){
-  const{data,error}=await sb.rpc('get_feed',{p_limit:30,p_offset:0});
+  await renderFeedCommunityFilters();
+  let data,error;
+  if(feedCommunityFilter){
+    // Get members of the community, then get their posts
+    const{data:members}=await sb.from('community_members').select('user_id').eq('community_id',feedCommunityFilter);
+    const memberIds=(members||[]).map(m=>m.user_id);
+    if(memberIds.length){
+      const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
+      data=(res.data||[]).map(p=>{
+        const wl=p.workout_logs;
+        const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
+      });
+    }else{data=[]}
+  }else{
+    const res=await sb.rpc('get_feed',{p_limit:30,p_offset:0});
+    data=res.data;error=res.error;
+  }
   const list=document.getElementById('feed-list');
   const empty=document.getElementById('feed-empty');
   if(!data||!data.length){
@@ -3302,7 +3372,9 @@ async function handleNotifClick(notifId, type, relatedId){
   await sb.from('notifications').update({is_read:true}).eq('id',notifId);
   notifOpen=false;
   document.getElementById('notif-dropdown').classList.remove('open');
-  if((type==='like'||type==='comment')&&relatedId){
+  if(type==='community_invite'&&relatedId){
+    await handleCommunityInviteNotif(relatedId);
+  }else if((type==='like'||type==='comment')&&relatedId){
     await nav('feed');
   }else if(type==='plan_adopted'&&relatedId){
     await nav('profile');
@@ -3379,6 +3451,298 @@ function closeModal(){
    UTILS
    ============================================================= */
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+/* =============================================================
+   COMMUNITIES
+   ============================================================= */
+let feedCommunityFilter=null; // null = all, uuid = community_id
+let viewingCommunityId=null;
+
+async function renderCommunities(){
+  // Search
+  document.getElementById('community-search-input').value='';
+  document.getElementById('community-search-results').innerHTML='';
+  // My communities
+  const{data:memberships}=await sb.from('community_members').select('*,communities(*)').eq('user_id',currentUser.id);
+  const grid=document.getElementById('my-communities-grid');
+  // Update sidebar badge
+  const badge=document.getElementById('community-count');
+  if(memberships&&memberships.length){
+    badge.textContent=memberships.length;badge.classList.remove('hidden');
+  }else{badge.classList.add('hidden')}
+
+  if(!memberships||!memberships.length){
+    grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1">You haven\'t joined any communities yet.</p>';
+    return;
+  }
+  // Get member counts
+  const commIds=memberships.map(m=>m.community_id);
+  const{data:allMembers}=await sb.from('community_members').select('community_id').in('community_id',commIds);
+  const memberCounts={};
+  (allMembers||[]).forEach(m=>{memberCounts[m.community_id]=(memberCounts[m.community_id]||0)+1});
+
+  grid.innerHTML=memberships.map(m=>{
+    const c=m.communities;if(!c)return'';
+    return `<div class="community-card" onclick="openCommunityDetail('${c.id}')">
+      <div class="comm-avatar">${c.avatar_url?`<img src="${c.avatar_url}">`:(c.name||'?')[0].toUpperCase()}</div>
+      <div class="comm-name">${esc(c.name)}</div>
+      <div class="comm-meta">${memberCounts[c.id]||1} members</div>
+      <span class="comm-role">${m.role}</span>
+    </div>`;
+  }).join('');
+}
+
+let communitySearchTimeout=null;
+async function searchCommunities(){
+  const q=document.getElementById('community-search-input').value.trim();
+  if(communitySearchTimeout)clearTimeout(communitySearchTimeout);
+  const container=document.getElementById('community-search-results');
+  if(!q){container.innerHTML='';return}
+  communitySearchTimeout=setTimeout(async()=>{
+    const{data}=await sb.from('communities').select('*').eq('is_private',false).or(`name.ilike.%${q}%,description.ilike.%${q}%`).limit(10);
+    if(!data||!data.length){container.innerHTML='<p class="fg3 small">No communities found.</p>';return}
+    // Get member counts
+    const ids=data.map(c=>c.id);
+    const{data:members}=await sb.from('community_members').select('community_id').in('community_id',ids);
+    const counts={};(members||[]).forEach(m=>{counts[m.community_id]=(counts[m.community_id]||0)+1});
+    // Check which user is already a member of
+    const{data:myMemberships}=await sb.from('community_members').select('community_id').eq('user_id',currentUser.id).in('community_id',ids);
+    const joined=new Set((myMemberships||[]).map(m=>m.community_id));
+
+    container.innerHTML=data.map(c=>`<div class="wo-card" style="margin-bottom:6px">
+      <div class="wo-info">
+        <div class="wo-name">${esc(c.name)}</div>
+        <div class="wo-meta">${esc(c.description||'')} &middot; ${counts[c.id]||1} members ${c.is_private?'&middot; Private':''}</div>
+      </div>
+      ${joined.has(c.id)?`<span class="tag tag-muscle">Joined</span>`
+        :`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();joinCommunity('${c.id}')">Join</button>`}
+    </div>`).join('');
+  },300);
+}
+
+async function joinCommunity(communityId){
+  const{error}=await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'member'});
+  if(error){toast(error.message.includes('duplicate')?'Already a member':'Error joining');return}
+  toast('Joined!');
+  await renderCommunities();
+}
+
+function openCreateCommunity(){
+  openModal(`
+    <div class="modal-header"><h2>Create Community</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="profile-field"><label>Community Name</label><input class="input" id="cc-name" placeholder="Community name"></div>
+      <div class="profile-field"><label>Description</label><textarea class="input" id="cc-desc" placeholder="What is this community about?"></textarea></div>
+      <div class="flex gap-sm mt-sm">
+        <span class="small fg2">Private</span>
+        <label class="toggle-switch"><input type="checkbox" id="cc-private"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveCreateCommunity()">Create</button></div>
+  `);
+}
+
+async function saveCreateCommunity(){
+  const name=document.getElementById('cc-name').value.trim();
+  if(!name){toast('Name is required');return}
+  const desc=document.getElementById('cc-desc').value.trim();
+  const isPrivate=document.getElementById('cc-private').checked;
+  const{data,error}=await sb.from('communities').insert({name,description:desc,is_private:isPrivate,created_by:currentUser.id}).select().single();
+  if(error){toast('Error creating');console.error(error);return}
+  // Add creator as admin
+  await sb.from('community_members').insert({community_id:data.id,user_id:currentUser.id,role:'admin'});
+  closeModal();toast('Community created!');
+  await renderCommunities();
+}
+
+async function openCommunityDetail(communityId){
+  viewingCommunityId=communityId;
+  currentView='community-detail';
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-community-detail').classList.add('active');
+
+  const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
+  if(!comm){toast('Community not found');return}
+  const{data:members}=await sb.from('community_members').select('*,profiles(name,username,avatar_url)').eq('community_id',communityId);
+  const myMembership=(members||[]).find(m=>m.user_id===currentUser.id);
+  const isAdmin=myMembership&&myMembership.role==='admin';
+
+  const header=document.getElementById('community-detail-header');
+  header.innerHTML=`<div class="community-header">
+    <h2>${esc(comm.name)}</h2>
+    <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
+    <div class="flex gap-sm mt-sm">
+      ${isAdmin?`<button class="btn btn-sm" onclick="openInviteMembers('${communityId}')">Invite Members</button>`:''}
+      ${myMembership&&!isAdmin?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave</button>`:''}
+    </div>
+  </div>`;
+
+  // Render feed tab
+  await renderCommunityFeed(communityId, members||[]);
+  // Render members tab
+  renderCommunityMembers(members||[], isAdmin, communityId);
+}
+
+function showCommunityTab(tab, el){
+  document.querySelectorAll('#view-community-detail .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('community-feed-tab').style.display=tab==='feed'?'block':'none';
+  document.getElementById('community-members-tab').style.display=tab==='members'?'block':'none';
+}
+
+async function renderCommunityFeed(communityId, members){
+  const memberIds=members.map(m=>m.user_id);
+  const container=document.getElementById('community-feed-tab');
+  if(!memberIds.length){container.innerHTML='<p class="fg3 small">No members yet.</p>';return}
+  const{data:posts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  if(!posts||!posts.length){container.innerHTML='<p class="fg3 small">No activity yet in this community.</p>';return}
+  container.innerHTML=posts.map(p=>{
+    const photos=p.photo_urls||[];
+    const wl=p.workout_logs;
+    const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+    return `<div class="feed-card">
+      <div class="feed-header">
+        <div class="feed-avatar" onclick="openPublicProfile('${p.user_id}')">${p.profiles?.avatar_url?`<img src="${p.profiles.avatar_url}">`:(p.profiles?.name||'?')[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div class="feed-user" onclick="openPublicProfile('${p.user_id}')">${esc(p.profiles?.name)}</div>
+          <div class="feed-time">${timeAgo(p.created_at)}</div>
+        </div>
+      </div>
+      ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
+      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${photos.length?`<div class="feed-photos">${photos.map(u=>`<img src="${u}" loading="lazy">`).join('')}</div>`:''}
+      <div class="feed-actions">
+        <button class="feed-action ${p.i_liked?'liked':''}" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
+        <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
+      </div>
+      <div id="comments-${p.id}" style="display:none"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderCommunityMembers(members, isAdmin, communityId){
+  const container=document.getElementById('community-members-tab');
+  container.innerHTML=members.map(m=>{
+    const p=m.profiles||{};
+    return `<div class="member-row">
+      <div class="feed-avatar">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div>
+      <div class="member-info" style="cursor:pointer" onclick="openPublicProfile('${m.user_id}')">
+        <div class="member-name">${esc(p.name)}</div>
+        <div class="member-user">@${esc(p.username)} &middot; ${m.role}</div>
+      </div>
+      ${isAdmin&&m.user_id!==currentUser.id?`<div class="flex gap-sm">
+        ${m.role==='member'?`<button class="btn btn-sm" onclick="promoteMember('${m.id}','${communityId}')">Promote</button>`:''}
+        <button class="btn btn-sm btn-danger" onclick="removeMember('${m.id}','${communityId}')">Remove</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function promoteMember(membershipId, communityId){
+  await sb.from('community_members').update({role:'admin'}).eq('id',membershipId);
+  toast('Promoted to admin');
+  await openCommunityDetail(communityId);
+}
+
+async function removeMember(membershipId, communityId){
+  if(!confirm('Remove this member?'))return;
+  await sb.from('community_members').delete().eq('id',membershipId);
+  toast('Member removed');
+  await openCommunityDetail(communityId);
+}
+
+async function leaveCommunity(communityId){
+  if(!confirm('Leave this community?'))return;
+  await sb.from('community_members').delete().eq('community_id',communityId).eq('user_id',currentUser.id);
+  toast('Left community');
+  await nav('communities');
+}
+
+function openInviteMembers(communityId){
+  openModal(`
+    <div class="modal-header"><h2>Invite Members</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="search-wrap"><span class="search-icon">&#128269;</span><input class="input" id="invite-search" placeholder="Search by name or username..." oninput="searchInviteUsers('${communityId}')"></div>
+      <div id="invite-results"></div>
+    </div>
+  `);
+}
+
+let inviteSearchTimeout=null;
+async function searchInviteUsers(communityId){
+  const q=document.getElementById('invite-search').value.trim();
+  if(inviteSearchTimeout)clearTimeout(inviteSearchTimeout);
+  const container=document.getElementById('invite-results');
+  if(!q){container.innerHTML='';return}
+  inviteSearchTimeout=setTimeout(async()=>{
+    const{data}=await sb.from('profiles').select('id,name,username,avatar_url').or(`name.ilike.%${q}%,username.ilike.%${q}%`).limit(10);
+    // Filter out existing members
+    const{data:existing}=await sb.from('community_members').select('user_id').eq('community_id',communityId);
+    const existingIds=new Set((existing||[]).map(m=>m.user_id));
+    const filtered=(data||[]).filter(u=>!existingIds.has(u.id));
+    if(!filtered.length){container.innerHTML='<p class="fg3 small">No users found or all already members.</p>';return}
+    container.innerHTML=filtered.map(u=>`<div class="user-card" onclick="sendInvite('${communityId}','${u.id}',this)">
+      <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+      <div><div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">${esc(u.name)}</div><div class="small fg2">@${esc(u.username)}</div></div>
+    </div>`).join('');
+  },300);
+}
+
+async function sendInvite(communityId, userId, el){
+  const{error}=await sb.from('community_invites').insert({community_id:communityId,invited_user_id:userId,invited_by:currentUser.id});
+  if(error){toast('Error sending invite');return}
+  el.innerHTML='<span class="tag tag-muscle">Invited</span>';
+  el.onclick=null;el.style.cursor='default';
+  toast('Invite sent!');
+}
+
+async function handleCommunityInviteNotif(inviteId){
+  const{data:invite}=await sb.from('community_invites').select('*,communities(name)').eq('id',inviteId).single();
+  if(!invite){toast('Invite not found');return}
+  openModal(`
+    <div class="modal-header"><h2>Community Invite</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body text-center">
+      <p style="line-height:1.6">You've been invited to join</p>
+      <h3 class="mt-sm mb-md">${esc(invite.communities?.name||'a community')}</h3>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="declineInvite('${inviteId}')">Decline</button>
+      <button class="btn btn-primary" onclick="acceptInvite('${inviteId}','${invite.community_id}')">Accept</button>
+    </div>
+  `);
+}
+
+async function acceptInvite(inviteId, communityId){
+  await sb.from('community_invites').update({status:'accepted'}).eq('id',inviteId);
+  await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'member'});
+  closeModal();toast('Joined!');
+  if(currentView==='communities')await renderCommunities();
+}
+
+async function declineInvite(inviteId){
+  await sb.from('community_invites').update({status:'declined'}).eq('id',inviteId);
+  closeModal();toast('Invite declined');
+}
+
+/* =============================================================
+   FEED COMMUNITY FILTER
+   ============================================================= */
+async function renderFeedCommunityFilters(){
+  const{data:memberships}=await sb.from('community_members').select('community_id,communities(id,name)').eq('user_id',currentUser.id);
+  const container=document.getElementById('feed-community-filters');
+  if(!memberships||!memberships.length){container.innerHTML='';return}
+  const chips=[`<div class="chip ${feedCommunityFilter===null?'active':''}" onclick="setFeedCommunityFilter(null)">All</div>`];
+  memberships.forEach(m=>{
+    if(!m.communities)return;
+    chips.push(`<div class="chip ${feedCommunityFilter===m.community_id?'active':''}" onclick="setFeedCommunityFilter('${m.community_id}')">${esc(m.communities.name)}</div>`);
+  });
+  container.innerHTML=chips.join('');
+}
+
+async function setFeedCommunityFilter(communityId){
+  feedCommunityFilter=communityId;
+  await renderFeed();
+}
 
 /* =============================================================
    BOOTSTRAP
