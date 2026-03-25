@@ -2608,6 +2608,45 @@ async function renderActiveWorkout(){
     }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addPyramidSet(${ei})">+ Add Set</button>`;
   }
 
+  function renderDropSetBody(ae,ei,prev,targetRep){
+    const numDrops=ae.drops||2;
+    // Ensure each set has subSets for drops
+    ae.sets.forEach((s,si)=>{
+      if(!s.subSets){
+        s.subSets=[];
+        for(let d=0;d<numDrops;d++){
+          const dropWt=s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0;
+          s.subSets.push({weight:dropWt,reps:0,completed:false});
+        }
+      }
+    });
+    return ae.sets.map((s,si)=>{
+      return `<div style="padding:4px 0">
+        <table class="set-table">
+          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
+          <tbody><tr>
+            <td>${si+1}</td>
+            <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+            <td><input type="number" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
+            <td><div style="display:flex;align-items:center;gap:4px"><input type="number" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
+            <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+            <td>${ae.sets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;padding:2px" onclick="removeSet(${ei},${si})"><i data-lucide="x" style="width:12px;height:12px"></i></button>`:''}</td>
+          </tr></tbody>
+        </table>
+        <div class="sub-rows">
+          ${s.subSets.map((sub,subi)=>`<div class="sub-row">
+            <span class="sub-label">Drop ${subi+1}</span>
+            <input type="number" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
+            <input type="number" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
+            <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
+            ${s.subSets.length>1?`<button style="background:none;border:none;color:var(--fg3);cursor:pointer;padding:2px" onclick="removeSubSet(${ei},${si},${subi})"><i data-lucide="x" style="width:11px;height:11px"></i></button>`:''}
+          </div>`).join('')}
+          <button class="add-sub-link" onclick="addDropSubSet(${ei},${si})">+ Add drop</button>
+        </div>
+      </div>`;
+    }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
+  }
+
   function renderRestPauseBody(ae,ei,prev,targetRep){
     const rpDur=ae.restPauseDuration||15;
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
@@ -2652,6 +2691,7 @@ async function renderActiveWorkout(){
       <div class="aw-ex-body">
         ${(st==='ascending_pyramid'||st==='descending_pyramid')?renderPyramidBody(ae,ei,prev,st,targetRep)
           :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
+          :st==='drop'?renderDropSetBody(ae,ei,prev,targetRep)
           :`<table class="set-table">
           <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
@@ -2667,7 +2707,6 @@ async function renderActiveWorkout(){
         </table>
         <div class="flex gap-sm mt-sm">
           <button class="btn btn-sm btn-ghost grow" onclick="addSet(${ei})">+ Add Set</button>
-          ${st==='drop'?`<button class="btn btn-sm btn-ghost" onclick="addDropSet(${ei})">+ Add Drop</button>`:''}
         </div>`}
       </div>`;
   }
@@ -2764,14 +2803,8 @@ function toggleSet(ei,si){
   }
 }
 
-function addDropSet(ei){
-  const ae=activeWorkout.exercises[ei];
-  const lastSet=ae.sets[ae.sets.length-1];
-  const dropWeight=lastSet?Math.round(lastSet.weight*0.85):0;
-  ae.sets.push({weight:dropWeight,reps:0,completed:false});
-  saveActiveWO(activeWorkout);
-  renderActiveWorkout();
-}
+// addDropSet kept for backwards compat but drops are now sub-sets
+function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length-1)}
 
 function updateSupersetSet(ei,si,ssi,field,val){
   activeWorkout.exercises[ei].supersetExercises[si].sets[ssi][field]=val;
@@ -2899,6 +2932,25 @@ function removeSubSet(ei,si,subi){
   const s=activeWorkout.exercises[ei].sets[si];
   if(!s.subSets||s.subSets.length<=1)return;
   s.subSets.splice(subi,1);
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function addDropSubSet(ei,si){
+  const s=activeWorkout.exercises[ei].sets[si];
+  if(!s.subSets)s.subSets=[];
+  const lastWeight=s.subSets.length?s.subSets[s.subSets.length-1].weight:s.weight;
+  s.subSets.push({weight:lastWeight?Math.round(lastWeight*0.85):0,reps:0,completed:false});
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function autoFillDropWeights(ei,si){
+  const s=activeWorkout.exercises[ei].sets[si];
+  if(!s.subSets||!s.weight)return;
+  s.subSets.forEach((sub,i)=>{
+    sub.weight=Math.round(s.weight*Math.pow(0.85,i+1));
+  });
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
