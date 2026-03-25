@@ -270,9 +270,10 @@ select.input{appearance:none;cursor:pointer;
 .superset-group{border-left:3px solid var(--accent);padding-left:8px;margin-bottom:10px}
 .superset-label{font-family:var(--font-body);font-size:.7rem;font-weight:700;color:var(--accent);padding:4px 0;text-transform:uppercase;letter-spacing:.04em}
 .set-type-select{width:auto;padding:2px 8px;height:28px;font-size:.72rem;border-radius:20px;min-width:90px}
-.sub-rows{margin-left:24px;border-left:2px solid var(--accent);padding-left:10px;margin-top:4px;margin-bottom:8px}
-.sub-row{display:grid;grid-template-columns:50px 64px 64px 28px 24px;gap:6px;align-items:center;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);margin-bottom:3px;font-size:.82rem}
-.sub-row input[type="number"],.sub-row input[type="text"]{width:64px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:right;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
+.sub-rows{background:#f3f4f6;border-radius:0 0 8px 8px;padding:8px;margin-bottom:10px}
+.sub-row{display:flex;align-items:center;gap:0;padding:0;background:none;border-radius:0;margin-bottom:0;font-size:.82rem;border-bottom:1px solid var(--bg4)}
+.sub-row:last-of-type{border-bottom:none}
+.sub-row input[type="number"],.sub-row input[type="text"]{width:64px;padding:4px;height:28px;background:var(--bg);border:1px solid var(--bg4);color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.8rem;border-radius:var(--radius)}
 .sub-row input[type="number"]:focus,.sub-row input[type="text"]:focus{outline:none;border-color:var(--accent)}
 .sub-row .sub-label{font-size:.7rem;color:var(--fg3);min-width:50px}
 .sub-row .set-check{width:24px;height:24px;font-size:.75rem}
@@ -314,7 +315,7 @@ select.input{appearance:none;cursor:pointer;
 .set-table .prev{font-size:.75rem;color:var(--fg3);font-family:var(--font-mono)}
 .set-table input[type="number"],.set-table input[type="text"]{
   width:64px;padding:6px 4px;background:var(--bg);border:1px solid var(--bg4);
-  color:var(--fg);text-align:right;font-family:var(--font-mono);font-size:.85rem;
+  color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.85rem;
   -moz-appearance:textfield;border-radius:var(--radius);
 }
 .set-table input::-webkit-inner-spin-button{-webkit-appearance:none}
@@ -2733,92 +2734,93 @@ async function renderActiveWorkout(){
   function renderPyramidBody(ae,ei,prev,st,targetRep){
     const isAsc=st==='ascending_pyramid';
     const repScheme=isAsc?[12,10,8,6]:[6,8,10,12];
-    // Ensure each set has subSets
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:0,reps:0,completed:false}]});
-    return ae.sets.map((s,si)=>{
+    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    ae.sets.map((s,si)=>{
       const suggestedReps=repScheme[si]||repScheme[repScheme.length-1];
-      return `<div class="primary-set-row">
-        <span class="set-num">${si+1}</span>
-        <span>${isAsc?'&#8593;':'&#8595;'} Target: ${suggestedReps} reps</span>
-        <span class="set-hint">${isAsc?'Increase weight':'Decrease weight'}</span>
-      </div>
+      return `
+      <table class="set-table"><tbody><tr>
+        <td>${si+1}</td>
+        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0"><span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${isAsc?'&#8593;':'&#8595;'}${suggestedReps}</span></div></td>
+        <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+        <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
+      </tr></tbody></table>
       <div class="sub-rows">
-        ${s.subSets.map((sub,subi)=>`<div class="sub-row">
-          <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
-          <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
-          <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
-          <button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button>
-        </div>`).join('')}
-        <button class="add-sub-link" onclick="addSubSet(${ei},${si})">+ Add sub-set</button>
+        <table class="set-table" style="margin:0"><tbody>
+        ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
+          <td style="color:var(--fg3);font-size:.75rem">Sub ${subi+1}</td>
+          <td class="prev">—</td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
+          <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
+          <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
+        </tr>`).join('')}
+        </tbody></table>
+        <button class="add-sub-link" style="padding:6px 0" onclick="addSubSet(${ei},${si})">+ Add sub-set</button>
       </div>`;
     }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addPyramidSet(${ei})">+ Add Set</button>`;
   }
 
   function renderDropSetBody(ae,ei,prev,targetRep){
     const numDrops=ae.drops||2;
-    // Ensure each set has subSets for drops
     ae.sets.forEach((s,si)=>{
-      if(!s.subSets){
-        s.subSets=[];
-        for(let d=0;d<numDrops;d++){
-          const dropWt=s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0;
-          s.subSets.push({weight:dropWt,reps:0,completed:false});
-        }
-      }
+      if(!s.subSets){s.subSets=[];for(let d=0;d<numDrops;d++){s.subSets.push({weight:s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0,reps:0,completed:false})}}
     });
-    return ae.sets.map((s,si)=>{
-      return `<div style="padding:4px 0">
-        <table class="set-table">
-          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
-          <tbody><tr>
-            <td>${si+1}</td>
-            <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
-            <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
-            <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
-            <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
-            <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:``}</td>
-          </tr></tbody>
-        </table>
-        <div class="sub-rows">
-          ${s.subSets.map((sub,subi)=>`<div class="sub-row">
-            <span class="sub-label">Drop ${subi+1}</span>
-            <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
-            <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
-            <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
-            <button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button>
-          </div>`).join('')}
-          <button class="add-sub-link" onclick="addDropSubSet(${ei},${si})">+ Add drop</button>
-        </div>
-      </div>`;
-    }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
+    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    ae.sets.map((s,si)=>`
+      <table class="set-table"><tbody><tr>
+        <td>${si+1}</td>
+        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
+        <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+        <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
+      </tr></tbody></table>
+      <div class="sub-rows">
+        <table class="set-table" style="margin:0"><tbody>
+        ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
+          <td style="color:var(--fg3);font-size:.75rem">Drop ${subi+1}</td>
+          <td class="prev">—</td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
+          <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
+          <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
+        </tr>`).join('')}
+        </tbody></table>
+        <button class="add-sub-link" style="padding:6px 0" onclick="addDropSubSet(${ei},${si})">+ Add drop</button>
+      </div>
+    `).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
   }
 
   function renderRestPauseBody(ae,ei,prev,targetRep){
     const rpDur=ae.restPauseDuration||15;
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
-    return ae.sets.map((s,si)=>{
-      return `<div style="padding:6px 0;border-bottom:1px solid var(--bg4)">
-        <div class="flex gap-sm" style="align-items:center;padding:4px 0">
-          <span style="font-family:var(--font-mono);color:var(--fg2);min-width:28px;font-weight:600">${si+1}</span>
-          <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value)" placeholder="wt" style="width:64px;padding:4px;height:30px;text-align:center;font-family:var(--font-mono);font-size:.85rem;border:1px solid var(--bg4);border-radius:var(--radius);background:var(--bg);color:var(--fg)">
-          <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="reps" style="width:64px;padding:4px;height:30px;text-align:center;font-family:var(--font-mono);font-size:.85rem;border:1px solid var(--bg4);border-radius:var(--radius);background:var(--bg);color:var(--fg)">
-          ${targetRep?`<span style="font-size:.65rem;color:var(--fg3)">${targetRep}</span>`:''}
-          <div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div>
-          ${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:``}
-          <span style="font-size:.65rem;color:var(--fg3);margin-left:auto">${rpDur}s pause</span>
-        </div>
-        <div class="sub-rows">
-          ${s.subSets.map((sub,subi)=>`<div class="sub-row">
-            <span class="sub-label">Pause ${subi+1}</span>
-            <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" min="0" step="2.5" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value)" placeholder="wt">
-            <input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" min="0" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value)" placeholder="reps">
-            <div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div>
-            <button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button>
-          </div>`).join('')}
-          <button class="add-sub-link" onclick="addSubSet(${ei},${si})">+ Add pause set</button>
-        </div>
-      </div>`;
-    }).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
+    return `<table class="set-table"><thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    ae.sets.map((s,si)=>`
+      <table class="set-table"><tbody><tr>
+        <td>${si+1}</td>
+        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
+        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}<span style="font-size:.6rem;color:var(--fg3)">${rpDur}s</span></div></td>
+        <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
+        <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
+      </tr></tbody></table>
+      <div class="sub-rows">
+        <table class="set-table" style="margin:0"><tbody>
+        ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
+          <td style="color:var(--fg3);font-size:.75rem">Pause ${subi+1}</td>
+          <td class="prev">—</td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
+          <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
+          <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
+          <td><button class="set-del" onclick="removeSubSet(${ei},${si},${subi})">&times;</button></td>
+        </tr>`).join('')}
+        </tbody></table>
+        <button class="add-sub-link" style="padding:6px 0" onclick="addSubSet(${ei},${si})">+ Add pause set</button>
+      </div>
+    `).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
   }
 
   function renderExCard(ae, ei, prev, isSuperset){
