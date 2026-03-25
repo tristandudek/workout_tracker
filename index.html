@@ -2520,41 +2520,101 @@ let activeWorkout=null;
 let timerInterval=null;
 
 async function startWorkoutFlow(){
+  openModal(`
+    <div class="modal-header"><h2>Start Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="card" style="cursor:pointer;display:flex;gap:14px;align-items:center" onclick="showStartFromPlan()">
+          <div style="width:44px;height:44px;border-radius:var(--radius);background:var(--accent-light);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0"><i data-lucide="calendar" style="width:22px;height:22px"></i></div>
+          <div><div style="font-family:var(--font-display);font-weight:700;font-size:.95rem">From Plan</div><div class="small fg2">Follow a structured plan</div></div>
+        </div>
+        <div class="card" style="cursor:pointer;display:flex;gap:14px;align-items:center" onclick="showStartFromWorkout()">
+          <div style="width:44px;height:44px;border-radius:var(--radius);background:var(--accent-light);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0"><i data-lucide="dumbbell" style="width:22px;height:22px"></i></div>
+          <div><div style="font-family:var(--font-display);font-weight:700;font-size:.95rem">From Workout</div><div class="small fg2">Pick a specific workout</div></div>
+        </div>
+        <div class="card" style="cursor:pointer;display:flex;gap:14px;align-items:center" onclick="closeModal();startEmptyWorkout()">
+          <div style="width:44px;height:44px;border-radius:var(--radius);background:var(--accent-light);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0"><i data-lucide="plus" style="width:22px;height:22px"></i></div>
+          <div><div style="font-family:var(--font-display);font-weight:700;font-size:.95rem">Start Fresh</div><div class="small fg2">Build your workout as you go</div></div>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+async function showStartFromPlan(){
+  const{data:myPlans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  const{data:savedRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*,profiles(name))').eq('user_id',currentUser.id);
+  const savedPlans=(savedRows||[]).map(s=>s.workout_plans).filter(Boolean);
   const wos=await getWorkouts();
-  const{data:adoptions}=await sb.from('plan_adoptions').select('*,workout_plans(*)').eq('adopted_by_user_id',currentUser.id).eq('is_active',true);
-  const plans=(adoptions||[]).filter(a=>a.workout_plans).map(a=>a.workout_plans);
 
-  let html=`<div class="modal-header"><h2>Start Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">`;
+  let html=`<div class="modal-header"><h2>From Plan</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">`;
 
-  // Option 1: Start from a Plan
-  if(plans.length){
-    html+=`<h3 class="mb-sm fg2" style="font-size:.85rem">Start from a Plan</h3>`;
-    html+=plans.map(p=>{
-      const pWorkouts=p.workouts||[];
-      return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startPlanWorkout('${p.id}',0)">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${pWorkouts.length} workouts in plan</div></div>
-        <span class="accent" style="font-size:1.2rem">&#9654;</span>
-      </div>`;
-    }).join('');
-    html+=`<div class="divider"></div>`;
+  if((myPlans&&myPlans.length)||savedPlans.length){
+    if(myPlans&&myPlans.length){
+      html+=`<h3 class="mb-sm fg2" style="font-size:.82rem">My Creations</h3>`;
+      html+=myPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} workouts</div></div>
+        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+      </div>`).join('');
+    }
+    if(savedPlans.length){
+      html+=`<h3 class="mb-sm mt-md fg2" style="font-size:.82rem">Saved Plans</h3>`;
+      html+=savedPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} workouts${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
+        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+      </div>`).join('');
+    }
+  }else{
+    html+=`<p class="fg3 small">No plans yet. Create one from the Plans page.</p>`;
   }
-
-  // Option 2: Start from a Workout Template
-  if(wos.length){
-    html+=`<h3 class="mb-sm fg2" style="font-size:.85rem">Start from a Workout</h3>`;
-    html+=wos.map(w=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${w.id}')">
-      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises</div></div>
-      <span class="accent" style="font-size:1.2rem">&#9654;</span>
-    </div>`).join('');
-    html+=`<div class="divider"></div>`;
-  }
-
-  // Option 3: Start Fresh
-  html+=`<button class="btn btn-block mt-sm" onclick="closeModal();startEmptyWorkout()">&#9654; Start Fresh — Build As I Go</button>`;
-
   html+=`</div>`;
   openModal(html);
+}
+
+async function showPlanWorkouts(planId){
+  const{data:plan}=await sb.from('workout_plans').select('*').eq('id',planId).single();
+  if(!plan)return;
+  const wos=await getWorkouts();
+  openModal(`
+    <div class="modal-header"><h2>${esc(plan.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+      ${(plan.workouts||[]).map((pw,i)=>{
+        const wo=wos.find(w=>w.id===pw.workout_template_id);
+        return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${pw.workout_template_id}')">
+          <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name">${wo?esc(wo.name):'Unknown'}</div><div class="wo-meta">${wo?wo.exercises.length+' exercises':'—'}</div></div>
+          <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
+        </div>`;
+      }).join('')}
+      ${!(plan.workouts||[]).length?'<p class="fg3 small">No workouts in this plan.</p>':''}
+    </div>
+  `);
+}
+
+async function showStartFromWorkout(){
+  const wos=await getWorkouts();
+  openModal(`
+    <div class="modal-header"><h2>From Workout</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+      <div class="search-wrap mb-sm"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="start-wo-search" placeholder="Search workouts..." oninput="filterStartWorkouts()"></div>
+      <div id="start-wo-list">
+        ${wos.length?wos.map(w=>`<div class="wo-card start-wo-item" style="cursor:pointer;margin-bottom:6px" data-name="${esc(w.name.toLowerCase())}" onclick="closeModal();startFromTemplate('${w.id}')">
+          <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises${(w.workout_types||[]).length?' · '+w.workout_types.map(t=>t.replace('_',' ')).join(', '):''}</div></div>
+          <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
+        </div>`).join(''):'<p class="fg3 small">No workouts yet. Create one first.</p>'}
+      </div>
+    </div>
+  `);
+}
+
+function filterStartWorkouts(){
+  const q=(document.getElementById('start-wo-search')?.value||'').toLowerCase();
+  const words=q.split(/\s+/).filter(w=>w);
+  document.querySelectorAll('.start-wo-item').forEach(el=>{
+    const name=el.dataset.name||'';
+    const show=!q||words.some(w=>name.includes(w));
+    el.style.display=show?'':'none';
+  });
 }
 
 async function startEmptyWorkout(){
@@ -3484,14 +3544,13 @@ async function renderPlansLibrary(){
 
   function planCard(p, isOwn, isSaved){
     const creator=p.profiles||{};
-    return `<div class="plan-card">
-      ${isOwn?'<div class="plan-badge">Your Plan</div>':''}
+    return `<div class="plan-card" style="cursor:pointer" onclick="console.log('Plan clicked:','${p.id}');openPlanDetail('${p.id}',${isOwn})">
       <div class="plan-name">${esc(p.name)}</div>
       ${p.description?`<div class="small fg2" style="margin-top:4px;line-height:1.4">${esc(p.description)}</div>`:''}
       <div class="plan-meta" style="margin-top:8px">${(p.workouts||[]).length} workouts</div>
       <div class="plan-adopters">${adoptCounts[p.id]||0} followers</div>
       ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
         ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
           :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use Plan</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save</button>`}`}
       </div>
@@ -3945,7 +4004,39 @@ async function deletePlan(id){
   if(!confirm('Delete this plan?'))return;
   await sb.from('workout_plans').delete().eq('id',id);
   toast('Plan deleted');
-  await renderMyPlans();
+  if(currentView==='plans-library')await renderPlansLibrary();
+}
+
+async function openPlanDetail(planId, isOwn){
+  const{data:plan}=await sb.from('workout_plans').select('*,profiles(name,avatar_url)').eq('id',planId).single();
+  if(!plan){toast('Plan not found');return}
+  const wos=await getWorkouts();
+  const allExs=await getExercises();
+  const workoutList=(plan.workouts||[]).map((pw,i)=>{
+    const wo=wos.find(w=>w.id===pw.workout_template_id);
+    return `<div class="wo-card" style="margin-bottom:6px">
+      <div class="wo-info">
+        <div class="small fg3">W${pw.week||1} D${pw.day||1}</div>
+        <div class="wo-name">${wo?esc(wo.name):'Unknown Workout'}</div>
+        <div class="wo-meta">${wo?wo.exercises.length+' exercises':'—'}</div>
+      </div>
+      ${wo?`<button class="btn btn-sm btn-primary" onclick="closeModal();startFromTemplate('${wo.id}')"><i data-lucide="play" style="width:12px;height:12px"></i></button>`:''}
+    </div>`;
+  }).join('');
+
+  openModal(`
+    <div class="modal-header"><h2>${esc(plan.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${plan.description?`<p class="fg2 small mb-md" style="line-height:1.5">${esc(plan.description)}</p>`:''}
+      ${plan.profiles&&!isOwn?`<div class="flex gap-sm mb-md" style="align-items:center"><div class="feed-avatar" style="width:24px;height:24px;font-size:.6rem">${plan.profiles.avatar_url?`<img src="${plan.profiles.avatar_url}">`:(plan.profiles.name||'?')[0].toUpperCase()}</div><span class="small fg2">by ${esc(plan.profiles.name)}</span></div>`:''}
+      <h3 class="mb-sm" style="font-size:.88rem">Workouts (${(plan.workouts||[]).length})</h3>
+      ${workoutList||'<p class="fg3 small">No workouts in this plan.</p>'}
+    </div>
+    <div class="modal-footer">
+      ${isOwn?`<button class="btn btn-sm" onclick="closeModal();editPlan('${planId}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="closeModal();deletePlan('${planId}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>`
+        :`<button class="btn btn-primary" onclick="closeModal();adoptPlan('${planId}')">Use This Plan</button>`}
+    </div>
+  `);
 }
 
 /* =============================================================
