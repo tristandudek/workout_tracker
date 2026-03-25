@@ -3279,7 +3279,7 @@ async function renderProfile(){
     <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
     <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
     <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
-    <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Followed by Others</div></div>
+    <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Completed by Followers</div></div>
     <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
     <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
   `;
