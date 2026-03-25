@@ -4320,10 +4320,14 @@ async function handleNotifClick(notifId, type, relatedId){
   document.getElementById('notif-dropdown').classList.remove('open');
   if(type==='community_invite'&&relatedId){
     await handleCommunityInviteNotif(relatedId);
+  }else if(type==='follow'&&relatedId){
+    await openPublicProfile(relatedId);
   }else if((type==='like'||type==='comment')&&relatedId){
     await nav('feed');
   }else if(type==='plan_adopted'&&relatedId){
     await nav('profile');
+  }else if(type==='challenge_ended'&&relatedId){
+    await nav('communities');
   }
   await updateNotifBadge();
 }
@@ -4516,11 +4520,15 @@ async function openCommunityDetail(communityId){
 
   const header=document.getElementById('community-detail-header');
   header.innerHTML=`<div class="community-header">
-    <h2>${esc(comm.name)}</h2>
-    <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
-    <div class="flex gap-sm mt-sm">
-      ${isAdmin?`<button class="btn btn-sm" onclick="openInviteMembers('${communityId}')">Invite Members</button>`:''}
-      ${myMembership&&!isAdmin?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave</button>`:''}
+    <div class="flex between" style="align-items:flex-start">
+      <div>
+        <h2>${esc(comm.name)}</h2>
+        <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
+      </div>
+      <div class="flex gap-sm">
+        ${isAdmin?`<button class="btn btn-sm btn-primary" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Invite</button>`:''}
+        ${myMembership&&!isAdmin?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave</button>`:''}
+      </div>
     </div>
   </div>`;
 
@@ -4607,6 +4615,9 @@ function renderCommunityMembers(members, isAdmin, communityId){
       </div>`:''}
     </div>`;
   }).join('');
+  if(isAdmin){
+    container.innerHTML+=`<button class="btn btn-primary btn-block mt-md" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:16px;height:16px"></i> Invite Athletes</button>`;
+  }
 }
 
 async function promoteMember(membershipId, communityId){
@@ -4629,11 +4640,14 @@ async function leaveCommunity(communityId){
   await nav('communities');
 }
 
-function openInviteMembers(communityId){
+async function openInviteMembers(communityId){
+  const{data:comm}=await sb.from('communities').select('name').eq('id',communityId).single();
+  const commName=comm?comm.name:'this community';
   openModal(`
-    <div class="modal-header"><h2>Invite Members</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-header"><h2>Invite Athletes to ${esc(commName)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="invite-search" placeholder="Search by name or username..." oninput="searchInviteUsers('${communityId}')"></div>
+      <p class="small fg2 mb-sm">Search for athletes by name or username to invite them.</p>
+      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="invite-search" placeholder="Search athletes..." oninput="searchInviteUsers('${communityId}')"></div>
       <div id="invite-results"></div>
     </div>
   `);
@@ -4647,38 +4661,51 @@ async function searchInviteUsers(communityId){
   if(!q){container.innerHTML='';return}
   inviteSearchTimeout=setTimeout(async()=>{
     const{data}=await sb.from('profiles').select('id,name,username,avatar_url').or(`name.ilike.%${q}%,username.ilike.%${q}%`).limit(10);
-    // Filter out existing members
+    // Get existing members and pending invites
     const{data:existing}=await sb.from('community_members').select('user_id').eq('community_id',communityId);
-    const existingIds=new Set((existing||[]).map(m=>m.user_id));
-    const filtered=(data||[]).filter(u=>!existingIds.has(u.id));
-    if(!filtered.length){container.innerHTML='<p class="fg3 small">No users found or all already members.</p>';return}
-    container.innerHTML=filtered.map(u=>`<div class="user-card" onclick="sendInvite('${communityId}','${u.id}',this)">
-      <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
-      <div><div style="font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem">${esc(u.name)}</div><div class="small fg2">@${esc(u.username)}</div></div>
-    </div>`).join('');
+    const memberIds=new Set((existing||[]).map(m=>m.user_id));
+    const{data:invites}=await sb.from('community_invites').select('invited_user_id').eq('community_id',communityId).eq('status','pending');
+    const invitedIds=new Set((invites||[]).map(inv=>inv.invited_user_id));
+
+    if(!data||!data.length){container.innerHTML='<p class="fg3 small">No users found.</p>';return}
+    container.innerHTML=data.filter(u=>u.id!==currentUser.id).map(u=>{
+      const isMember=memberIds.has(u.id);
+      const isInvited=invitedIds.has(u.id);
+      return `<div class="user-card" style="${isMember||isInvited?'opacity:.7':''}">
+        <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+        <div style="flex:1"><div style="font-family:var(--font-display);font-weight:700;font-size:.88rem">${esc(u.name)}</div><div class="small fg2">@${esc(u.username)}</div></div>
+        ${isMember?'<span class="tag tag-equip">Member</span>'
+          :isInvited?'<span class="tag tag-muscle">Invited</span>'
+          :`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();sendInvite('${communityId}','${u.id}','${esc(u.name)}',this)">Invite</button>`}
+      </div>`;
+    }).join('');
   },300);
 }
 
-async function sendInvite(communityId, userId, el){
+async function sendInvite(communityId, userId, userName, btn){
   const{error}=await sb.from('community_invites').insert({community_id:communityId,invited_user_id:userId,invited_by:currentUser.id});
-  if(error){toast('Error sending invite');return}
-  el.innerHTML='<span class="tag tag-muscle">Invited</span>';
-  el.onclick=null;el.style.cursor='default';
-  toast('Invite sent!');
+  if(error){toast(error.message.includes('duplicate')?'Already invited':'Error sending invite');return}
+  btn.outerHTML='<span class="tag tag-muscle">Invited</span>';
+  toast('Invite sent to '+userName+'!');
 }
 
 async function handleCommunityInviteNotif(inviteId){
-  const{data:invite}=await sb.from('community_invites').select('*,communities(name)').eq('id',inviteId).single();
+  const{data:invite}=await sb.from('community_invites').select('*,communities(name,description),profiles:invited_by(name)').eq('id',inviteId).single();
   if(!invite){toast('Invite not found');return}
+  const commName=invite.communities?.name||'a community';
+  const commDesc=invite.communities?.description||'';
+  const inviterName=invite.profiles?.name||'Someone';
   openModal(`
-    <div class="modal-header"><h2>Community Invite</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-header"><h2>You're Invited!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body text-center">
-      <p style="line-height:1.6">You've been invited to join</p>
-      <h3 class="mt-sm mb-md">${esc(invite.communities?.name||'a community')}</h3>
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-light);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:var(--accent)"><i data-lucide="users" style="width:24px;height:24px"></i></div>
+      <p class="fg2" style="line-height:1.5">${esc(inviterName)} invited you to join</p>
+      <h3 class="mt-sm">${esc(commName)}</h3>
+      ${commDesc?`<p class="small fg3 mt-sm" style="max-width:300px;margin:0 auto;line-height:1.4">${esc(commDesc)}</p>`:''}
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="justify-content:center;gap:12px">
       <button class="btn" onclick="declineInvite('${inviteId}')">Decline</button>
-      <button class="btn btn-primary" onclick="acceptInvite('${inviteId}','${invite.community_id}')">Accept</button>
+      <button class="btn btn-primary" onclick="acceptInvite('${inviteId}','${invite.community_id}')">Accept & Join</button>
     </div>
   `);
 }
