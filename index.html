@@ -213,10 +213,10 @@ select.input{appearance:none;cursor:pointer;
 .ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
 
 /* Stats Strip */
-.stats-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0;width:100%}
-.stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow)}
-.stat-box .val{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--accent)}
-.stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500}
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:16px 0;width:100%}
+.stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow);overflow:hidden}
+.stat-box .val{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Workout Card */
 .wo-card{
@@ -4178,11 +4178,9 @@ async function openPublicProfile(userId){
     </div>
   </div>`;
 
-  const{data:stats}=await sb.rpc('get_creator_stats',{p_user_id:userId});
-  const s=stats&&stats[0]?stats[0]:{};
-  html+=`<div class="creator-stats">
-    <div class="creator-stat"><div class="cs-val">${s.total_plan_adoptions||0}</div><div class="cs-lbl">Plan Adoptions</div></div>
-    <div class="creator-stat"><div class="cs-val">${s.total_workouts_from_plans||0}</div><div class="cs-lbl">Workouts by Others</div></div>
+  html+=`<div class="stats-strip">
+    <div class="stat-box"><div class="val">${pubFollowers||0}</div><div class="lbl">Followers</div></div>
+    <div class="stat-box"><div class="val">${pubFollowing||0}</div><div class="lbl">Following</div></div>
   </div>`;
 
   if(profile.is_workouts_public){
