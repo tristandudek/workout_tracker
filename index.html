@@ -52,7 +52,7 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 }
 .sidebar .sidebar-logo{
   font-family:var(--font-display);font-size:1.6rem;font-weight:800;
-  letter-spacing:-.02em;margin-bottom:24px;padding:0 12px;
+  letter-spacing:-.02em;margin-bottom:24px;text-align:center;
 }
 .sidebar .sidebar-cta{
   height:44px;font-size:.875rem;margin-bottom:16px;
@@ -663,7 +663,7 @@ select.input{appearance:none;cursor:pointer;
 <div class="sidebar" id="sidebar">
   <div class="sidebar-logo">forg<span class="accent">d</span></div>
   <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:16px;height:16px"></i> Start Workout</button>
-  <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>On The Floor</button>
+  <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>Action on the Floor</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon"><i data-lucide="dumbbell" style="width:18px;height:18px"></i></span>My Workouts</button>
   <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>My Plans</button>
   <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
@@ -711,7 +711,7 @@ select.input{appearance:none;cursor:pointer;
   </div>
   <div class="flex gap-sm mt-md">
     <button class="btn btn-block grow" onclick="nav('workouts')">My Workouts</button>
-    <button class="btn btn-block grow" onclick="nav('feed')">On The Floor</button>
+    <button class="btn btn-block grow" onclick="nav('feed')">Action on the Floor</button>
   </div>
   <div id="home-stats" class="stats-strip"></div>
   <h3 class="fg2 mt-md mb-sm" style="font-size:.85rem">Recent Workouts</h3>
@@ -723,7 +723,7 @@ select.input{appearance:none;cursor:pointer;
      FEED VIEW
      ============================================================ -->
 <div class="view" id="view-feed" data-view="feed">
-  <h2 class="mt-md mb-md">On The Floor</h2>
+  <h2 class="mt-md mb-md">Action on the Floor</h2>
   <div class="feed-search-wrap">
     <div class="search-wrap" style="margin-bottom:0">
       <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
