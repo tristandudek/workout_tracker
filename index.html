@@ -213,7 +213,7 @@ select.input{appearance:none;cursor:pointer;
 .ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
 
 /* Stats Strip */
-.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0;width:100%}
+.stats-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0;width:100%}
 .stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow)}
 .stat-box .val{font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:var(--accent)}
 .stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500}
@@ -462,6 +462,9 @@ select.input{appearance:none;cursor:pointer;
 .feed-action{background:none;border:none;color:var(--fg2);cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:4px;font-family:var(--font-body);transition:color .15s}
 .feed-action:hover{color:var(--fg)}
 .feed-action.liked{color:var(--red)}
+.feed-tab{background:none;border:none;padding:10px 20px;font-family:var(--font-body);font-size:.875rem;font-weight:500;color:var(--fg3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.feed-tab:hover{color:var(--fg)}
+.feed-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
 .feed-action .count{font-family:var(--font-mono);font-size:.78rem}
 
 /* Comments */
@@ -731,11 +734,13 @@ select.input{appearance:none;cursor:pointer;
     </div>
     <div class="feed-search-results" id="feed-search-results"></div>
   </div>
-  <div class="filter-bar" id="feed-community-filters" style="margin-top:8px"></div>
-  <div id="feed-list"></div>
-  <div id="feed-empty" class="text-center mt-lg hidden">
-    <p class="fg3">No posts yet. Complete a workout and share it!</p>
+  <div class="feed-tabs" style="display:flex;border-bottom:2px solid var(--bg4);margin-bottom:16px">
+    <button class="feed-tab active" id="feed-tab-following" onclick="switchFeedTab('following')">Your Feed</button>
+    <button class="feed-tab" id="feed-tab-suggested" onclick="switchFeedTab('suggested')">Suggested For You</button>
   </div>
+  <div class="filter-bar" id="feed-community-filters"></div>
+  <div id="feed-list"></div>
+  <div id="feed-empty" class="text-center mt-lg hidden"></div>
 </div>
 
 <!-- ============================================================
@@ -2451,7 +2456,9 @@ async function renderProfile(){
     }
   }
 
-  // "Workouts done by others" stat
+  // Follow counts
+  const{count:followersCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',currentUser.id);
+  const{count:followingCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',currentUser.id);
   const{count:othersDoneCount}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',currentUser.id).neq('user_id',currentUser.id);
 
   document.getElementById('profile-stats').innerHTML=`
@@ -2459,6 +2466,8 @@ async function renderProfile(){
     <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
     <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
     <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Followed by Others</div></div>
+    <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
+    <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
   `;
 
   // Body metrics chart (Chart.js dual axis)
@@ -3032,8 +3041,9 @@ async function renderProfileHistory(){
 async function renderFeed(){
   await renderFeedCommunityFilters();
   let data,error;
+
   if(feedCommunityFilter){
-    // Get members of the community, then get their posts
+    // Community filter overrides tab
     const{data:members}=await sb.from('community_members').select('user_id').eq('community_id',feedCommunityFilter);
     const memberIds=(members||[]).map(m=>m.user_id);
     if(memberIds.length){
@@ -3044,14 +3054,39 @@ async function renderFeed(){
         return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
       });
     }else{data=[]}
+  }else if(feedActiveTab==='following'){
+    // Your Feed: posts from people you follow
+    const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
+    const followIds=(myFollows||[]).map(f=>f.following_id);
+    if(followIds.length){
+      const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',followIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
+      data=(res.data||[]).map(p=>{
+        const wl=p.workout_logs;
+        const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
+      });
+    }else{data=[]}
   }else{
+    // Suggested: all public posts
     const res=await sb.rpc('get_feed',{p_limit:30,p_offset:0});
     data=res.data;error=res.error;
   }
+
   const list=document.getElementById('feed-list');
   const empty=document.getElementById('feed-empty');
+
+  // Empty state depends on tab
   if(!data||!data.length){
-    list.innerHTML='';empty.classList.remove('hidden');return;
+    list.innerHTML='';
+    if(feedActiveTab==='following'&&!feedCommunityFilter){
+      empty.innerHTML=`<p class="fg3" style="margin-bottom:12px">You're not following anyone yet. Discover athletes below or search for friends to follow.</p>
+        <button class="btn btn-primary" onclick="switchFeedTab('suggested')"><i data-lucide="search" style="width:16px;height:16px"></i> Discover Athletes</button>`;
+    }else{
+      empty.innerHTML='<p class="fg3">No posts yet. Complete a workout and share it!</p>';
+    }
+    empty.classList.remove('hidden');
+    if(typeof lucide!=='undefined')lucide.createIcons();
+    return;
   }
   empty.classList.add('hidden');
   list.innerHTML=data.map(p=>{
@@ -3232,11 +3267,25 @@ async function openPublicProfile(userId){
   const{data:profile}=await sb.from('profiles').select('*').eq('id',userId).single();
   if(!profile){document.getElementById('pub-profile-content').innerHTML='<p class="fg3">User not found.</p>';return}
 
+  // Check if following
+  const{data:followCheck}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',userId).maybeSingle();
+  const isFollowing=!!followCheck;
+  // Follower/following counts
+  const{count:pubFollowers}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',userId);
+  const{count:pubFollowing}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',userId);
+
   let html=`<div class="pub-profile-header">
     <div class="pub-avatar">${profile.avatar_url?`<img src="${profile.avatar_url}">`:(profile.name||'?')[0].toUpperCase()}</div>
     <h2>${esc(profile.name)}</h2>
     <p class="fg2 small">@${esc(profile.username)}</p>
     ${profile.bio?`<p class="pub-bio">${esc(profile.bio)}</p>`:''}
+    <div style="margin-top:12px">
+      <button class="btn btn-sm ${isFollowing?'btn-danger':'btn-primary'}" data-following="${isFollowing}" onclick="toggleFollow('${userId}',this)">${isFollowing?'Unfollow':'Follow'}</button>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:12px">
+      <span class="small"><strong>${pubFollowers||0}</strong> <span class="fg2">followers</span></span>
+      <span class="small"><strong>${pubFollowing||0}</strong> <span class="fg2">following</span></span>
+    </div>
   </div>`;
 
   const{data:stats}=await sb.rpc('get_creator_stats',{p_user_id:userId});
@@ -3741,6 +3790,74 @@ async function renderFeedCommunityFilters(){
 async function setFeedCommunityFilter(communityId){
   feedCommunityFilter=communityId;
   await renderFeed();
+}
+
+/* =============================================================
+   FOLLOW / UNFOLLOW
+   ============================================================= */
+async function followUser(userId){
+  const{error}=await sb.from('follows').insert({follower_id:currentUser.id,following_id:userId});
+  if(error){toast(error.message.includes('duplicate')?'Already following':'Error following');return}
+  toast('Following!');
+  return true;
+}
+
+async function unfollowUser(userId){
+  const{error}=await sb.from('follows').delete().eq('follower_id',currentUser.id).eq('following_id',userId);
+  if(error){toast('Error unfollowing');return}
+  toast('Unfollowed');
+  return true;
+}
+
+async function toggleFollow(userId, btn){
+  const isFollowing=btn.dataset.following==='true';
+  if(isFollowing){
+    const ok=await unfollowUser(userId);
+    if(ok){btn.textContent='Follow';btn.dataset.following='false';btn.classList.remove('btn-danger');btn.classList.add('btn-primary')}
+  }else{
+    const ok=await followUser(userId);
+    if(ok){btn.textContent='Unfollow';btn.dataset.following='true';btn.classList.remove('btn-primary');btn.classList.add('btn-danger')}
+  }
+}
+
+async function openFollowList(type){
+  let data;
+  if(type==='followers'){
+    const res=await sb.from('follows').select('follower_id,profiles:follower_id(id,name,username,avatar_url)').eq('following_id',currentUser.id);
+    data=(res.data||[]).map(f=>f.profiles).filter(Boolean);
+  }else{
+    const res=await sb.from('follows').select('following_id,profiles:following_id(id,name,username,avatar_url)').eq('follower_id',currentUser.id);
+    data=(res.data||[]).map(f=>f.profiles).filter(Boolean);
+  }
+  // Check which ones I follow
+  const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
+  const followingSet=new Set((myFollows||[]).map(f=>f.following_id));
+
+  openModal(`
+    <div class="modal-header"><h2>${type==='followers'?'Followers':'Following'}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${data.length?data.map(u=>`<div class="member-row">
+        <div class="feed-avatar" onclick="closeModal();openPublicProfile('${u.id}')" style="cursor:pointer">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+        <div class="member-info" style="cursor:pointer" onclick="closeModal();openPublicProfile('${u.id}')">
+          <div class="member-name">${esc(u.name)}</div>
+          <div class="member-user">@${esc(u.username)}</div>
+        </div>
+        ${u.id!==currentUser.id?`<button class="btn btn-sm ${followingSet.has(u.id)?'btn-danger':'btn-primary'}" data-following="${followingSet.has(u.id)}" onclick="toggleFollow('${u.id}',this)">${followingSet.has(u.id)?'Unfollow':'Follow'}</button>`:''}
+      </div>`).join(''):'<p class="fg3 small">No one here yet.</p>'}
+    </div>
+  `);
+}
+
+/* =============================================================
+   FEED TAB SWITCHING
+   ============================================================= */
+let feedActiveTab='following';
+
+function switchFeedTab(tab){
+  feedActiveTab=tab;
+  document.getElementById('feed-tab-following').classList.toggle('active',tab==='following');
+  document.getElementById('feed-tab-suggested').classList.toggle('active',tab==='suggested');
+  renderFeed();
 }
 
 /* =============================================================
