@@ -322,7 +322,8 @@ select.input{appearance:none;cursor:pointer;
 .set-table th:first-child{text-align:left}
 .set-table td{padding:5px 4px;text-align:center;vertical-align:middle;overflow:hidden}
 .set-table td:first-child{text-align:left;font-family:var(--font-mono);font-size:.78rem;color:var(--fg2)}
-.set-table .prev{font-size:.75rem;color:var(--fg3);font-family:var(--font-mono)}
+.set-table .prev{font-size:.75rem;color:var(--accent);font-family:var(--font-mono);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px}
+.set-table .prev:hover{color:var(--accent2)}
 .set-table input[type="number"],.set-table input[type="text"]{
   width:64px;padding:6px 4px;background:var(--bg);border:1px solid var(--bg4);
   color:var(--fg);text-align:center;font-family:var(--font-mono);font-size:.85rem;
@@ -2760,7 +2761,7 @@ async function renderActiveWorkout(){
       return `
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
-        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${suggestedReps}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -2770,7 +2771,7 @@ async function renderActiveWorkout(){
         <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Sub ${subi+1}</td>
-          <td class="prev">—</td>
+          <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">—</td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
           <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
@@ -2791,7 +2792,7 @@ async function renderActiveWorkout(){
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
-        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -2801,7 +2802,7 @@ async function renderActiveWorkout(){
         <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Drop ${subi+1}</td>
-          <td class="prev">—</td>
+          <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">—</td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
           <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
@@ -2820,7 +2821,7 @@ async function renderActiveWorkout(){
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
-        <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+        <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -2830,7 +2831,7 @@ async function renderActiveWorkout(){
         <table class="set-table" style="margin:0">${SET_COLS}<tbody>
         ${s.subSets.map((sub,subi)=>`<tr style="border-bottom:1px solid var(--bg4)">
           <td style="color:var(--fg3);font-size:.75rem">Pause ${subi+1}</td>
-          <td class="prev">—</td>
+          <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">—</td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.weight||''}" onchange="updateSubSet(${ei},${si},${subi},'weight',+this.value||0)" placeholder="wt"></td>
           <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${sub.reps||''}" onchange="updateSubSet(${ei},${si},${subi},'reps',+this.value||0)" placeholder="reps"></td>
           <td><div class="set-check ${sub.completed?'done':''}" onclick="toggleSubSet(${ei},${si},${subi})">&#10003;</div></td>
@@ -2864,7 +2865,7 @@ async function renderActiveWorkout(){
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
-              <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
+              <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
               <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
               <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="${targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -2906,7 +2907,7 @@ async function renderActiveWorkout(){
                   <tbody>
                     ${se.sets.map((s,ssi)=>`<tr>
                       <td>${ssi+1}</td>
-                      <td class="prev">${sePrev[ssi]?sePrev[ssi].weight+'x'+sePrev[ssi].reps:'—'}</td>
+                      <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${se.exerciseId}')">${sePrev[ssi]?sePrev[ssi].weight+'×'+sePrev[ssi].reps:'—'}</td>
                       <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSupersetSet(${ei},${si},${ssi},'weight',+this.value)" placeholder="0"></td>
                       <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="${se.targetReps||'reps'}"></td>
                       <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSupersetSet(${ei},${si},${ssi})">&#10003;</div></td>
@@ -3186,6 +3187,53 @@ function confirmDiscard(){
   closeModal();
   toast('Workout discarded');
   nav('feed');
+}
+
+async function openExHistoryModal(exId){
+  const allExs=await getExercises();
+  const ex=allExs.find(e=>e.id===exId);
+  const exName=ex?ex.name:'Exercise';
+  const logs=await getLogs();
+  const sessions=[];
+  for(let i=logs.length-1;i>=0&&sessions.length<3;i--){
+    const le=logs[i].exercises.find(e=>e.exerciseId===exId);
+    if(le){
+      const completed=le.sets.filter(s=>s.completed&&s.weight>0);
+      if(completed.length){
+        const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
+        const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+        sessions.push({date:logs[i].startTime,woName:logs[i].workoutName,sets:le.sets,best,e1rm});
+      }
+    }
+  }
+  let bestE1rm=0,bestSet=null;
+  sessions.forEach(s=>{if(s.e1rm>bestE1rm){bestE1rm=s.e1rm;bestSet=s.best}});
+  let html=`<div class="modal-header"><h2>${esc(exName)} — History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body" style="max-height:70vh;overflow-y:auto">`;
+  if(!sessions.length){
+    html+='<p class="fg3">No history yet — this will populate after your first logged session.</p>';
+  }else{
+    html+=`<p class="small fg2 mb-md">Last ${sessions.length} session${sessions.length>1?'s':''} · Best 1RM: ${bestE1rm} ${getUnit()} · Best set: ${bestSet?bestSet.weight+'×'+bestSet.reps:'—'}</p>`;
+    html+=sessions.map((s,si)=>{
+      const d=new Date(s.date);
+      let setRows=s.sets.map((set,idx)=>{
+        let r=`<tr><td style="font-weight:600">Set ${idx+1}</td><td class="mono">${set.weight||'—'}</td><td class="mono">${set.reps||'—'}</td></tr>`;
+        if(set.subSets&&set.subSets.length){
+          set.subSets.forEach((sub,subi)=>{
+            r+=`<tr style="color:var(--fg3);font-size:.78rem"><td style="padding-left:16px">↳ ${sub.label||'Sub '+(subi+1)}</td><td class="mono">${sub.weight||'—'}</td><td class="mono">${sub.reps||'—'}</td></tr>`;
+          });
+        }
+        return r;
+      }).join('');
+      return `${si>0?'<div class="divider"></div>':''}
+        <div class="mb-md">
+          <div class="flex between mb-sm"><div><div style="font-family:var(--font-display);font-weight:700;font-size:.85rem">${d.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'})}</div><div class="small fg3">${esc(s.woName)}</div></div><div class="small"><span class="accent mono">1RM: ${s.e1rm}</span></div></div>
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Set</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Weight</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Reps</th></tr></thead><tbody>${setRows}</tbody></table>
+          <div class="small fg2 mt-sm">Best: <span class="accent mono">${s.best.weight}×${s.best.reps}</span></div>
+        </div>`;
+    }).join('');
+  }
+  html+='</div>';
+  openModal(html);
 }
 
 async function openExerciseHistory(exId){
