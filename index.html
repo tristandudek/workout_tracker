@@ -3,35 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>IRON LOG — Workout Tracker</title>
+<title>Forgd</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 /* ============================================================
-   RESET & BASE
+   FORGD DESIGN SYSTEM
    ============================================================ */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#ffffff;--bg2:#f5f5f5;--bg3:#ebebeb;--bg4:#ddd;
-  --fg:#111111;--fg2:#555;--fg3:#999;
-  --accent:#38bdf8;--accent2:#0ea5e9;--red:#ff3b3b;--red2:#cc2a2a;
-  --font-display:'Barlow Condensed',sans-serif;
-  --font-body:'Inter',sans-serif;
+  --bg:#ffffff;--bg2:#f8f9fb;--bg3:#f0f1f3;--bg4:#eaedf0;
+  --fg:#0a0a0a;--fg2:#6b7280;--fg3:#9ca3af;
+  --accent:#38bdf8;--accent2:#0ea5e9;--accent-light:#e0f5fe;
+  --red:#ef4444;--red2:#dc2626;--success:#22c55e;--warning:#f59e0b;
+  --font-display:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
   --font-mono:'JetBrains Mono',monospace;
-  --radius:3px;--radius2:6px;
+  --radius:8px;--radius2:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.06);--shadow-hover:0 4px 12px rgba(0,0,0,.08);
 }
 html{font-size:15px;-webkit-tap-highlight-color:transparent}
 body{
-  font-family:var(--font-body);color:var(--fg);background:var(--bg);
-  min-height:100vh;overflow-x:hidden;
+  font-family:var(--font-body);color:var(--fg);background:var(--bg2);
+  min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;
 }
 a{color:var(--accent);text-decoration:none}
 input,textarea,select,button{font-family:inherit;font-size:inherit}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
 
 /* ============================================================
    LAYOUT
@@ -43,36 +46,28 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 
 /* Desktop Sidebar */
 .sidebar{
-  display:none;position:fixed;top:0;left:0;bottom:0;width:220px;
-  background:var(--bg2);border-right:1px solid var(--bg4);z-index:500;
-  padding:24px 16px;flex-direction:column;gap:6px;overflow-y:auto;
+  display:none;position:fixed;top:0;left:0;bottom:0;width:240px;
+  background:var(--bg);border-right:1px solid var(--bg4);z-index:500;
+  padding:24px 16px;flex-direction:column;gap:4px;overflow-y:auto;
 }
 .sidebar .sidebar-logo{
-  font-family:var(--font-display);font-size:1.8rem;font-weight:900;
-  letter-spacing:.08em;text-transform:uppercase;margin-bottom:24px;
-  text-align:center;
+  font-family:var(--font-display);font-size:1.6rem;font-weight:800;
+  letter-spacing:-.02em;margin-bottom:24px;padding:0 12px;
 }
 .sidebar .sidebar-cta{
-  padding:14px;font-size:1rem;margin-bottom:12px;
+  height:44px;font-size:.875rem;margin-bottom:16px;
 }
 .sidebar .sidebar-link{
-  display:flex;align-items:center;gap:10px;padding:10px 12px;
-  background:none;border:none;color:var(--fg2);cursor:pointer;
-  font-family:var(--font-display);font-size:.88rem;font-weight:600;
-  text-transform:uppercase;letter-spacing:.04em;transition:all .12s;
-  width:100%;text-align:left;border-radius:var(--radius);
+  display:flex;align-items:center;gap:10px;padding:0 12px;height:44px;
+  background:none;border:none;border-left:3px solid transparent;
+  color:var(--fg2);cursor:pointer;
+  font-family:var(--font-body);font-size:.875rem;font-weight:500;
+  transition:all .15s ease;width:100%;text-align:left;border-radius:var(--radius);
 }
-.sidebar .sidebar-link:hover{background:var(--bg3);color:var(--fg)}
-.sidebar .sidebar-link.active{color:var(--accent);background:rgba(56,189,248,.12)}
-.sidebar .sidebar-link .sidebar-icon{font-size:1.1rem;width:24px;text-align:center}
+.sidebar .sidebar-link:hover{background:var(--bg2);color:var(--fg)}
+.sidebar .sidebar-link.active{color:var(--accent);background:var(--accent-light);border-left-color:var(--accent)}
+.sidebar .sidebar-link .sidebar-icon{width:20px;display:flex;align-items:center;justify-content:center}
 .sidebar .sidebar-spacer{flex:1}
-.sidebar .sidebar-logout{
-  margin-top:auto;padding:8px 12px;font-size:.78rem;color:var(--fg3);
-  background:none;border:1px solid var(--bg4);cursor:pointer;
-  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
-  width:100%;text-align:center;transition:all .12s;
-}
-.sidebar .sidebar-logout:hover{border-color:var(--red);color:var(--red)}
 
 /* Feed search dropdown */
 .feed-search-wrap{position:relative;margin-bottom:16px}
@@ -86,7 +81,7 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 
 @media(min-width:768px){
   .sidebar{display:flex}
-  #app-wrapper #app{margin-left:220px}
+  #app-wrapper #app{margin-left:240px}
   .nav{display:none!important}
 }
 @media(max-width:767px){
@@ -96,10 +91,10 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 /* ============================================================
    TYPOGRAPHY
    ============================================================ */
-h1,h2,h3{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.04em;font-weight:800}
-h1{font-size:2.4rem;line-height:1}
-h2{font-size:1.6rem;line-height:1.1}
-h3{font-size:1.15rem}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:-.01em;font-weight:700}
+h1{font-size:2.2rem;line-height:1.1}
+h2{font-size:1.5rem;line-height:1.2}
+h3{font-size:1.05rem}
 .mono{font-family:var(--font-mono)}
 .accent{color:var(--accent)}
 .fg2{color:var(--fg2)}
@@ -113,124 +108,125 @@ h3{font-size:1.15rem}
 /* Buttons */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:12px 24px;font-family:var(--font-display);font-weight:700;
-  font-size:1rem;text-transform:uppercase;letter-spacing:.06em;
-  border:none;cursor:pointer;transition:all .12s;background:var(--bg3);
-  color:var(--fg);border:1px solid var(--bg4);
+  padding:0 20px;height:40px;font-family:var(--font-body);font-weight:500;
+  font-size:.875rem;border:none;cursor:pointer;transition:all .15s ease;
+  background:var(--bg);color:var(--fg);border:1px solid var(--bg4);
+  border-radius:var(--radius);
 }
-.btn:hover{background:var(--bg4)}
-.btn:active{transform:scale(.97)}
+.btn:hover{background:var(--bg3);border-color:var(--fg3)}
+.btn:active{transform:scale(.98)}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn-primary:hover{background:var(--accent2)}
-.btn-danger{border-color:var(--red);color:var(--red)}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.btn-danger{background:transparent;border-color:var(--red);color:var(--red)}
 .btn-danger:hover{background:var(--red);color:#fff}
-.btn-sm{padding:8px 14px;font-size:.82rem}
+.btn-sm{padding:0 12px;height:32px;font-size:.8rem}
 .btn-block{width:100%;justify-content:center}
-.btn-ghost{background:transparent;border-color:transparent;color:var(--fg2)}
-.btn-ghost:hover{color:var(--fg);background:var(--bg3)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--accent)}
+.btn-ghost:hover{background:var(--accent-light)}
 
 /* Inputs */
 .input{
-  width:100%;padding:10px 12px;background:var(--bg);
-  border:1px solid var(--bg4);color:var(--fg);font-size:.9rem;
-  transition:border-color .15s;
+  width:100%;padding:0 12px;height:40px;background:var(--bg);
+  border:1px solid var(--bg4);color:var(--fg);font-size:.875rem;
+  transition:all .15s ease;border-radius:var(--radius);font-family:var(--font-body);
 }
-.input:focus{outline:none;border-color:var(--accent)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
 .input::placeholder{color:var(--fg3)}
-textarea.input{resize:vertical;min-height:60px}
+textarea.input{resize:vertical;min-height:60px;height:auto;padding:10px 12px}
 select.input{appearance:none;cursor:pointer;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 12px center}
 
 /* Cards */
-.card{background:var(--bg2);border:1px solid var(--bg4);padding:14px;margin-bottom:8px;transition:border-color .15s}
-.card:hover{border-color:var(--fg3)}
+.card{background:var(--bg);border:1px solid var(--bg4);padding:16px;margin-bottom:8px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease}
+.card:hover{box-shadow:var(--shadow-hover)}
 
 /* Chips */
 .chip{
-  display:inline-flex;align-items:center;padding:5px 12px;
-  font-size:.75rem;font-weight:600;border:1px solid var(--bg4);
-  background:var(--bg3);color:var(--fg2);cursor:pointer;
-  text-transform:uppercase;letter-spacing:.04em;transition:all .12s;
-  font-family:var(--font-display);user-select:none;
+  display:inline-flex;align-items:center;padding:6px 14px;
+  font-size:.8rem;font-weight:500;border:1px solid var(--bg4);
+  background:var(--bg);color:var(--fg2);cursor:pointer;
+  transition:all .15s ease;font-family:var(--font-body);
+  user-select:none;border-radius:20px;
 }
-.chip:hover{border-color:var(--fg3);color:var(--fg)}
-.chip.active{border-color:var(--accent);color:var(--accent);background:rgba(56,189,248,.12)}
+.chip:hover{border-color:var(--accent);color:var(--fg)}
+.chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 
 /* Modal */
 .modal-backdrop{
   position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;
-  display:none;align-items:flex-start;justify-content:center;
-  padding:40px 16px;overflow-y:auto;animation:fadeIn .15s;
+  display:none;align-items:center;justify-content:center;
+  padding:24px 16px;overflow-y:auto;animation:fadeIn .2s ease;
 }
 .modal-backdrop.open{display:flex}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal{
-  background:var(--bg2);border:1px solid var(--bg4);width:100%;
-  max-width:600px;max-height:85vh;overflow-y:auto;animation:slideUp .2s ease;
+  background:var(--bg);border:1px solid var(--bg4);width:100%;
+  max-width:520px;max-height:85vh;overflow-y:auto;border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);animation:modalIn .2s ease;
 }
-@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+@keyframes modalIn{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
 .modal-header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px;border-bottom:1px solid var(--bg4);position:sticky;top:0;
-  background:var(--bg2);z-index:2;
+  padding:20px 24px 16px;position:sticky;top:0;background:var(--bg);z-index:2;
 }
-.modal-header h2{font-size:1.2rem}
+.modal-header h2{font-size:1.15rem}
 .modal-close{
   width:32px;height:32px;display:flex;align-items:center;justify-content:center;
-  background:none;border:none;color:var(--fg2);cursor:pointer;font-size:1.2rem;
+  background:none;border:none;color:var(--fg3);cursor:pointer;font-size:1.1rem;
+  border-radius:50%;transition:background .15s;
 }
-.modal-close:hover{color:var(--fg)}
-.modal-body{padding:16px}
-.modal-footer{padding:16px;border-top:1px solid var(--bg4);display:flex;gap:8px;justify-content:flex-end}
+.modal-close:hover{background:var(--bg3);color:var(--fg)}
+.modal-body{padding:0 24px 16px}
+.modal-footer{padding:16px 24px 20px;border-top:1px solid var(--bg4);display:flex;gap:8px;justify-content:flex-end}
 
 /* Tags */
 .tag{
-  display:inline-block;padding:2px 8px;font-size:.65rem;font-weight:700;
-  text-transform:uppercase;letter-spacing:.06em;
-  font-family:var(--font-display);border:1px solid;
+  display:inline-block;padding:3px 10px;font-size:.7rem;font-weight:600;
+  letter-spacing:.02em;font-family:var(--font-body);border:1px solid;
+  border-radius:20px;
 }
-.tag-muscle{border-color:var(--accent);color:var(--accent)}
-.tag-equip{border-color:var(--fg3);color:var(--fg2)}
+.tag-muscle{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.tag-equip{border-color:var(--bg4);color:var(--fg2)}
 
 /* Toast */
 #toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
-  background:var(--accent);color:#fff;padding:10px 24px;
-  font-family:var(--font-display);font-weight:700;font-size:.9rem;
-  text-transform:uppercase;letter-spacing:.04em;z-index:2000;
+  position:fixed;bottom:24px;right:24px;transform:translateY(100px);
+  background:var(--fg);color:#fff;padding:12px 20px;
+  font-family:var(--font-body);font-weight:500;font-size:.875rem;
+  z-index:2000;border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.15);
   transition:transform .3s ease;white-space:nowrap;
 }
-#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.show{transform:translateY(0)}
 
 /* Exercise Grid */
 .ex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
 .ex-card{
-  background:var(--bg2);border:1px solid var(--bg4);padding:12px;
-  cursor:pointer;transition:all .15s;display:flex;gap:10px;align-items:center;
+  background:var(--bg);border:1px solid var(--bg4);padding:12px;border-radius:var(--radius);
+  cursor:pointer;transition:all .2s ease;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow);
 }
-.ex-card:hover{border-color:var(--accent);background:var(--bg3)}
+.ex-card:hover{box-shadow:var(--shadow-hover);border-color:var(--accent)}
 .ex-card .thumb{width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .ex-card .thumb svg{width:44px;height:44px}
 .ex-card .info{flex:1;min-width:0}
-.ex-card .info .name{font-family:var(--font-display);font-weight:700;font-size:.92rem;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-card .info .name{font-family:var(--font-display);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ex-card .info .meta{font-size:.7rem;color:var(--fg2);margin-top:2px}
 
 /* Stats Strip */
-.stats-strip{display:flex;gap:1px;background:var(--bg4);border:1px solid var(--bg4);margin:16px 0}
-.stat-box{flex:1;background:var(--bg2);padding:14px 12px;text-align:center}
-.stat-box .val{font-family:var(--font-display);font-weight:900;font-size:1.6rem;color:var(--accent)}
-.stat-box .lbl{font-size:.68rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;font-family:var(--font-display)}
+.stats-strip{display:flex;gap:8px;margin:16px 0}
+.stat-box{flex:1;background:var(--bg);padding:16px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow)}
+.stat-box .val{font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:var(--accent)}
+.stat-box .lbl{font-size:.68rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500}
 
 /* Workout Card */
 .wo-card{
-  background:var(--bg2);border:1px solid var(--bg4);padding:14px;
+  background:var(--bg);border:1px solid var(--bg4);padding:16px;
   margin-bottom:8px;display:flex;align-items:center;gap:12px;
-  transition:border-color .15s;
+  border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease;
 }
-.wo-card:hover{border-color:var(--fg3)}
+.wo-card:hover{box-shadow:var(--shadow-hover)}
 .wo-card .wo-info{flex:1}
-.wo-card .wo-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:1rem}
+.wo-card .wo-name{font-family:var(--font-display);font-weight:700;font-size:1rem}
 .wo-card .wo-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
 .wo-card .wo-actions{display:flex;gap:6px}
 
@@ -241,7 +237,7 @@ select.input{appearance:none;cursor:pointer;
   display:flex;align-items:center;justify-content:space-between;
 }
 .aw-timer{font-family:var(--font-mono);font-size:1.3rem;font-weight:500;color:var(--accent)}
-.aw-exercise{background:var(--bg2);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden}
+.aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
 .aw-ex-header{
@@ -249,7 +245,7 @@ select.input{appearance:none;cursor:pointer;
   cursor:pointer;border-bottom:1px solid var(--bg4);
 }
 .aw-ex-header .drag{cursor:grab;color:var(--fg3);font-size:1rem;user-select:none}
-.aw-ex-header .ex-title{flex:1;font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.95rem}
+.aw-ex-header .ex-title{flex:1;font-family:var(--font-display);font-weight:700;font-size:.95rem}
 .aw-ex-header .target{font-size:.75rem;color:var(--fg2);font-family:var(--font-mono)}
 .aw-ex-body{padding:10px 14px}
 .set-table{width:100%;border-collapse:collapse}
@@ -279,25 +275,24 @@ select.input{appearance:none;cursor:pointer;
 
 /* PR Badge */
 .pr-badge{
-  display:inline-block;padding:1px 6px;font-size:.6rem;font-weight:800;
-  background:var(--accent);color:#fff;font-family:var(--font-display);
-  letter-spacing:.06em;margin-left:6px;animation:prPop .3s ease;
+  display:inline-block;padding:3px 8px;font-size:.65rem;font-weight:700;
+  background:var(--accent);color:#fff;font-family:var(--font-body);
+  border-radius:20px;margin-left:6px;animation:prPop .3s ease;
 }
 @keyframes prPop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
 
 /* Nav Bar */
 .nav{
-  position:fixed;bottom:0;left:0;right:0;background:var(--bg2);
+  position:fixed;bottom:0;left:0;right:0;background:var(--bg);
   border-top:1px solid var(--bg4);display:flex;z-index:500;
 }
 .nav-btn{
-  flex:1;padding:10px 0 8px;background:none;border:none;color:var(--fg3);
+  flex:1;padding:8px 0 6px;background:none;border:none;color:var(--fg3);
   cursor:pointer;text-align:center;transition:color .15s;
-  font-family:var(--font-display);font-size:.7rem;font-weight:600;
-  text-transform:uppercase;letter-spacing:.08em;
+  font-family:var(--font-body);font-size:.65rem;font-weight:500;
 }
 .nav-btn.active{color:var(--accent)}
-.nav-btn .nav-icon{font-size:1.2rem;display:block;margin-bottom:2px}
+.nav-btn .nav-icon{font-size:1.1rem;display:block;margin-bottom:2px}
 
 /* Misc */
 .divider{height:1px;background:var(--bg4);margin:16px 0}
@@ -331,28 +326,28 @@ select.input{appearance:none;cursor:pointer;
 
 /* Recent workout cards */
 .recent-card{
-  background:var(--bg2);border:1px solid var(--bg4);padding:12px;
-  margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg);border:1px solid var(--bg4);padding:14px;border-radius:var(--radius);
+  margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow);
 }
-.recent-card .rc-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.9rem}
+.recent-card .rc-name{font-family:var(--font-display);font-weight:700;font-size:.9rem}
 .recent-card .rc-meta{font-size:.72rem;color:var(--fg2);margin-top:2px}
 .recent-card .rc-dur{font-family:var(--font-mono);font-size:.8rem;color:var(--accent)}
 
 /* Unit toggle */
 .unit-toggle{
-  display:inline-flex;border:1px solid var(--bg4);font-size:.7rem;
-  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
+  display:inline-flex;border:1px solid var(--bg4);font-size:.75rem;
+  font-family:var(--font-body);font-weight:600;border-radius:var(--radius);overflow:hidden;
 }
-.unit-toggle span{padding:4px 10px;cursor:pointer;transition:all .12s}
+.unit-toggle span{padding:6px 12px;cursor:pointer;transition:all .15s}
 .unit-toggle span.active{background:var(--accent);color:#fff}
 
 /* Finish Summary */
 .finish-stat{
-  text-align:center;padding:12px;border:1px solid var(--bg4);
-  background:var(--bg3);flex:1;
+  text-align:center;padding:16px;border:1px solid var(--bg4);
+  background:var(--bg);flex:1;border-radius:var(--radius);
 }
-.finish-stat .val{font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--accent)}
-.finish-stat .lbl{font-size:.7rem;color:var(--fg2);text-transform:uppercase;margin-top:2px;font-family:var(--font-display)}
+.finish-stat .val{font-family:var(--font-display);font-weight:800;font-size:1.8rem;color:var(--accent)}
+.finish-stat .lbl{font-size:.7rem;color:var(--fg2);margin-top:4px;font-family:var(--font-body)}
 
 /* ============================================================
    AUTH VIEW
@@ -375,36 +370,36 @@ select.input{appearance:none;cursor:pointer;
    TOP RIGHT BAR
    ============================================================ */
 #profile-badge{
-  position:fixed;top:8px;right:12px;z-index:600;
-  display:flex;align-items:center;gap:8px;
+  position:fixed;top:14px;right:16px;z-index:600;
+  display:flex;align-items:center;gap:10px;
 }
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
-  font-size:1.1rem;color:var(--fg2);transition:border-color .15s;overflow:hidden;
+  font-size:.9rem;color:var(--fg2);transition:border-color .15s;overflow:hidden;
 }
 .profile-menu-btn:hover{border-color:var(--accent)}
 .profile-menu-btn img{width:100%;height:100%;object-fit:cover}
 .profile-menu-dropdown{
-  position:absolute;top:calc(100% + 6px);right:0;width:200px;
-  background:var(--bg2);border:1px solid var(--bg4);z-index:700;
-  display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);
+  position:absolute;top:calc(100% + 8px);right:0;width:220px;
+  background:var(--bg);border:1px solid var(--bg4);z-index:700;
+  display:none;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);
+  overflow:hidden;
 }
 .profile-menu-dropdown.open{display:block}
 .profile-menu-name{
-  padding:10px 14px;font-family:var(--font-display);font-weight:700;
-  font-size:.85rem;text-transform:uppercase;color:var(--fg);
-  border-bottom:1px solid var(--bg4);
+  padding:14px 16px 10px;font-family:var(--font-display);font-weight:700;
+  font-size:.9rem;color:var(--fg);border-bottom:1px solid var(--bg4);
 }
 .profile-menu-item{
-  display:block;width:100%;padding:10px 14px;background:none;border:none;
-  text-align:left;font-size:.82rem;color:var(--fg2);cursor:pointer;
-  font-family:var(--font-body);transition:background .12s;
+  display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;
+  background:none;border:none;text-align:left;font-size:.85rem;color:var(--fg2);
+  cursor:pointer;font-family:var(--font-body);transition:background .15s;
 }
-.profile-menu-item:hover{background:var(--bg3);color:var(--fg)}
+.profile-menu-item:hover{background:var(--bg2);color:var(--fg)}
 .profile-menu-logout{color:var(--red)}
-.profile-menu-logout:hover{background:rgba(255,59,59,.08)}
+.profile-menu-logout:hover{background:rgba(239,68,68,.06)}
 
 /* ============================================================
    PROFILE VIEW
@@ -418,7 +413,7 @@ select.input{appearance:none;cursor:pointer;
   overflow:hidden;
 }
 .profile-avatar img{width:100%;height:100%;object-fit:cover}
-.profile-section{background:var(--bg2);border:1px solid var(--bg4);padding:16px;margin-bottom:12px}
+.profile-section{background:var(--bg);border:1px solid var(--bg4);padding:20px;margin-bottom:12px;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .profile-section h3{font-size:.88rem;margin-bottom:12px}
 .profile-field{margin-bottom:10px}
 .profile-field label{display:block;font-size:.7rem;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-display);font-weight:600;margin-bottom:4px}
@@ -450,11 +445,11 @@ select.input{appearance:none;cursor:pointer;
 /* ============================================================
    SOCIAL: Feed
    ============================================================ */
-.feed-card{background:var(--bg2);border:1px solid var(--bg4);margin-bottom:12px;overflow:hidden}
+.feed-card{background:var(--bg);border:1px solid var(--bg4);margin-bottom:12px;overflow:hidden;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .feed-header{display:flex;align-items:center;gap:10px;padding:12px 14px}
 .feed-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:.85rem;color:var(--accent);overflow:hidden;flex-shrink:0;cursor:pointer}
 .feed-avatar img{width:100%;height:100%;object-fit:cover}
-.feed-user{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem;cursor:pointer}
+.feed-user{font-family:var(--font-display);font-weight:700;font-size:.88rem;cursor:pointer}
 .feed-user:hover{color:var(--accent)}
 .feed-time{font-size:.68rem;color:var(--fg3)}
 .feed-summary{padding:0 14px 10px;font-size:.82rem;color:var(--fg2)}
@@ -495,10 +490,11 @@ select.input{appearance:none;cursor:pointer;
 
 /* Notification bell */
 .notif-wrap{position:relative}
-.notif-bell{background:none;border:none;color:var(--fg2);font-size:1.2rem;cursor:pointer;position:relative;padding:4px}
+.notif-bell{background:none;border:none;color:var(--fg2);font-size:1rem;cursor:pointer;position:relative;padding:6px;border-radius:50%;transition:background .15s}
+.notif-bell:hover{background:var(--bg2)}
 .notif-bell:hover{color:var(--fg)}
 .notif-badge{position:absolute;top:-2px;right:-4px;background:var(--red);color:#fff;font-size:.55rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono)}
-.notif-dropdown{position:absolute;top:100%;right:0;width:320px;max-height:400px;overflow-y:auto;background:var(--bg2);border:1px solid var(--bg4);z-index:700;display:none;animation:fadeIn .15s}
+.notif-dropdown{position:absolute;top:100%;right:0;width:340px;max-height:400px;overflow-y:auto;background:var(--bg);border:1px solid var(--bg4);z-index:700;display:none;animation:fadeIn .15s;border-radius:var(--radius2);box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .notif-dropdown.open{display:block}
 .notif-item{padding:10px 14px;border-bottom:1px solid var(--bg4);font-size:.82rem;cursor:pointer;transition:background .12s}
 .notif-item:hover{background:var(--bg3)}
@@ -521,9 +517,9 @@ select.input{appearance:none;cursor:pointer;
 .photo-upload-area input[type="file"]{display:none}
 
 /* Plans */
-.plan-card{background:var(--bg2);border:1px solid var(--bg4);padding:14px;margin-bottom:8px;transition:border-color .15s}
-.plan-card:hover{border-color:var(--fg3)}
-.plan-card .plan-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:1rem}
+.plan-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;margin-bottom:8px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease}
+.plan-card:hover{box-shadow:var(--shadow-hover)}
+.plan-card .plan-name{font-family:var(--font-display);font-weight:700;font-size:1rem}
 .plan-card .plan-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
 .plan-card .plan-adopters{font-size:.72rem;color:var(--accent);margin-top:4px}
 .plan-workout-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--bg4);margin-bottom:4px}
@@ -569,8 +565,8 @@ select.input{appearance:none;cursor:pointer;
 .active-plan-card .apc-meta{font-size:.78rem;color:var(--fg2);margin-top:2px}
 
 /* Community cards */
-.community-card{background:var(--bg2);border:1px solid var(--bg4);padding:14px;text-align:center;cursor:pointer;transition:border-color .15s}
-.community-card:hover{border-color:var(--accent)}
+.community-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;text-align:center;cursor:pointer;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease}
+.community-card:hover{box-shadow:var(--shadow-hover)}
 .community-card .comm-avatar{width:48px;height:48px;border-radius:50%;background:var(--bg4);margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:1.1rem;color:var(--accent);overflow:hidden}
 .community-card .comm-avatar img{width:100%;height:100%;object-fit:cover}
 .community-card .comm-name{font-family:var(--font-display);font-weight:700;text-transform:uppercase;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -608,7 +604,7 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div id="auth-view" style="display:none">
   <div class="auth-logo">
-    <h1>IRON<span class="accent">LOG</span></h1>
+    <h1>forg<span class="accent">d</span></h1>
     <p>Lift. Track. Share.</p>
   </div>
 
@@ -647,7 +643,7 @@ select.input{appearance:none;cursor:pointer;
 
   <!-- EMAIL CONFIRMATION SCREEN -->
   <div id="auth-confirm" style="display:none;text-align:center;padding:20px 0">
-    <div style="width:64px;height:64px;border-radius:50%;background:rgba(56,189,248,.12);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:1.8rem">&#9993;</div>
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--accent-light);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;color:var(--accent)"><i data-lucide="mail" style="width:28px;height:28px"></i></div>
     <h2 style="font-size:1.4rem;margin-bottom:8px">Check Your Email!</h2>
     <p style="color:var(--fg2);line-height:1.6;margin-bottom:6px">We've sent a confirmation link to</p>
     <p style="color:var(--accent);font-family:var(--font-mono);font-size:.9rem;margin-bottom:16px" id="confirm-email-display"></p>
@@ -665,19 +661,19 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- DESKTOP SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <div class="sidebar-logo">IRON<span class="accent">LOG</span></div>
-  <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()">&#9654; Start Workout</button>
-  <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon">&#128240;</span>Feed</button>
-  <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon">&#128203;</span>My Workouts</button>
-  <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon">&#128221;</span>My Plans</button>
-  <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon">&#127968;</span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
+  <div class="sidebar-logo">forg<span class="accent">d</span></div>
+  <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:16px;height:16px"></i> Start Workout</button>
+  <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>On The Floor</button>
+  <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon"><i data-lucide="dumbbell" style="width:18px;height:18px"></i></span>My Workouts</button>
+  <button class="sidebar-link" data-nav="plan-edit" onclick="nav('profile')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>My Plans</button>
+  <button class="sidebar-link" data-nav="communities" onclick="nav('communities')"><span class="sidebar-icon"><i data-lucide="users" style="width:18px;height:18px"></i></span>Communities <span class="notif-badge hidden" id="community-count" style="position:static;margin-left:4px;font-size:.6rem;min-width:14px;height:14px">0</span></button>
 </div>
 
 <!-- TOP RIGHT BAR -->
 <div id="profile-badge">
   <div class="notif-wrap">
     <button class="notif-bell" onclick="toggleNotifications()">
-      &#128276;
+      <i data-lucide="bell" style="width:18px;height:18px"></i>
       <span class="notif-badge hidden" id="notif-count">0</span>
     </button>
     <div class="notif-dropdown" id="notif-dropdown">
@@ -687,15 +683,15 @@ select.input{appearance:none;cursor:pointer;
   </div>
   <div class="profile-menu-wrap">
     <button class="profile-menu-btn" id="profile-menu-btn" onclick="toggleProfileMenu()">
-      <span id="badge-avatar-icon">&#128100;</span>
+      <span id="badge-avatar-icon"><i data-lucide="user-circle" style="width:20px;height:20px"></i></span>
     </button>
     <div class="profile-menu-dropdown" id="profile-menu-dropdown">
       <div class="profile-menu-name" id="badge-name"></div>
-      <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')">My Profile</button>
-      <button class="profile-menu-item" onclick="closeProfileMenu();nav('my-info')">My Information</button>
-      <button class="profile-menu-item" onclick="closeProfileMenu();nav('privacy')">Privacy Settings</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')"><i data-lucide="user" style="width:16px;height:16px"></i> My Profile</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('my-info')"><i data-lucide="settings" style="width:16px;height:16px"></i> My Information</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
       <div class="divider" style="margin:6px 0"></div>
-      <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()">Logout</button>
+      <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
     </div>
   </div>
 </div>
@@ -707,15 +703,15 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-home" data-view="home">
   <div class="mt-lg text-center">
-    <h1 style="font-size:3rem;font-weight:900;letter-spacing:.08em">IRON<span class="accent">LOG</span></h1>
+    <h1 style="font-size:3rem;font-weight:900;letter-spacing:.08em">forg<span class="accent">d</span></h1>
     <p class="fg3 small" style="letter-spacing:.15em;margin-top:4px;font-family:var(--font-display);text-transform:uppercase">Lift. Track. Share.</p>
   </div>
   <div class="mt-lg">
-    <button class="btn btn-primary btn-block" style="padding:18px;font-size:1.15rem" onclick="startWorkoutFlow()">&#9654; START WORKOUT</button>
+    <button class="btn btn-primary btn-block" style="height:52px;font-size:1rem" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:18px;height:18px"></i> Start Workout</button>
   </div>
   <div class="flex gap-sm mt-md">
-    <button class="btn btn-block grow" onclick="nav('workouts')">MY WORKOUTS</button>
-    <button class="btn btn-block grow" onclick="nav('feed')">VIEW FEED</button>
+    <button class="btn btn-block grow" onclick="nav('workouts')">My Workouts</button>
+    <button class="btn btn-block grow" onclick="nav('feed')">On The Floor</button>
   </div>
   <div id="home-stats" class="stats-strip"></div>
   <h3 class="fg2 mt-md mb-sm" style="font-size:.85rem">Recent Workouts</h3>
@@ -727,10 +723,10 @@ select.input{appearance:none;cursor:pointer;
      FEED VIEW
      ============================================================ -->
 <div class="view" id="view-feed" data-view="feed">
-  <h2 class="mt-md mb-md">Feed</h2>
+  <h2 class="mt-md mb-md">On The Floor</h2>
   <div class="feed-search-wrap">
     <div class="search-wrap" style="margin-bottom:0">
-      <span class="search-icon">&#128269;</span>
+      <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
       <input class="input" id="feed-search-input" placeholder="Search athletes..." oninput="feedSearchUsers()" onfocus="feedSearchFocus()" onblur="setTimeout(()=>closeFeedSearch(),200)">
     </div>
     <div class="feed-search-results" id="feed-search-results"></div>
@@ -746,7 +742,7 @@ select.input{appearance:none;cursor:pointer;
      PUBLIC PROFILE VIEW
      ============================================================ -->
 <div class="view" id="view-public-profile" data-view="public-profile">
-  <button class="btn btn-sm btn-ghost mb-md" onclick="history.back()||nav('feed')">&larr; Back</button>
+  <button class="btn btn-sm btn-ghost mb-md" onclick="history.back()||nav('feed')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back</button>
   <div id="pub-profile-content"></div>
 </div>
 
@@ -759,7 +755,7 @@ select.input{appearance:none;cursor:pointer;
     <button class="btn btn-sm" onclick="openAddCustomExercise()">+ Custom</button>
   </div>
   <div class="search-wrap">
-    <span class="search-icon">&#128269;</span>
+    <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
     <input class="input" id="db-search" placeholder="Search exercises..." oninput="renderDatabase()">
   </div>
   <div class="filter-bar" id="db-muscle-filters"></div>
@@ -804,7 +800,7 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-active" data-view="active">
   <div class="aw-header">
     <div>
-      <div id="aw-name" style="font-family:var(--font-display);font-weight:800;text-transform:uppercase;font-size:1.1rem"></div>
+      <div id="aw-name" style="font-family:var(--font-display);font-weight:700;font-size:1.1rem"></div>
       <div class="aw-timer" id="aw-timer">0:00</div>
     </div>
     <div class="flex gap-sm">
@@ -812,8 +808,8 @@ select.input{appearance:none;cursor:pointer;
         <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
         <span data-unit="kg" onclick="setUnit('kg')">KG</span>
       </div>
-      <button class="btn btn-sm btn-danger" onclick="discardWorkout()">Discard</button>
-      <button class="btn btn-sm btn-primary" onclick="finishWorkout()">Finish</button>
+      <button class="btn btn-sm btn-danger" onclick="discardWorkout()"><i data-lucide="x" style="width:14px;height:14px"></i> Discard</button>
+      <button class="btn btn-sm btn-primary" onclick="finishWorkout()"><i data-lucide="check" style="width:14px;height:14px"></i> Finish</button>
     </div>
   </div>
   <div id="aw-exercises" class="mt-sm"></div>
@@ -825,7 +821,7 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-history" data-view="history">
   <h2 class="mt-md mb-md">Workout History</h2>
-  <button class="btn btn-sm btn-ghost mb-md" onclick="nav('profile')">&larr; Back to Profile</button>
+  <button class="btn btn-sm btn-ghost mb-md" onclick="nav('profile')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to Profile</button>
   <div id="history-list"></div>
 </div>
 
@@ -878,7 +874,7 @@ select.input{appearance:none;cursor:pointer;
      MY INFORMATION PAGE
      ============================================================ -->
 <div class="view" id="view-my-info" data-view="my-info">
-  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')">&larr; Back to Profile</button>
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to Profile</button>
   <h2 class="mb-md">My Information</h2>
   <div class="profile-section">
     <div class="profile-field"><label>Name</label><input class="input" id="mi-name"></div>
@@ -901,7 +897,7 @@ select.input{appearance:none;cursor:pointer;
      PRIVACY SETTINGS PAGE
      ============================================================ -->
 <div class="view" id="view-privacy" data-view="privacy">
-  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')">&larr; Back to Profile</button>
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to Profile</button>
   <h2 class="mb-md">Privacy Settings</h2>
   <div class="profile-section">
     <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
@@ -952,7 +948,7 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-communities" data-view="communities">
   <h2 class="mt-md mb-md">Communities</h2>
   <div class="search-wrap">
-    <span class="search-icon">&#128269;</span>
+    <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
     <input class="input" id="community-search-input" placeholder="Find a community..." oninput="searchCommunities()">
   </div>
   <div id="community-search-results" class="mb-md"></div>
@@ -967,7 +963,7 @@ select.input{appearance:none;cursor:pointer;
      COMMUNITY DETAIL VIEW
      ============================================================ -->
 <div class="view" id="view-community-detail" data-view="community-detail">
-  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('communities')">&larr; Back</button>
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('communities')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back</button>
   <div id="community-detail-header"></div>
   <div class="filter-bar mb-sm">
     <div class="chip active" onclick="showCommunityTab('feed',this)">Feed</div>
@@ -989,10 +985,10 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- NAV BAR (mobile only) -->
 <nav class="nav" id="main-nav">
-  <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon">&#128240;</span>Feed</button>
-  <button class="nav-btn" data-nav="start" onclick="startWorkoutFlow()"><span class="nav-icon">&#9654;</span>Start</button>
-  <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon">&#128203;</span>Workouts</button>
-  <button class="nav-btn" data-nav="profile" onclick="nav('profile')"><span class="nav-icon">&#128100;</span>Profile</button>
+  <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon"><i data-lucide="radio" style="width:20px;height:20px"></i></span>Floor</button>
+  <button class="nav-btn" data-nav="start" onclick="startWorkoutFlow()"><span class="nav-icon"><i data-lucide="play" style="width:20px;height:20px"></i></span>Start</button>
+  <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon"><i data-lucide="dumbbell" style="width:20px;height:20px"></i></span>Workouts</button>
+  <button class="nav-btn" data-nav="profile" onclick="nav('profile')"><span class="nav-icon"><i data-lucide="user-circle" style="width:20px;height:20px"></i></span>Profile</button>
 </nav>
 
 </div><!-- #app-wrapper -->
@@ -1580,6 +1576,7 @@ async function nav(view){
   if(view==='privacy')await renderPrivacy();
   if(view==='communities')await renderCommunities();
   window.scrollTo(0,0);
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
 /* =============================================================
@@ -1966,7 +1963,7 @@ async function renderExercisePicker(q){
   openModal(`
     <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="search-wrap"><span class="search-icon">&#128269;</span><input class="input" id="picker-search" placeholder="Search exercises..." value="${esc(q||'')}" oninput="renderExercisePicker(this.value)"></div>
+      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." value="${esc(q||'')}" oninput="renderExercisePicker(this.value)"></div>
       <div class="flex gap-sm mb-sm">
         <select class="input" style="font-size:.8rem" onchange="pickerMuscle=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
           <option value="">All Muscles</option>
@@ -3442,6 +3439,7 @@ async function submitWorkoutPost(){
 function openModal(html){
   document.getElementById('modal-content').innerHTML=html;
   document.getElementById('modal-backdrop').classList.add('open');
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 function closeModal(){
   document.getElementById('modal-backdrop').classList.remove('open');
@@ -3662,7 +3660,7 @@ function openInviteMembers(communityId){
   openModal(`
     <div class="modal-header"><h2>Invite Members</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="search-wrap"><span class="search-icon">&#128269;</span><input class="input" id="invite-search" placeholder="Search by name or username..." oninput="searchInviteUsers('${communityId}')"></div>
+      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="invite-search" placeholder="Search by name or username..." oninput="searchInviteUsers('${communityId}')"></div>
       <div id="invite-results"></div>
     </div>
   `);
@@ -3748,6 +3746,9 @@ async function setFeedCommunityFilter(communityId){
    BOOTSTRAP
    ============================================================= */
 (async function(){
+  // Initialize Lucide icons
+  if(typeof lucide!=='undefined')lucide.createIcons();
+
   // Handle Supabase email confirmation callback
   // Supabase appends #access_token=...&type=signup&refresh_token=... after email confirm
   const hash=window.location.hash;
