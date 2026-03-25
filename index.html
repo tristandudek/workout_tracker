@@ -240,11 +240,21 @@ select.input{appearance:none;cursor:pointer;
 .aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
-.rest-timer{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-light);border-top:1px solid var(--bg4);font-family:var(--font-mono);font-size:.9rem;color:var(--accent);font-weight:600}
-.rest-timer.done{background:rgba(34,197,94,.1);color:var(--success);animation:restPulse 1s ease 3}
-.rest-timer .skip-rest{background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.75rem;font-family:var(--font-body);margin-left:auto}
-.rest-timer .skip-rest:hover{color:var(--fg)}
-@keyframes restPulse{0%,100%{opacity:1}50%{opacity:.5}}
+#global-rest-timer{
+  position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:90;
+  display:none;align-items:center;gap:10px;
+  padding:10px 20px;background:var(--bg);border:1px solid var(--bg4);
+  border-radius:24px;box-shadow:0 4px 16px rgba(0,0,0,.1);
+  font-family:var(--font-mono);font-size:.9rem;font-weight:600;color:var(--fg);
+  transition:all .2s ease;
+}
+#global-rest-timer.active{display:flex}
+#global-rest-timer.reached{border-color:var(--success);color:var(--success);animation:restReached .4s ease}
+#global-rest-timer .rest-progress{width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}
+#global-rest-timer .rest-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .5s linear}
+#global-rest-timer .rest-progress-bar.full{background:var(--success)}
+@keyframes restReached{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@media(min-width:768px){#global-rest-timer{bottom:24px;left:50%;margin-left:120px}}
 .aw-ex-header{
   display:flex;align-items:center;gap:10px;padding:12px 14px;
   cursor:pointer;border-bottom:1px solid var(--bg4);
@@ -1028,6 +1038,12 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- GLOBAL REST TIMER (floating pill) -->
+<div id="global-rest-timer">
+  <span id="rest-timer-text">Rest 0:00</span>
+  <div class="rest-progress"><div class="rest-progress-bar" id="rest-progress-bar" style="width:0%"></div></div>
+</div>
 
 <!-- NAV BAR (mobile only) -->
 <nav class="nav" id="main-nav">
@@ -2509,10 +2525,6 @@ async function renderActiveWorkout(){
         </div>
       </div>
       ${ae.supersetExercises&&ae.supersetExercises.length?`<div class="superset-group" style="margin:0 14px 10px"><div class="superset-label">Superset with:</div>${ae.supersetExercises.map(se=>`<div class="small" style="padding:4px 0">${esc(se.exerciseName||se.exerciseId)}</div>`).join('')}</div>`:''}
-      <div class="rest-timer" id="rest-timer-${ei}" style="display:none">
-        <span class="rest-time">0:00</span>
-        <button class="skip-rest" onclick="skipRest(${ei})">Skip rest</button>
-      </div>
     </div>`;
   }).join('');
 }
@@ -2540,17 +2552,16 @@ function toggleSet(ei,si){
   renderActiveWorkout();
   if(s.completed){
     const st=ae.setType||'standard';
+    let target=0;
     if(st==='rest_pause'){
-      const rpDur=ae.restPauseDuration||15;
-      startRestTimer(ei,rpDur);
+      target=ae.restPauseDuration||15;
     }else if(st==='superset'){
-      // No rest between superset exercises; rest only after all done in round
       const allInRoundDone=ae.sets.every(ss=>ss.completed);
-      if(allInRoundDone){const restTime=ae.restTime||0;if(restTime>0)startRestTimer(ei,restTime)}
+      if(allInRoundDone)target=ae.restTime||0;
     }else{
-      const restTime=ae.restTime||0;
-      if(restTime>0)startRestTimer(ei,restTime);
+      target=ae.restTime||0;
     }
+    startGlobalRestTimer(target);
   }
 }
 
@@ -2563,40 +2574,57 @@ function addDropSet(ei){
   renderActiveWorkout();
 }
 
-let restTimers={};
+let globalRestInterval=null;
+let globalRestElapsed=0;
+let globalRestTarget=0;
+let globalRestReached=false;
 
-function startRestTimer(ei,seconds){
-  // Clear any existing timer for this exercise
-  if(restTimers[ei])clearInterval(restTimers[ei].interval);
-  let remaining=seconds;
-  const timerEl=document.getElementById('rest-timer-'+ei);
-  if(!timerEl)return;
-  timerEl.style.display='flex';
-  timerEl.classList.remove('done');
-  timerEl.querySelector('.rest-time').textContent=fmtRestTime(remaining);
+function startGlobalRestTimer(targetSeconds){
+  stopGlobalRestTimer();
+  globalRestElapsed=0;
+  globalRestTarget=targetSeconds||0;
+  globalRestReached=false;
+  const el=document.getElementById('global-rest-timer');
+  const txt=document.getElementById('rest-timer-text');
+  const bar=document.getElementById('rest-progress-bar');
+  el.classList.add('active');
+  el.classList.remove('reached');
+  bar.classList.remove('full');
+  bar.style.width='0%';
+  txt.textContent=globalRestTarget?`Rest 0:00 / ${fmtRestTime(globalRestTarget)}`:'Rest 0:00';
 
-  restTimers[ei]={interval:setInterval(()=>{
-    remaining--;
-    const el=document.getElementById('rest-timer-'+ei);
-    if(!el){clearInterval(restTimers[ei].interval);delete restTimers[ei];return}
-    if(remaining<=0){
-      clearInterval(restTimers[ei].interval);
-      delete restTimers[ei];
-      el.classList.add('done');
-      el.querySelector('.rest-time').textContent='Rest complete!';
-      // Auto-hide after 5s
-      setTimeout(()=>{if(el)el.style.display='none'},5000);
-    }else{
-      el.querySelector('.rest-time').textContent=fmtRestTime(remaining);
+  globalRestInterval=setInterval(()=>{
+    globalRestElapsed++;
+    const txt=document.getElementById('rest-timer-text');
+    const bar=document.getElementById('rest-progress-bar');
+    const el=document.getElementById('global-rest-timer');
+    if(!txt){stopGlobalRestTimer();return}
+    const elapsed=fmtRestTime(globalRestElapsed);
+    txt.textContent=globalRestTarget?`Rest ${elapsed} / ${fmtRestTime(globalRestTarget)}`:`Rest ${elapsed}`;
+    if(globalRestTarget){
+      const pct=Math.min(100,Math.round((globalRestElapsed/globalRestTarget)*100));
+      bar.style.width=pct+'%';
+      if(globalRestElapsed>=globalRestTarget&&!globalRestReached){
+        globalRestReached=true;
+        bar.classList.add('full');
+        el.classList.add('reached');
+      }
     }
-  },1000)};
+  },1000);
 }
 
-function skipRest(ei){
-  if(restTimers[ei]){clearInterval(restTimers[ei].interval);delete restTimers[ei]}
-  const el=document.getElementById('rest-timer-'+ei);
-  if(el)el.style.display='none';
+function stopGlobalRestTimer(){
+  if(globalRestInterval){clearInterval(globalRestInterval);globalRestInterval=null}
+  const el=document.getElementById('global-rest-timer');
+  if(el){el.classList.remove('active','reached')}
 }
+
+// Stop timer when user clicks into a set input field
+document.addEventListener('focusin',e=>{
+  if(globalRestInterval&&e.target.closest&&e.target.closest('.set-table input')){
+    stopGlobalRestTimer();
+  }
+});
 
 function fmtRestTime(s){
   const m=Math.floor(s/60);const sec=s%60;
@@ -2626,6 +2654,7 @@ function confirmDiscard(){
   saveActiveWO(null);
   activeWorkout=null;
   if(timerInterval)clearInterval(timerInterval);
+  stopGlobalRestTimer();
   hideResumeWorkoutBanner();
   closeModal();
   toast('Workout discarded');
@@ -2773,6 +2802,7 @@ async function confirmFinish(){
   saveActiveWO(null);
   activeWorkout=null;
   if(timerInterval)clearInterval(timerInterval);
+  stopGlobalRestTimer();
   hideResumeWorkoutBanner();
   closeModal();
   toast('Workout saved!');
