@@ -2762,7 +2762,7 @@ async function renderActiveWorkout(){
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
-        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0"><span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${isAsc?'&#8593;':'&#8595;'}${suggestedReps}</span></div></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${suggestedReps}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
@@ -2793,7 +2793,7 @@ async function renderActiveWorkout(){
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
-        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
@@ -2822,7 +2822,7 @@ async function renderActiveWorkout(){
         <td>${si+1}</td>
         <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
-        <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}<span style="font-size:.6rem;color:var(--fg3)">${rpDur}s</span></div></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
       </tr></tbody></table>
@@ -2866,7 +2866,7 @@ async function renderActiveWorkout(){
               <td>${setLabel(si)}</td>
               <td class="prev">${prev[si]?prev[si].weight+'x'+prev[si].reps:'—'}</td>
               <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
-              <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="0">${targetRep?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${targetRep}</span>`:''}</div></td>
+              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSet(${ei},${si},'reps',+this.value)" placeholder="${targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
               <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:``}</td>
             </tr>`).join('')}
@@ -2908,7 +2908,7 @@ async function renderActiveWorkout(){
                       <td>${ssi+1}</td>
                       <td class="prev">${sePrev[ssi]?sePrev[ssi].weight+'x'+sePrev[ssi].reps:'—'}</td>
                       <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSupersetSet(${ei},${si},${ssi},'weight',+this.value)" placeholder="0"></td>
-                      <td><div style="display:flex;align-items:center;gap:4px"><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="0">${se.targetReps?`<span style="font-size:.65rem;color:var(--fg3);white-space:nowrap">${se.targetReps}</span>`:''}</div></td>
+                      <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="${se.targetReps||'reps'}"></td>
                       <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSupersetSet(${ei},${si},${ssi})">&#10003;</div></td>
                       <td>${se.sets.length>1?`<button class="set-del" onclick="removeSupersetSet(${ei},${si},${ssi})">&times;</button>`:``}</td>
                     </tr>`).join('')}
