@@ -1046,17 +1046,17 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-gym" data-view="gym">
   <div class="profile-tabs" id="gym-tabs" style="margin-top:12px">
-    <button class="profile-tab active" onclick="switchGymTab(0)">My Workouts</button>
-    <button class="profile-tab" onclick="switchGymTab(1)">Workout Plans</button>
+    <button class="profile-tab active" onclick="switchGymTab(0)">Workout Plans</button>
+    <button class="profile-tab" onclick="switchGymTab(1)">My Workouts</button>
     <div class="profile-tab-indicator" id="gym-tab-indicator" style="left:0;width:50%"></div>
   </div>
   <div class="profile-tab-panels">
     <div class="profile-tab-slider" id="gym-tab-slider">
-      <div class="profile-tab-panel" id="gym-panel-workouts">
-        <div id="gym-workouts-content"></div>
-      </div>
       <div class="profile-tab-panel" id="gym-panel-plans">
         <div id="gym-plans-content"></div>
+      </div>
+      <div class="profile-tab-panel" id="gym-panel-workouts">
+        <div id="gym-workouts-content"></div>
       </div>
     </div>
   </div>
@@ -2796,8 +2796,8 @@ function switchGymTab(idx){
   tabs.forEach((t,i)=>t.classList.toggle('active',i===idx));
   const indicator=document.getElementById('gym-tab-indicator');
   if(indicator&&tabs.length){const w=100/tabs.length;indicator.style.left=w*idx+'%';indicator.style.width=w+'%'}
-  if(idx===0)renderGymWorkouts();
-  if(idx===1)renderGymPlans();
+  if(idx===0)renderGymPlans();
+  if(idx===1)renderGymWorkouts();
 }
 
 let gymFolderId=null;
