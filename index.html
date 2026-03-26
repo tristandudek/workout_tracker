@@ -5877,42 +5877,36 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
 
       <div class="divider"></div>
       <div class="small fg2 mb-sm" style="font-weight:600">Who can see this post?</div>
-      <div style="display:flex;flex-direction:column;gap:6px" id="share-vis-options">
-        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
-          <input type="radio" name="share-vis" value="public" ${defaultVis==='public'?'checked':''} onchange="updateShareVisUI()" style="margin-top:3px">
-          <div><div class="small" style="font-weight:600">🌐 Public Feed</div><div class="small fg3">Share to The Lab — visible to everyone</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label class="share-vis-card active" id="share-vis-public" onclick="selectShareVis('public')" style="cursor:pointer;padding:12px 14px;margin:0;display:flex;gap:10px;align-items:center;border:2px solid var(--accent);border-radius:var(--radius2);background:var(--bg)">
+          <input type="radio" name="share-vis" value="public" checked style="display:none">
+          <div style="flex:1"><div class="small" style="font-weight:700">Public Feed</div><div class="small fg3">Share to The Lab — visible to everyone</div></div>
         </label>
-        ${hasCommunities?`
-        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
-          <input type="radio" name="share-vis" value="communities" onchange="updateShareVisUI()" style="margin-top:3px">
-          <div><div class="small" style="font-weight:600">👥 Communities Only</div><div class="small fg3">Post only to selected communities</div></div>
-        </label>
-        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
-          <input type="radio" name="share-vis" value="feed_communities" ${defaultVis==='feed_communities'?'checked':''} onchange="updateShareVisUI()" style="margin-top:3px">
-          <div><div class="small" style="font-weight:600">🌐 + 👥 Feed & Communities</div><div class="small fg3">Share to The Lab AND selected communities</div></div>
-        </label>`:''}
-        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
-          <input type="radio" name="share-vis" value="private" onchange="updateShareVisUI()" style="margin-top:3px">
-          <div><div class="small" style="font-weight:600">🔒 Keep Private</div><div class="small fg3">Only visible to you in your profile history</div></div>
+        <label class="share-vis-card" id="share-vis-private" onclick="selectShareVis('private')" style="cursor:pointer;padding:12px 14px;margin:0;display:flex;gap:10px;align-items:center;border:2px solid var(--bg4);border-radius:var(--radius2);background:var(--bg)">
+          <input type="radio" name="share-vis" value="private" style="display:none">
+          <div style="flex:1"><div class="small" style="font-weight:700">Keep Private</div><div class="small fg3">Only visible to you in your profile history</div></div>
         </label>
       </div>
-      <div id="share-comm-list" style="display:none;margin-top:8px;padding-left:12px">
-        ${comms.map(c=>`<label class="flex gap-sm mb-sm" style="align-items:center;cursor:pointer"><input type="checkbox" class="share-comm-check" value="${c.id}" checked> <span class="small">${esc(c.name)}</span></label>`).join('')}
-      </div>
+      ${hasCommunities?`<div class="divider"></div>
+      <div class="small fg2 mb-sm" style="font-weight:600">Also share to communities:</div>
+      <div id="share-comm-list">
+        ${comms.map(c=>`<label class="flex gap-sm mb-sm" style="align-items:center;cursor:pointer;padding:6px 0"><input type="checkbox" class="share-comm-check" value="${c.id}"> <span class="small">${esc(c.name)}</span></label>`).join('')}
+      </div>`:''}
     </div>
     <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn btn-primary btn-block" onclick="submitPostV2()">Post & Finish</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
     </div>
   `);
-  updateShareVisUI();
 }
 
-function updateShareVisUI(){
-  const vis=document.querySelector('input[name="share-vis"]:checked')?.value;
-  const commList=document.getElementById('share-comm-list');
-  if(commList)commList.style.display=(vis==='communities'||vis==='feed_communities')?'block':'none';
+function selectShareVis(vis){
+  document.querySelectorAll('.share-vis-card').forEach(c=>{c.style.borderColor='var(--bg4)'});
+  const card=document.getElementById('share-vis-'+vis);
+  if(card){card.style.borderColor='var(--accent)';card.querySelector('input[type=radio]').checked=true}
 }
+
+function updateShareVisUI(){}
 
 function previewSharePhotosV2(event){
   const files=Array.from(event.target.files).slice(0,4);
@@ -5942,29 +5936,26 @@ async function submitPostV2(){
   // Determine visibility
   const vis=document.querySelector('input[name="share-vis"]:checked')?.value||'private';
   const selectedComms=[...document.querySelectorAll('.share-comm-check:checked')].map(el=>el.value);
-  const isPublic=vis==='public'||vis==='feed_communities';
-  const communityIds=(vis==='communities'||vis==='feed_communities')?selectedComms:[];
+  const isPublic=vis==='public';
+  const communityIds=selectedComms;
 
-  if(vis!=='private'&&activeWorkout&&activeWorkout._logId){
-    console.log('Creating post, visibility:',vis,'communities:',communityIds);
-    const{data:post,error:postErr}=await sb.from('workout_posts').insert({
+  if(activeWorkout&&activeWorkout._logId){
+    const shouldPost=isPublic||communityIds.length>0;
+    const{error:postErr}=await sb.from('workout_posts').insert({
       user_id:currentUser.id,
       workout_log_id:activeWorkout._logId,
       caption:caption||null,
       photo_urls:photoUrls,
       is_public:isPublic,
       community_ids:communityIds
-    }).select().single();
-    if(postErr){console.error('Post error:',postErr);toast('Error posting')}
-    else{console.log('Post created:',post);toast(isPublic?'Posted to the feed!':'Posted to communities!')}
-  }else if(vis==='private'&&activeWorkout&&activeWorkout._logId){
-    // Private post — just for profile history
-    const{error:postErr}=await sb.from('workout_posts').insert({
-      user_id:currentUser.id,workout_log_id:activeWorkout._logId,
-      caption:caption||null,photo_urls:photoUrls,is_public:false,community_ids:[]
     });
-    if(postErr)console.error('Post error:',postErr);
-    else toast('Workout saved to your profile!');
+    if(postErr){console.error('Post error:',postErr);toast('Error posting')}
+    else{
+      if(isPublic&&communityIds.length)toast('Posted to The Lab & communities!');
+      else if(isPublic)toast('Posted to The Lab!');
+      else if(communityIds.length)toast('Posted to communities!');
+      else toast('Workout saved to your profile!');
+    }
   }
   closeModal();
   finishCleanup();
