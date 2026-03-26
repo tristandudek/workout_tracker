@@ -3470,16 +3470,15 @@ async function startFromTemplate(id){
     sourcePlanId:w.source_plan_id||null,
     exercises:w.exercises.map(we=>{
       const ex=exs.find(e=>e.id===we.exerciseId);
-      const prev=findPreviousSets(we.exerciseId,logs);
       const sets=[];
       for(let i=0;i<(we.targetSets||3);i++){
-        sets.push({weight:prev[i]?prev[i].weight:0,reps:prev[i]?prev[i].reps:0,completed:false});
+        sets.push({weight:'',reps:'',completed:false});
       }
       // Resolve superset exercise names and create matching sets
       const ssExs=(we.supersetExercises||[]).map(se=>{
         const seEx=exs.find(e=>e.id===se.exerciseId);
         const seSets=[];
-        for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:0,reps:0,completed:false});
+        for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:'',reps:'',completed:false});
         return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),targetReps:se.targetReps||'',sets:seSets};
       });
       return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',instructions:ex?ex.instructions:'',tracking_type:ex?ex.tracking_type:'reps',video_url:ex?ex.video_url:null,video_type:ex?ex.video_type:null,targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
@@ -3573,7 +3572,7 @@ async function renderActiveWorkout(){
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
-        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'')" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${suggestedReps}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
@@ -3604,7 +3603,7 @@ async function renderActiveWorkout(){
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
-        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0);autoFillDropWeights(${ei},${si})" placeholder="0"></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'');autoFillDropWeights(${ei},${si})" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
@@ -3633,7 +3632,7 @@ async function renderActiveWorkout(){
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
         <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
-        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="0"></td>
+        <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'')" placeholder="0"></td>
         <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',+this.value||0)" placeholder="${targetRep||'reps'}"></td>
         <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
         <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:''}</td>
@@ -3681,7 +3680,7 @@ async function renderActiveWorkout(){
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
               <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
-              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',+this.value||0)" placeholder="${ae.tracking_type==='distance'?'—':'0'}"></td>
+              <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'')" placeholder="${ae.tracking_type==='distance'?'—':'0'}"></td>
               <td><input type="text" inputmode="${ae.tracking_type==='time'?'text':'numeric'}" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',this.value)" placeholder="${ae.tracking_type==='time'?'0:00':ae.tracking_type==='distance'?'dist':targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
               <td>${ae.sets.length>1?`<button class="set-del" onclick="removeSet(${ei},${si})">&times;</button>`:``}</td>
@@ -3759,6 +3758,16 @@ function awDrop(e,i){
 
 function updateSet(ei,si,field,val){
   activeWorkout.exercises[ei].sets[si][field]=val;
+  // Auto-populate weight downward to empty sets below
+  if(field==='weight'&&val){
+    const sets=activeWorkout.exercises[ei].sets;
+    for(let i=si+1;i<sets.length;i++){
+      if(!sets[i].weight&&sets[i].weight!==0)sets[i].weight=val;
+      else if(sets[i].weight===''||sets[i].weight===0)sets[i].weight=val;
+      else break; // stop at first non-empty set
+    }
+    renderActiveWorkout();
+  }
   saveActiveWO(activeWorkout);
 }
 
@@ -3791,6 +3800,14 @@ function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length
 
 function updateSupersetSet(ei,si,ssi,field,val){
   activeWorkout.exercises[ei].supersetExercises[si].sets[ssi][field]=val;
+  if(field==='weight'&&val){
+    const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
+    for(let i=ssi+1;i<sets.length;i++){
+      if(!sets[i].weight||sets[i].weight===''||sets[i].weight===0)sets[i].weight=val;
+      else break;
+    }
+    renderActiveWorkout();
+  }
   saveActiveWO(activeWorkout);
 }
 
@@ -3957,12 +3974,12 @@ function removeSupersetSet(ei,si,ssi){
 
 function addSet(ei){
   const ae=activeWorkout.exercises[ei];
-  ae.sets.push({weight:0,reps:0,completed:false});
+  ae.sets.push({weight:'',reps:'',completed:false});
   // Sync superset exercise set counts
   if(ae.setType==='superset'&&ae.supersetExercises){
     ae.supersetExercises.forEach(se=>{
       if(!se.sets)se.sets=[];
-      while(se.sets.length<ae.sets.length)se.sets.push({weight:0,reps:0,completed:false});
+      while(se.sets.length<ae.sets.length)se.sets.push({weight:'',reps:'',completed:false});
     });
   }
   saveActiveWO(activeWorkout);
