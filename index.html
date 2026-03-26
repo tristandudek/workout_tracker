@@ -5732,6 +5732,8 @@ async function renderChallengesTab(communityId){
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
+const CH_ICONS={resistance_training:'💪',cardio:'🏃',yoga:'🧘',sport:'⚽',other:'🏋️'};
+
 async function renderChallengeCard(c, isAdmin){
   const now=new Date();
   const start=new Date(c.start_date);
@@ -5745,16 +5747,23 @@ async function renderChallengeCard(c, isAdmin){
 
   const startStr=start.toLocaleDateString([],{month:'short',day:'numeric'});
   const endStr=end.toLocaleDateString([],{month:'short',day:'numeric'});
+  const rules=c.workout_type_rules||[];
 
-  // Get completions
+  // Build rules display
+  let rulesHtml='';
+  if(rules.length){
+    rulesHtml=rules.map(r=>`<div class="small fg2">${CH_ICONS[r.workout_type]||''} ${r.workout_type.replace('_',' ')}: ${r.times_per_week}x/week${r.min_minutes?' · '+r.min_minutes+' min min':''}</div>`).join('');
+  }else{
+    // Legacy format
+    const types=c.allowed_workout_types||[];
+    rulesHtml=`<div style="display:flex;gap:4px;flex-wrap:wrap"><span class="feed-stat-pill"><span class="pill-val">${c.workouts_per_week||3}x</span> / week</span>${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}${!types.length?'<span class="feed-stat-pill">All types</span>':''}</div>`;
+  }
+
+  // Progress (simplified — total completions vs total required)
   const{data:completions}=await sb.from('challenge_completions').select('user_id').eq('challenge_id',c.id);
-  const userCounts={};
-  (completions||[]).forEach(comp=>{userCounts[comp.user_id]=(userCounts[comp.user_id]||0)+1});
-
-  const myCompletions=userCounts[currentUser.id]||0;
-  const weekTarget=c.workouts_per_week||3;
-  const pct=Math.min(100,Math.round((myCompletions/weekTarget)*100));
-  const types=c.allowed_workout_types||[];
+  const myTotal=(completions||[]).filter(co=>co.user_id===currentUser.id).length;
+  const totalPerWeek=rules.length?rules.reduce((a,r)=>a+r.times_per_week,0):(c.workouts_per_week||3);
+  const pct=Math.min(100,Math.round((myTotal/totalPerWeek)*100));
 
   return `<div class="challenge-card">
     <div class="flex between" style="align-items:flex-start">
@@ -5763,13 +5772,8 @@ async function renderChallengeCard(c, isAdmin){
     </div>
     ${c.description?`<p class="small fg2" style="margin-top:4px;line-height:1.4">${esc(c.description)}</p>`:''}
     <div class="small fg3 mt-sm">${startStr} → ${endStr}</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
-      <span class="feed-stat-pill"><span class="pill-val">${c.workouts_per_week||3}x</span> / week</span>
-      ${c.min_workout_minutes?`<span class="feed-stat-pill"><span class="pill-val">${c.min_workout_minutes}</span> min</span>`:''}
-      ${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}
-      ${!types.length?'<span class="feed-stat-pill">All types</span>':''}
-    </div>
-    ${isActive?`<div style="margin-top:10px"><div class="small fg2">Your progress: <strong>${myCompletions}</strong> / ${weekTarget} this week</div><div class="challenge-progress"><div class="challenge-progress-bar" style="width:${pct}%"></div></div></div>`:''}
+    <div style="margin-top:8px">${rulesHtml}</div>
+    ${isActive?`<div style="margin-top:10px"><div class="small fg2">Your progress: <strong>${myTotal}</strong> / ${totalPerWeek} this week</div><div class="challenge-progress"><div class="challenge-progress-bar" style="width:${pct}%"></div></div></div>`:''}
     ${isAdmin?`<div class="flex gap-sm mt-sm">
       ${isEnded?`<button class="btn btn-sm btn-primary" onclick="manualPostResults('${c.id}')"><i data-lucide="trophy" style="width:12px;height:12px"></i> Post Results</button>`:''}
       <button class="btn btn-sm btn-danger" onclick="deleteChallenge('${c.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>
@@ -5784,30 +5788,39 @@ async function deleteChallenge(id){
   if(viewingCommunityId)await renderChallengesTab(viewingCommunityId);
 }
 
+const CH_TYPES=[
+  {key:'resistance_training',label:'Resistance Training',icon:'💪',defTimes:3,defMin:45},
+  {key:'cardio',label:'Cardio',icon:'🏃',defTimes:2,defMin:30},
+  {key:'yoga',label:'Yoga',icon:'🧘',defTimes:2,defMin:30},
+  {key:'sport',label:'Sport',icon:'⚽',defTimes:2,defMin:30},
+  {key:'other',label:'Other',icon:'🏋️',defTimes:2,defMin:30}
+];
+
 function openCreateChallenge(communityId){
   openModal(`
     <div class="modal-header"><h2>Create Challenge</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
       <div class="profile-field"><label>Challenge Name</label><input class="input" id="ch-name"></div>
       <div class="profile-field"><label>Description</label><textarea class="input" id="ch-desc" style="min-height:50px"></textarea></div>
       <div class="flex gap-sm">
         <div class="profile-field grow"><label>Start Date</label><input class="input" id="ch-start" type="date"></div>
         <div class="profile-field grow"><label>End Date</label><input class="input" id="ch-end" type="date"></div>
       </div>
-      <div class="flex gap-sm">
-        <div class="profile-field grow"><label>Workouts/Week</label><input class="input" id="ch-wpw" type="number" value="3" min="1"></div>
-        <div class="profile-field grow"><label>Min Minutes</label><input class="input" id="ch-min" type="number" value="30" min="1"></div>
-      </div>
-      <div class="profile-field">
-        <label>Allowed Workout Types (none = all count)</label>
-        <div class="flex gap-sm wrap mt-sm">
-          <label class="small flex gap-sm"><input type="checkbox" value="resistance_training" class="ch-type"> Resistance</label>
-          <label class="small flex gap-sm"><input type="checkbox" value="cardio" class="ch-type"> Cardio</label>
-          <label class="small flex gap-sm"><input type="checkbox" value="yoga" class="ch-type"> Yoga</label>
-          <label class="small flex gap-sm"><input type="checkbox" value="sport" class="ch-type"> Sport</label>
-          <label class="small flex gap-sm"><input type="checkbox" value="other" class="ch-type"> Other</label>
+      <div class="divider"></div>
+      <div class="small" style="font-weight:600;margin-bottom:8px">Workout Requirements</div>
+      <p class="small fg3 mb-sm">Toggle on each type and set weekly targets. At least one required.</p>
+      ${CH_TYPES.map(t=>`
+        <div style="border:1px solid var(--bg4);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px">
+          <label class="flex between" style="cursor:pointer;align-items:center">
+            <span class="small" style="font-weight:600">${t.icon} ${t.label}</span>
+            <input type="checkbox" class="ch-type-toggle" data-type="${t.key}" onchange="document.getElementById('ch-rule-${t.key}').style.display=this.checked?'flex':'none'">
+          </label>
+          <div id="ch-rule-${t.key}" class="flex gap-sm mt-sm" style="display:none;align-items:center">
+            <input type="number" class="input ch-times" data-type="${t.key}" value="${t.defTimes}" min="1" style="width:50px;padding:4px;height:30px;text-align:center"> <span class="small fg2">x/week</span>
+            <input type="number" class="input ch-min" data-type="${t.key}" value="${t.defMin}" min="0" style="width:50px;padding:4px;height:30px;text-align:center"> <span class="small fg2">min</span>
+          </div>
         </div>
-      </div>
+      `).join('')}
     </div>
     <div class="modal-footer"><button class="btn btn-primary" onclick="saveChallenge('${communityId}')">Save Challenge</button></div>
   `);
@@ -5820,14 +5833,24 @@ async function saveChallenge(communityId){
   const start_date=document.getElementById('ch-start').value;
   const end_date=document.getElementById('ch-end').value;
   if(!start_date||!end_date){toast('Dates required');return}
-  const workouts_per_week=+document.getElementById('ch-wpw').value||3;
-  const min_workout_minutes=+document.getElementById('ch-min').value||30;
-  const types=[...document.querySelectorAll('.ch-type:checked')].map(el=>el.value);
+
+  // Build per-type rules
+  const toggles=[...document.querySelectorAll('.ch-type-toggle:checked')];
+  if(!toggles.length){toast('Select at least one workout type');return}
+  const workout_type_rules=toggles.map(el=>{
+    const t=el.dataset.type;
+    const times=+(document.querySelector(`.ch-times[data-type="${t}"]`)?.value)||3;
+    const mins=+(document.querySelector(`.ch-min[data-type="${t}"]`)?.value)||0;
+    return{workout_type:t,times_per_week:times,min_minutes:mins};
+  });
+  // Also build legacy fields for backwards compat
+  const totalPerWeek=workout_type_rules.reduce((a,r)=>a+r.times_per_week,0);
+  const types=workout_type_rules.map(r=>r.workout_type);
 
   const{error}=await sb.from('community_challenges').insert({
     community_id:communityId,created_by:currentUser.id,name,description,
-    start_date,end_date,workouts_per_week,min_workout_minutes,
-    allowed_workout_types:types
+    start_date,end_date,workouts_per_week:totalPerWeek,min_workout_minutes:0,
+    allowed_workout_types:types,workout_type_rules
   });
   if(error){toast('Error creating challenge');console.error(error);return}
   closeModal();toast('Challenge created!');
