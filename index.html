@@ -110,6 +110,25 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 @media(max-width:900px){.discover-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:500px){.discover-grid{grid-template-columns:1fr}}
 
+/* Community post composer */
+.cp-composer{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.04);overflow:hidden}
+.cp-collapsed{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;transition:background .15s}
+.cp-collapsed:hover{background:var(--bg3)}
+.cp-collapsed .cp-placeholder{flex:1;background:var(--bg3);border:1px solid var(--bg4);border-radius:20px;padding:8px 16px;font-size:.82rem;color:var(--fg4);font-family:var(--font-body)}
+.cp-expanded{max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .2s ease;opacity:0}
+.cp-expanded.open{max-height:400px;opacity:1}
+.cp-expanded-inner{padding:0 14px 14px}
+.cp-textarea{width:100%;border:1px solid var(--bg4);border-radius:var(--radius);background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:.85rem;padding:10px 12px;resize:vertical;min-height:72px;outline:none;transition:border-color .15s;box-sizing:border-box}
+.cp-textarea:focus{border-color:var(--accent)}
+.cp-actions{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.cp-photo-btn{display:flex;align-items:center;gap:4px;background:none;border:1px solid var(--bg4);border-radius:var(--radius);padding:5px 10px;font-size:.72rem;font-weight:600;color:var(--fg3);cursor:pointer;font-family:var(--font-body);transition:border-color .15s,color .15s}
+.cp-photo-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cp-post-btn{padding:6px 18px;border-radius:20px;font-size:.75rem;font-weight:700;border:none;cursor:pointer;font-family:var(--font-display);transition:opacity .15s,background .15s}
+.cp-post-btn.active{background:var(--accent);color:#fff}
+.cp-post-btn.disabled{background:var(--bg4);color:var(--fg4);cursor:default}
+.cp-cancel{background:none;border:none;color:var(--fg4);font-size:.72rem;cursor:pointer;padding:2px 6px;font-family:var(--font-body)}
+.cp-cancel:hover{color:var(--fg2)}
+
 @media(min-width:768px){
   .sidebar{display:flex}
   #app-wrapper #app{margin-left:240px}
@@ -497,17 +516,20 @@ select.input{appearance:none;cursor:pointer;
    ============================================================ */
 #profile-badge{
   position:fixed;top:0;right:0;left:0;z-index:100;height:56px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:0 16px;background:var(--bg);border-bottom:1px solid var(--bg4);
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:0 14px;background:var(--bg);border-bottom:1px solid var(--bg4);
 }
 @media(min-width:768px){#profile-badge{left:240px}}
+.header-left{display:flex;align-items:center}
 .header-logo{font-family:var(--font-display);font-weight:900;font-size:1.15rem;color:var(--fg);letter-spacing:.02em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.header-logo .accent{color:var(--accent)}
 @media(min-width:768px){.header-logo{display:none}}
-.header-right{display:flex;align-items:center;gap:10px}
+.header-center{display:flex;align-items:center;justify-content:center}
+.header-right{display:flex;align-items:center;gap:10px;justify-content:flex-end}
 .start-wo-header{display:flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.72rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .start-wo-header:hover{opacity:.85}
 .start-wo-header .start-wo-text{display:inline}
-@media(max-width:767px){.start-wo-header .start-wo-text{display:none}.start-wo-header{padding:6px 8px}}
+@media(max-width:767px){.start-wo-header .start-wo-text{display:none}.start-wo-header{padding:6px 8px;border-radius:50%}}
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
@@ -876,9 +898,13 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- TOP RIGHT BAR -->
 <div id="profile-badge">
-  <div class="header-logo" onclick="nav('feed')">Forgd</div>
+  <div class="header-left">
+    <div class="header-logo" onclick="nav('feed')">forg<span class="accent">d</span></div>
+  </div>
+  <div class="header-center">
+    <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:14px;height:14px"></i><span class="start-wo-text">Start Workout</span></button>
+  </div>
   <div class="header-right">
-  <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:14px;height:14px"></i><span class="start-wo-text">Start Workout</span></button>
   <button class="notif-bell" onclick="nav('messages')" style="position:relative">
     <i data-lucide="message-square" style="width:18px;height:18px"></i>
     <span class="notif-badge hidden" id="msg-count" style="position:absolute;top:-2px;right:-4px">0</span>
@@ -5683,16 +5709,18 @@ function expandSidebarCommunities(){
 
 async function renderCommunities(){
   // Search
-  document.getElementById('community-search-input').value='';
-  document.getElementById('community-search-results').innerHTML='';
+  const searchInput=document.getElementById('community-search-input');
+  const searchResults=document.getElementById('community-search-results');
+  if(searchInput)searchInput.value='';
+  if(searchResults)searchResults.innerHTML='';
   // My communities
   const{data:memberships}=await sb.from('community_members').select('*,communities(*)').eq('user_id',currentUser.id);
   const grid=document.getElementById('my-communities-grid');
   // Update sidebar badge
   const badge=document.getElementById('community-count');
   if(memberships&&memberships.length){
-    badge.textContent=memberships.length;badge.classList.remove('hidden');
-  }else{badge.classList.add('hidden')}
+    if(badge){badge.textContent=memberships.length;badge.classList.remove('hidden')}
+  }else{if(badge)badge.classList.add('hidden')}
 
   if(!memberships||!memberships.length){
     grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1">You haven\'t joined any communities yet.</p>';
@@ -5856,15 +5884,21 @@ async function renderCommunityFeed(communityId, members){
 
   // Post composer
   const avatarHtml=currentProfile?.avatar_url?`<img src="${currentProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(currentProfile?.name||'?')[0].toUpperCase();
-  const composerHtml=`<div class="feed-card" style="margin-bottom:12px">
-    <div class="flex gap-sm" style="align-items:flex-start">
+  const composerHtml=`<div class="cp-composer" id="cp-composer">
+    <div class="cp-collapsed" id="cp-collapsed" onclick="expandComposer()">
       <div class="feed-avatar">${avatarHtml}</div>
-      <div style="flex:1">
-        <textarea class="input" id="cp-content" placeholder="Share something with the community..." rows="2" style="resize:vertical;min-height:48px"></textarea>
-        <div id="cp-photo-preview" class="flex gap-sm mt-sm" style="flex-wrap:wrap;display:none"></div>
-        <div class="flex gap-sm mt-sm" style="justify-content:space-between;align-items:center">
-          <label class="btn btn-sm" style="cursor:pointer;margin:0"><i data-lucide="image" style="width:14px;height:14px"></i> Photo<input type="file" accept="image/*" multiple style="display:none" onchange="previewCommunityPostPhotos(this.files)"></label>
-          <button class="btn btn-sm btn-primary" onclick="createCommunityPost('${communityId}')">Post</button>
+      <div class="cp-placeholder">Share something with the community...</div>
+    </div>
+    <div class="cp-expanded" id="cp-expanded">
+      <div class="cp-expanded-inner">
+        <textarea class="cp-textarea" id="cp-content" placeholder="What's on your mind?" oninput="updateCpPostBtn()"></textarea>
+        <div id="cp-photo-preview" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+        <div class="cp-actions">
+          <div class="flex gap-sm" style="align-items:center">
+            <label class="cp-photo-btn" style="cursor:pointer;margin:0"><i data-lucide="camera" style="width:13px;height:13px"></i> Photo<input type="file" accept="image/*" multiple style="display:none" onchange="previewCommunityPostPhotos(this.files)"></label>
+            <button class="cp-cancel" onclick="collapseComposer()">Cancel</button>
+          </div>
+          <button class="cp-post-btn disabled" id="cp-post-btn" onclick="createCommunityPost('${communityId}')">Post</button>
         </div>
       </div>
     </div>
@@ -5876,8 +5910,9 @@ async function renderCommunityFeed(communityId, members){
   const{data:rawCommPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(20);
   const commPosts=await attachProfiles(rawCommPosts||[]);
   // Get community direct posts
-  const{data:rawDirectPosts}=await sb.from('community_posts').select('*').eq('community_id',communityId).order('created_at',{ascending:false}).limit(30);
-  const directPosts=await attachProfiles(rawDirectPosts||[]);
+  const{data:rawDirectPosts,error:dpErr}=await sb.from('community_posts').select('*').eq('community_id',communityId).order('created_at',{ascending:false}).limit(30);
+  if(dpErr)console.log('community_posts query error (table may not exist yet):',dpErr.message);
+  const directPosts=dpErr?[]:await attachProfiles(rawDirectPosts||[]);
   // Check which community posts current user has liked
   const cpIds=(directPosts||[]).map(p=>p.id);
   let myLikedCpIds=new Set();
@@ -5976,16 +6011,47 @@ function renderCommunityPostCard(p, isLiked){
   </div>`;
 }
 
+function expandComposer(){
+  const collapsed=document.getElementById('cp-collapsed');
+  const expanded=document.getElementById('cp-expanded');
+  if(collapsed)collapsed.style.display='none';
+  if(expanded){expanded.classList.add('open');setTimeout(()=>{const ta=document.getElementById('cp-content');if(ta)ta.focus()},50)}
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function collapseComposer(){
+  const collapsed=document.getElementById('cp-collapsed');
+  const expanded=document.getElementById('cp-expanded');
+  if(expanded)expanded.classList.remove('open');
+  if(collapsed)collapsed.style.display='flex';
+  const ta=document.getElementById('cp-content');
+  if(ta)ta.value='';
+  pendingCommunityPostPhotos=[];
+  const preview=document.getElementById('cp-photo-preview');
+  if(preview){preview.innerHTML='';preview.style.display='none'}
+  updateCpPostBtn();
+}
+
+function updateCpPostBtn(){
+  const btn=document.getElementById('cp-post-btn');
+  if(!btn)return;
+  const ta=document.getElementById('cp-content');
+  const hasContent=(ta&&ta.value.trim().length>0)||pendingCommunityPostPhotos.length>0;
+  btn.classList.toggle('active',hasContent);
+  btn.classList.toggle('disabled',!hasContent);
+}
+
 function previewCommunityPostPhotos(files){
   pendingCommunityPostPhotos=[...files];
   const preview=document.getElementById('cp-photo-preview');
-  if(!files.length){preview.style.display='none';return}
+  if(!files.length){preview.style.display='none';updateCpPostBtn();return}
   preview.style.display='flex';
   preview.innerHTML='';
   for(const f of files){
     const url=URL.createObjectURL(f);
     preview.innerHTML+=`<div style="position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden"><img src="${url}" style="width:100%;height:100%;object-fit:cover"><button onclick="removeCpPhoto(this)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1">&times;</button></div>`;
   }
+  updateCpPostBtn();
 }
 
 function removeCpPhoto(btn){
@@ -5994,11 +6060,14 @@ function removeCpPhoto(btn){
   pendingCommunityPostPhotos.splice(idx,1);
   wrap.remove();
   if(!pendingCommunityPostPhotos.length)document.getElementById('cp-photo-preview').style.display='none';
+  updateCpPostBtn();
 }
 
 async function createCommunityPost(communityId){
+  const btn=document.getElementById('cp-post-btn');
+  if(btn&&btn.classList.contains('disabled'))return;
   const content=document.getElementById('cp-content').value.trim();
-  if(!content&&!pendingCommunityPostPhotos.length){toast('Write something or add a photo');return}
+  if(!content&&!pendingCommunityPostPhotos.length)return;
   const photoUrls=[];
   for(const file of pendingCommunityPostPhotos){
     const filePath=`${currentUser.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'')}`;
