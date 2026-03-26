@@ -3787,38 +3787,10 @@ function updateSet(ei,si,field,val){
 
 function toggleSet(ei,si){
   const ae=activeWorkout.exercises[ei];
-  const s=ae.sets[si];
-  s.completed=!s.completed;
+  ae.sets[si].completed=!ae.sets[si].completed;
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
-  if(s.completed){
-    const st=ae.setType||'standard';
-    console.log('Set completed, setType:',st,'checking rest timer');
-    if(st==='drop'){
-      // For drop sets: only start rest when primary AND all sub-sets are done
-      const allDropsDone=s.completed&&(s.subSets||[]).every(sub=>sub.completed);
-      console.log('Drop set checkbox clicked, checking if all drops complete:',allDropsDone,'subSets:',s.subSets?.length);
-      if(allDropsDone){
-        console.log('All drops complete, starting rest timer');
-        startGlobalRestTimer(ae.restTime||0);
-        console.log('Rest timer started, target:',ae.restTime||0,'seconds');
-      }
-    }else if(st==='rest_pause'){
-      startGlobalRestTimer(ae.restPauseDuration||15);
-      console.log('Rest timer started, target:',ae.restPauseDuration||15,'seconds');
-    }else if(st==='superset'){
-      const mainDone=ae.sets.every(ss=>ss.completed);
-      const ssDone=(ae.supersetExercises||[]).every(sse=>(sse.sets||[]).every(ss=>ss.completed));
-      if(mainDone&&ssDone){
-        startGlobalRestTimer(ae.restTime||0);
-        console.log('Rest timer started, target:',ae.restTime||0,'seconds');
-      }
-    }else{
-      // Standard set — start rest immediately
-      startGlobalRestTimer(ae.restTime||0);
-      console.log('Rest timer started, target:',ae.restTime||0,'seconds');
-    }
-  }
+  if(ae.sets[si].completed)onAnySetComplete(ae);
 }
 
 // addDropSet kept for backwards compat but drops are now sub-sets
@@ -3842,15 +3814,7 @@ function toggleSupersetSet(ei,si,ssi){
   se.sets[ssi].completed=!se.sets[ssi].completed;
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
-  // Check if ALL sets in the entire superset group are done
-  if(se.sets[ssi].completed){
-    const ae=activeWorkout.exercises[ei];
-    const mainDone=ae.sets.every(s=>s.completed);
-    const ssDone=(ae.supersetExercises||[]).every(sse=>(sse.sets||[]).every(s=>s.completed));
-    if(mainDone&&ssDone){
-      startGlobalRestTimer(ae.restTime||0);
-    }
-  }
+  if(se.sets[ssi].completed)onAnySetComplete(activeWorkout.exercises[ei]);
 }
 
 function addSupersetSet(ei,si){
@@ -3869,6 +3833,11 @@ let globalRestInterval=null;
 let globalRestElapsed=0;
 let globalRestTarget=0;
 let globalRestReached=false;
+
+function onAnySetComplete(ae){
+  const target=ae.restTime||0;
+  startGlobalRestTimer(target);
+}
 
 function startGlobalRestTimer(targetSeconds){
   stopGlobalRestTimer();
@@ -3921,29 +3890,11 @@ function updateSubSet(ei,si,subi,field,val){
 }
 
 function toggleSubSet(ei,si,subi){
-  const s=activeWorkout.exercises[ei].sets[si];
-  const sub=s.subSets[subi];
+  const sub=activeWorkout.exercises[ei].sets[si].subSets[subi];
   sub.completed=!sub.completed;
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
-  if(sub.completed){
-    const ae=activeWorkout.exercises[ei];
-    const st=ae.setType||'standard';
-    console.log('Sub-set completed, setType:',st);
-    if(st==='drop'){
-      // Check if primary set AND all sub-sets for this set are done
-      const allDropsDone=s.completed&&(s.subSets||[]).every(ss=>ss.completed);
-      console.log('Drop sub-set checked, all drops complete:',allDropsDone);
-      if(allDropsDone){
-        console.log('All drops complete, starting rest timer');
-        startGlobalRestTimer(ae.restTime||0);
-        console.log('Rest timer started, target:',ae.restTime||0,'seconds');
-      }
-    }else if(st==='rest_pause'){
-      startGlobalRestTimer(ae.restPauseDuration||15);
-      console.log('Rest timer started, target:',ae.restPauseDuration||15,'seconds');
-    }
-  }
+  if(sub.completed)onAnySetComplete(activeWorkout.exercises[ei]);
 }
 
 function addSubSet(ei,si){
