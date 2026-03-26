@@ -1137,35 +1137,29 @@ select.input{appearance:none;cursor:pointer;
      PROFILE VIEW (pure view page)
      ============================================================ -->
 <div class="view" id="view-profile" data-view="profile">
-  <!-- Row 1: Avatar + Stats -->
-  <div style="display:flex;align-items:center;gap:16px;padding:16px 0 0">
-    <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" style="flex-shrink:0">
-      <div class="profile-avatar" id="profile-avatar" style="width:90px;height:90px;font-size:2rem"></div>
+  <!-- Settings gear top right -->
+  <div style="display:flex;justify-content:flex-end;padding:12px 0 0">
+    <div class="profile-settings-wrap" style="position:relative">
+      <button class="notif-bell" onclick="toggleProfileSettings()" style="color:var(--fg3)"><i data-lucide="settings" style="width:18px;height:18px"></i></button>
+      <div class="profile-settings-dropdown" id="profile-settings-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--bg);border:1px solid var(--bg4);z-index:700;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);overflow:hidden">
+        <button class="profile-menu-item" onclick="closeProfileSettings();nav('my-info')"><i data-lucide="user" style="width:16px;height:16px"></i> My Information</button>
+        <button class="profile-menu-item" onclick="closeProfileSettings();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
+        <div class="divider" style="margin:4px 0"></div>
+        <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
+      </div>
+    </div>
+  </div>
+  <!-- Profile header: single column -->
+  <div class="profile-header" style="padding-top:0">
+    <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()">
+      <div class="profile-avatar" id="profile-avatar"></div>
       <div class="avatar-overlay">Change</div>
       <input type="file" id="avatar-input" accept="image/*" onchange="uploadAvatar(event)">
     </div>
-    <div style="flex:1;min-width:0">
-      <div id="profile-stats" style="margin-bottom:0"></div>
-    </div>
-  </div>
-  <!-- Row 2: Name, username, bio, buttons -->
-  <div style="padding:10px 0 0">
-    <div style="display:flex;align-items:center;gap:8px">
-      <h2 id="profile-display-name" style="font-size:1.1rem;margin:0"></h2>
-      <div class="profile-settings-wrap" style="position:relative;margin-left:auto">
-        <button class="notif-bell" onclick="toggleProfileSettings()" style="color:var(--fg3)"><i data-lucide="settings" style="width:18px;height:18px"></i></button>
-        <div class="profile-settings-dropdown" id="profile-settings-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--bg);border:1px solid var(--bg4);z-index:700;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);overflow:hidden">
-          <button class="profile-menu-item" onclick="closeProfileSettings();openAddTileModal('workout')"><i data-lucide="sliders" style="width:16px;height:16px"></i> Edit Tiles</button>
-          <button class="profile-menu-item" onclick="closeProfileSettings();nav('my-info')"><i data-lucide="user" style="width:16px;height:16px"></i> My Information</button>
-          <button class="profile-menu-item" onclick="closeProfileSettings();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
-          <div class="divider" style="margin:4px 0"></div>
-          <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
-        </div>
-      </div>
-    </div>
-    <p class="fg2" id="profile-username-display" style="font-size:.78rem;margin:2px 0 0"></p>
-    <p class="fg3" id="profile-member-number" style="font-size:.65rem;margin:2px 0 0"></p>
-    <p class="fg2 small" id="profile-bio-display" style="line-height:1.5;margin:6px 0 0"></p>
+    <h2 id="profile-display-name"></h2>
+    <p class="fg2 small" id="profile-username-display"></p>
+    <p class="fg3" id="profile-member-number" style="font-size:.7rem;margin-top:4px"></p>
+    <p class="fg2 small mt-sm" id="profile-bio-display" style="max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5"></p>
     <div id="profile-action-btns" style="margin-top:8px"></div>
   </div>
 
@@ -4115,17 +4109,8 @@ async function renderProfile(){
 
   console.log('Stats:',{totalWorkouts,streak,totalVolume,followersCount,followingCount,plansCreatedCount,othersDoneCount,savedPlansCount,postsCount});
 
-  // ---- Render inline stats (top right next to avatar) ----
+  // ---- Render tile sections ----
   const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
-  const statsEl=document.getElementById('profile-stats');
-  if(statsEl)statsEl.innerHTML=`<div class="profile-inline-stats">
-    <div class="profile-inline-stat"><div class="pis-val">${postsCount}</div><div class="pis-lbl">Posts</div></div>
-    <div class="profile-inline-stat"><div class="pis-val">${totalWorkouts}</div><div class="pis-lbl">Workouts</div></div>
-    <div class="profile-inline-stat" onclick="openFollowList('followers','${uid}')" style="cursor:pointer"><div class="pis-val">${followersCount}</div><div class="pis-lbl">Followers</div></div>
-    <div class="profile-inline-stat" onclick="openFollowList('following','${uid}')" style="cursor:pointer"><div class="pis-val">${followingCount}</div><div class="pis-lbl">Following</div></div>
-  </div>`;
-
-  // ---- Render full tile sections ----
   const tilesEl=document.getElementById('profile-tiles');
   if(tilesEl){
     tilesEl.innerHTML=`
@@ -4142,8 +4127,8 @@ async function renderProfile(){
         <div class="stat-box" style="cursor:pointer" onclick="openPlansCreatedModal('${uid}',true)"><div class="val">${plansCreatedCount}</div><div class="lbl">Plans Created</div></div>
         <div class="stat-box" style="cursor:pointer" onclick="openCompletedByModal('${uid}')"><div class="val">${othersDoneCount}</div><div class="lbl">Completed by Followers</div></div>
         <div class="stat-box" style="cursor:pointer" onclick="openSavedPlansModal('${uid}')"><div class="val">${savedPlansCount}</div><div class="lbl">Saved Plans</div></div>
+        <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
       </div>
-      <button class="btn btn-block mt-sm" style="border:1.5px solid var(--accent);color:var(--accent);background:transparent;font-size:.78rem" onclick="openAddTileModal('workout')"><i data-lucide="sliders" style="width:14px;height:14px"></i> Edit Tiles</button>
     `;
   }
   console.log('Tiles rendered');
