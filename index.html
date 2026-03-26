@@ -6255,12 +6255,17 @@ async function saveCreateCommunity(){
 }
 
 async function openCommunityDetail(communityId){
+  console.log('Rendering community page for:',communityId);
   viewingCommunityId=communityId;
   currentView='community-detail';
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-community-detail').classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sidebar .sidebar-link').forEach(b=>b.classList.toggle('active',b.dataset.nav==='communities'));
+  window.scrollTo(0,0);
 
   const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
+  console.log('Community data:',comm);
   if(!comm){toast('Community not found');return}
 
   // Check if current user is the creator
@@ -7140,7 +7145,7 @@ async function renderFeedCommunityFilters(){
     const btn=document.createElement('button');
     btn.className='feed-tab feed-tab-comm'+(feedCommunityFilter===m.community_id?' active':'');
     btn.textContent=m.communities.name;
-    btn.onclick=()=>setFeedCommunityFilter(m.community_id);
+    btn.onclick=()=>openCommunityDetail(m.community_id);
     tabBar.appendChild(btn);
   });
 }
