@@ -2830,15 +2830,15 @@ async function renderGymPlans(){
   html+=`<h3 class="fg2 mb-sm" style="font-size:.82rem">My Creations</h3>`;
   if(myPlans&&myPlans.length){
     html+=myPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',true)">
-      <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+      <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
+      ${planPriceBadge(p)}
     </div>`).join('');
   }else{html+='<p class="fg3 small mb-md">No plans created yet.</p>'}
   html+=`<h3 class="fg2 mb-sm mt-md" style="font-size:.82rem">Saved Plans</h3>`;
   if(savedPlans.length){
     html+=savedPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
-      <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+      <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
+      ${planPriceBadge(p)}
     </div>`).join('');
   }else{html+='<p class="fg3 small">No saved plans yet. <span class="accent" style="cursor:pointer" onclick="nav(\'plans-library\')">Browse plans</span></p>'}
   container.innerHTML=html;
@@ -3246,15 +3246,15 @@ async function showStartFromPlan(){
     if(myPlans&&myPlans.length){
       html+=`<h3 class="mb-sm fg2" style="font-size:.82rem">My Creations</h3>`;
       html+=myPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+        <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
+        ${planPriceBadge(p)}
       </div>`).join('');
     }
     if(savedPlans.length){
       html+=`<h3 class="mb-sm mt-md fg2" style="font-size:.82rem">Saved Plans</h3>`;
       html+=savedPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
-        <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+        <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
+        ${planPriceBadge(p)}
       </div>`).join('');
     }
   }else{
@@ -4696,9 +4696,7 @@ async function renderPlansLibrary(){
     const vis=p.visibility||'public_free';
     const isPaid=vis==='public_paid'&&p.price>0;
     const hasPurchased=purchasedIds.has(p.id);
-    const priceBadge=vis==='private'?'<span class="price-badge private">🔒 Private</span>'
-      :isPaid?`<span class="price-badge paid">$${(+p.price).toFixed(2)}</span>`
-      :'<span class="price-badge free">FREE</span>';
+    const priceBadge=planPriceBadge(p);
 
     return `<div class="plan-card" style="cursor:pointer" onclick="${isPaid&&!isOwn&&!hasPurchased?`event.stopPropagation();previewPaidPlan('${p.id}')`:`openPlanDetail('${p.id}',${isOwn})`}">
       <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${priceBadge}</div>
@@ -4773,7 +4771,7 @@ async function renderProfilePlans(userId, isOwn){
   }
 
   container.innerHTML=`<div class="plans-grid">${plans.map(p=>`<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',${isOwn})">
-    <div class="plan-name">${esc(p.name)}</div>
+    <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${planPriceBadge(p)}</div>
     ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
     <div class="plan-footer">
       <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${adoptCounts[p.id]||0} followers</div>
@@ -6319,6 +6317,11 @@ function closeModal(){
    UTILS
    ============================================================= */
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function planPriceBadge(p){
+  if(p.visibility==='private')return'<span class="price-badge private">🔒 Private</span>';
+  if(p.price>0)return`<span class="price-badge paid">$${(+p.price).toFixed(2)}</span>`;
+  return'<span class="price-badge free">FREE</span>';
+}
 
 /* =============================================================
    COMMUNITIES
@@ -7472,7 +7475,7 @@ async function openPlansCreatedModal(userId, isOwn){
     <div class="modal-body" style="max-height:60vh;overflow-y:auto">
       ${(plans||[]).length?(plans||[]).map(p=>{
         const days=(p.workouts||[]).length;
-        const priceBadge=p.price>0?`<span class="tag" style="background:var(--accent);color:#fff;font-size:.6rem;padding:2px 6px">$${p.price}</span>`:'<span class="tag" style="font-size:.6rem;padding:2px 6px">FREE</span>';
+        const priceBadge=planPriceBadge(p);
         return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();openPlanDetail('${p.id}',${isOwn})">
           <div class="wo-info" style="flex:1">
             <div class="wo-name">${esc(p.name)}</div>
@@ -7527,7 +7530,7 @@ async function openSavedPlansModal(userId){
     <div class="modal-body" style="max-height:60vh;overflow-y:auto">
       ${plans.length?plans.map(p=>{
         const c=creators[p.user_id]||{};
-        const priceBadge=p.price>0?`<span class="tag" style="background:var(--accent);color:#fff;font-size:.6rem;padding:2px 6px">$${p.price}</span>`:'<span class="tag" style="font-size:.6rem;padding:2px 6px">FREE</span>';
+        const priceBadge=planPriceBadge(p);
         return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();openPlanDetail('${p.id}',false)">
           <div style="flex:1">
             <div class="wo-name">${esc(p.name)}</div>
