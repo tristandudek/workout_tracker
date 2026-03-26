@@ -571,10 +571,9 @@ select.input{appearance:none;cursor:pointer;
 .header-center-logo{font-family:var(--font-display);font-weight:900;font-size:1.3rem;color:var(--fg);letter-spacing:.02em;text-transform:lowercase;cursor:pointer}
 .header-center-logo .accent{color:var(--accent)}
 .header-right{display:flex;align-items:center;gap:10px;justify-content:flex-end}
-.start-wo-header{display:flex;align-items:center;gap:4px;background:var(--accent);color:#fff;border:none;border-radius:50%;padding:8px;cursor:pointer;transition:opacity .15s}
+.start-wo-header{display:flex;align-items:center;gap:3px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:5px 10px;font-family:var(--font-display);font-weight:700;font-size:.68rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .start-wo-header:hover{opacity:.85}
-@media(min-width:768px){.start-wo-header{border-radius:20px;padding:6px 12px}.start-wo-header .start-wo-text{display:inline}}
-@media(max-width:767px){.start-wo-header .start-wo-text{display:none}}
+@media(min-width:768px){.start-wo-header{padding:6px 12px;font-size:.72rem;gap:4px}}
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
@@ -966,7 +965,7 @@ select.input{appearance:none;cursor:pointer;
 <!-- TOP HEADER BAR -->
 <div id="profile-badge">
   <div class="header-left">
-    <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:14px;height:14px"></i><span class="start-wo-text"> Start Workout</span></button>
+    <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:13px;height:13px"></i> Start Workout</button>
   </div>
   <div class="header-center">
     <div class="header-center-logo" onclick="nav('feed')">forg<span class="accent">d</span></div>
