@@ -6491,6 +6491,7 @@ function planPriceBadge(p, opts){
   const o=opts||{};
   // Auto-detect ownership if not explicitly passed
   const isOwn=o.isOwn||(p.user_id&&currentUser&&p.user_id===currentUser.id);
+  console.log('Plan badge:',{name:p.name,planUserId:p.user_id,currentUserId:currentUser?.id,isOwn,purchased:!!o.purchased,saved:!!o.saved});
   if(isOwn)return'<span class="price-badge" style="background:rgba(56,189,248,.1);color:var(--accent)">Yours</span>';
   if(o.purchased)return'<span class="price-badge" style="background:rgba(34,197,94,.1);color:#16a34a">✓ Owned</span>';
   if(o.saved)return'<span class="price-badge" style="background:rgba(34,197,94,.1);color:#16a34a">✓ Saved</span>';
