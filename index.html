@@ -286,6 +286,29 @@ select.input{appearance:none;cursor:pointer;
 .video-modal-content video{width:100%;display:block}
 .video-modal-content iframe{width:100%;height:360px;border:none}
 .video-modal-close{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;z-index:2}
+
+/* Reels */
+.reels-feed{height:calc(100vh - 160px);overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
+.reel-card{height:calc(100vh - 160px);scroll-snap-align:start;position:relative;background:#000;border-radius:var(--radius2);overflow:hidden;margin-bottom:4px}
+.reel-card video{width:100%;height:100%;object-fit:cover;cursor:pointer}
+.reel-actions{position:absolute;right:12px;bottom:100px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:2}
+.reel-action{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.reel-action-btn{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:all .15s}
+.reel-action-btn:hover{background:rgba(255,255,255,.2)}
+.reel-action-btn.liked{color:var(--red)}
+.reel-action-count{font-size:.7rem;color:#fff;font-family:var(--font-mono)}
+.reel-bottom{position:absolute;bottom:0;left:0;right:0;padding:16px;background:linear-gradient(transparent,rgba(0,0,0,.8));z-index:2}
+.reel-username{color:#fff;font-family:var(--font-display);font-weight:700;font-size:.9rem;cursor:pointer}
+.reel-caption{color:rgba(255,255,255,.9);font-size:.82rem;margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reel-plan-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;background:rgba(56,189,248,.2);color:var(--accent);border-radius:20px;font-size:.75rem;font-weight:600;margin-top:8px;cursor:pointer}
+.reel-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;overflow:hidden;cursor:pointer;background:#333;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;font-weight:700}
+.reel-avatar img{width:100%;height:100%;object-fit:cover}
+.reel-views{color:rgba(255,255,255,.6);font-size:.68rem;font-family:var(--font-mono);margin-top:4px}
+.reel-comment-sheet{position:absolute;bottom:0;left:0;right:0;max-height:50%;background:var(--bg);border-radius:16px 16px 0 0;z-index:10;overflow-y:auto;animation:slideUp .2s ease}
+.reel-thumb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.reel-thumb{aspect-ratio:9/16;background:#000;border-radius:var(--radius);overflow:hidden;position:relative;cursor:pointer}
+.reel-thumb video,.reel-thumb img{width:100%;height:100%;object-fit:cover}
+.reel-thumb .thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;background:rgba(0,0,0,.3)}
 .set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
 .set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
 .set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
@@ -891,11 +914,16 @@ select.input{appearance:none;cursor:pointer;
   </div>
   <div class="feed-tabs" style="display:flex;border-bottom:2px solid var(--bg4);margin-bottom:16px">
     <button class="feed-tab active" id="feed-tab-following" onclick="switchFeedTab('following')">Your Feed</button>
-    <button class="feed-tab" id="feed-tab-suggested" onclick="switchFeedTab('suggested')">Suggested For You</button>
+    <button class="feed-tab" id="feed-tab-suggested" onclick="switchFeedTab('suggested')">Suggested</button>
+    <button class="feed-tab" id="feed-tab-reels" onclick="switchFeedTab('reels')">🎬 Reels</button>
   </div>
   <div class="filter-bar" id="feed-community-filters"></div>
   <div id="feed-list"></div>
   <div id="feed-empty" class="text-center mt-lg hidden"></div>
+  <div id="feed-reels" style="display:none">
+    <div class="flex between mb-sm"><h3 style="font-size:.88rem">Reels</h3><button class="btn btn-sm btn-primary" onclick="openCreateReel()"><i data-lucide="plus" style="width:14px;height:14px"></i> Create Reel</button></div>
+    <div class="reels-feed" id="reels-feed-container"></div>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -6261,7 +6289,26 @@ function switchFeedTab(tab){
   feedActiveTab=tab;
   document.getElementById('feed-tab-following').classList.toggle('active',tab==='following');
   document.getElementById('feed-tab-suggested').classList.toggle('active',tab==='suggested');
-  renderFeed();
+  const reelsTab=document.getElementById('feed-tab-reels');
+  if(reelsTab)reelsTab.classList.toggle('active',tab==='reels');
+  // Show/hide reels vs feed
+  const feedList=document.getElementById('feed-list');
+  const feedEmpty=document.getElementById('feed-empty');
+  const feedComms=document.getElementById('feed-community-filters');
+  const reelsDiv=document.getElementById('feed-reels');
+  if(tab==='reels'){
+    if(feedList)feedList.style.display='none';
+    if(feedEmpty)feedEmpty.style.display='none';
+    if(feedComms)feedComms.style.display='none';
+    if(reelsDiv)reelsDiv.style.display='block';
+    renderReelsFeed();
+  }else{
+    if(feedList)feedList.style.display='';
+    if(feedEmpty)feedEmpty.style.display='';
+    if(feedComms)feedComms.style.display='';
+    if(reelsDiv)reelsDiv.style.display='none';
+    renderFeed();
+  }
 }
 
 /* =============================================================
@@ -6418,6 +6465,191 @@ async function unsavePlan(planId){
   await sb.from('saved_plans').delete().eq('user_id',currentUser.id).eq('plan_id',planId);
   toast('Plan removed');
   if(currentView==='plans-library')await renderPlansLibrary();
+}
+
+/* =============================================================
+   REELS
+   ============================================================= */
+let reelViewTimers={};
+
+function fmtCount(n){return n>=1000?(n/1000).toFixed(1)+'k':n.toString()}
+
+async function renderReelsFeed(){
+  const container=document.getElementById('reels-feed-container');
+  const{data:reels}=await sb.from('reels').select('*,profiles:user_id(name,username,avatar_url),workout_plans:linked_plan_id(name,price,visibility)').eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  if(!reels||!reels.length){container.innerHTML='<p class="fg3 small text-center" style="padding:40px">No reels yet. Be the first to create one!</p>';return}
+  // Check which ones user liked
+  const reelIds=reels.map(r=>r.id);
+  const{data:myLikes}=await sb.from('reel_likes').select('reel_id').eq('user_id',currentUser.id).in('reel_id',reelIds);
+  const likedSet=new Set((myLikes||[]).map(l=>l.reel_id));
+
+  container.innerHTML=reels.map(r=>{
+    const p=r.profiles||{};
+    const plan=r.workout_plans;
+    return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}">
+      <video src="${r.video_url}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
+      <div class="reel-actions">
+        <div class="reel-action"><div class="reel-avatar" onclick="openPublicProfile('${r.user_id}')">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div></div>
+        <div class="reel-action"><button class="reel-action-btn ${likedSet.has(r.id)?'liked':''}" onclick="toggleReelLike('${r.id}',this)"><i data-lucide="heart" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.likes_count)}</span></div>
+        <div class="reel-action"><button class="reel-action-btn" onclick="openReelComments('${r.id}')"><i data-lucide="message-circle" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.comments_count)}</span></div>
+        <div class="reel-action"><button class="reel-action-btn" onclick="shareReelDM('${r.id}')"><i data-lucide="send" style="width:20px;height:20px"></i></button></div>
+        ${plan?`<div class="reel-action"><button class="reel-action-btn" onclick="openPlanDetail('${r.linked_plan_id}',false)"><i data-lucide="map" style="width:20px;height:20px"></i></button></div>`:''}
+      </div>
+      <div class="reel-bottom">
+        <div class="reel-username" onclick="openPublicProfile('${r.user_id}')">@${esc(p.username)}</div>
+        ${r.caption?`<div class="reel-caption">${esc(r.caption)}</div>`:''}
+        ${plan?`<div class="reel-plan-pill" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(plan.name)}${plan.visibility==='public_paid'?' · $'+(+plan.price).toFixed(2):''}</div>`:''}
+        <div class="reel-views">👁 ${fmtCount(r.views_count)} views</div>
+      </div>
+      <div id="reel-comments-sheet-${r.id}" class="reel-comment-sheet" style="display:none"></div>
+    </div>`;
+  }).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  // Set up intersection observer for autoplay and view counting
+  setupReelObserver();
+}
+
+function setupReelObserver(){
+  const observer=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      const video=entry.target.querySelector('video');
+      const reelId=entry.target.dataset.reelId;
+      if(entry.isIntersecting){
+        if(video){video.play().catch(()=>{})}
+        // Count view after 2 seconds
+        reelViewTimers[reelId]=setTimeout(()=>{
+          sb.from('reels').update({views_count:undefined}).eq('id',reelId); // RPC would be better but this is simple
+          // Increment via raw SQL is complex from client, so just do a select+update
+          sb.from('reels').select('views_count').eq('id',reelId).single().then(({data})=>{
+            if(data)sb.from('reels').update({views_count:(data.views_count||0)+1}).eq('id',reelId);
+          });
+        },2000);
+      }else{
+        if(video)video.pause();
+        if(reelViewTimers[reelId]){clearTimeout(reelViewTimers[reelId]);delete reelViewTimers[reelId]}
+      }
+    });
+  },{threshold:0.7});
+  document.querySelectorAll('.reel-card').forEach(card=>observer.observe(card));
+}
+
+async function toggleReelLike(reelId,btn){
+  const isLiked=btn.classList.contains('liked');
+  if(isLiked){
+    await sb.from('reel_likes').delete().eq('reel_id',reelId).eq('user_id',currentUser.id);
+    btn.classList.remove('liked');
+  }else{
+    await sb.from('reel_likes').insert({reel_id:reelId,user_id:currentUser.id});
+    btn.classList.add('liked');
+  }
+}
+
+async function openReelComments(reelId){
+  const sheet=document.getElementById('reel-comments-sheet-'+reelId);
+  if(sheet.style.display==='none'){
+    sheet.style.display='block';
+    const{data:comments}=await sb.from('reel_comments').select('*,profiles(name,username,avatar_url)').eq('reel_id',reelId).order('created_at');
+    sheet.innerHTML=`
+      <div style="padding:12px 16px;border-bottom:1px solid var(--bg4);font-weight:600;font-size:.9rem">Comments</div>
+      <div style="max-height:200px;overflow-y:auto;padding:8px 16px">
+        ${(comments||[]).map(c=>`<div class="comment-item">
+          <div class="comment-avatar">${c.profiles?.avatar_url?`<img src="${c.profiles.avatar_url}">`:(c.profiles?.name||'?')[0].toUpperCase()}</div>
+          <div class="comment-body"><span class="comment-user">${esc(c.profiles?.name)}</span>${esc(c.content)}<span class="comment-time">${timeAgo(c.created_at)}</span>${c.user_id===currentUser.id?`<button class="comment-del" onclick="deleteReelComment('${c.id}','${reelId}')">&times;</button>`:''}</div>
+        </div>`).join('')}
+        ${!comments?.length?'<p class="fg3 small">No comments yet.</p>':''}
+      </div>
+      <div class="comment-input-row" style="border-top:1px solid var(--bg4)">
+        <input class="input" id="reel-comment-input-${reelId}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addReelComment('${reelId}')">
+        <button class="btn btn-sm btn-primary" onclick="addReelComment('${reelId}')">Post</button>
+      </div>`;
+  }else{sheet.style.display='none'}
+}
+
+async function addReelComment(reelId){
+  const input=document.getElementById('reel-comment-input-'+reelId);
+  const content=input.value.trim();if(!content)return;
+  await sb.from('reel_comments').insert({reel_id:reelId,user_id:currentUser.id,content});
+  input.value='';
+  await openReelComments(reelId);// Re-open to refresh
+  document.getElementById('reel-comments-sheet-'+reelId).style.display='block';
+}
+
+async function deleteReelComment(commentId,reelId){
+  await sb.from('reel_comments').delete().eq('id',commentId);
+  await openReelComments(reelId);
+  document.getElementById('reel-comments-sheet-'+reelId).style.display='block';
+}
+
+function shareReelDM(reelId){
+  toast('Share via DM coming soon');
+}
+
+function openCreateReel(){
+  openModal(`
+    <div class="modal-header"><h2>Create Reel</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="photo-upload-area" onclick="document.getElementById('reel-video-input').click()" style="padding:30px">
+        <p class="fg3"><i data-lucide="video" style="width:24px;height:24px;vertical-align:middle"></i></p>
+        <p class="fg3 small mt-sm">Tap to upload video (max 100MB)</p>
+        <input type="file" id="reel-video-input" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="previewReelVideo(event)">
+      </div>
+      <div id="reel-video-preview" class="mt-sm"></div>
+      <textarea class="input mt-sm mb-sm" id="reel-caption" placeholder="Add a caption..." style="min-height:50px"></textarea>
+      <div class="profile-field">
+        <label>Link a Workout Plan (optional)</label>
+        <button class="btn btn-sm btn-block" id="reel-plan-btn" onclick="selectReelPlan()">Select a Plan</button>
+        <div id="reel-plan-selected" class="mt-sm"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch">
+      <button class="btn btn-primary btn-block" onclick="submitReel()">Post Reel</button>
+      <button class="btn btn-ghost btn-block" onclick="closeModal()">Discard</button>
+    </div>
+  `);
+}
+
+let selectedReelPlanId=null;
+
+function previewReelVideo(event){
+  const file=event.target.files[0];if(!file)return;
+  if(file.size>100*1024*1024){toast('Max 100MB');event.target.value='';return}
+  document.getElementById('reel-video-preview').innerHTML=`<video src="${URL.createObjectURL(file)}" controls style="width:100%;max-height:200px;border-radius:var(--radius)"></video><div class="small fg2 mt-sm">${file.name} (${(file.size/1024/1024).toFixed(1)}MB)</div>`;
+}
+
+async function selectReelPlan(){
+  const{data:plans}=await sb.from('workout_plans').select('id,name,price,visibility').eq('user_id',currentUser.id).order('name');
+  if(!plans||!plans.length){toast('Create a plan first');return}
+  openModal(`
+    <div class="modal-header"><h2>Select Plan</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${plans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="selectedReelPlanId='${p.id}';closeModal();openCreateReel();setTimeout(()=>{document.getElementById('reel-plan-selected').innerHTML='<div class=\\'flex between\\' style=\\'padding:6px;background:var(--bg2);border-radius:var(--radius)\\'><span class=\\'small\\'>${esc(p.name)}</span><button class=\\'set-del\\' onclick=\\'selectedReelPlanId=null;this.parentElement.remove()\\'>&times;</button></div>'},100)">
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${p.visibility==='public_paid'?'$'+(+p.price).toFixed(2):'Free'}</div></div>
+      </div>`).join('')}
+    </div>
+  `);
+}
+
+async function submitReel(){
+  const videoInput=document.getElementById('reel-video-input');
+  if(!videoInput||!videoInput.files[0]){toast('Select a video');return}
+  const file=videoInput.files[0];
+  toast('Uploading reel...');
+  const filePath=`${currentUser.id}/${Date.now()}_reel.${file.name.split('.').pop()}`;
+  const{data:upData,error:upErr}=await sb.storage.from('reels').upload(filePath,file,{upsert:true,contentType:file.type});
+  if(upErr){toast('Upload failed');console.error(upErr);return}
+  const{data:urlData}=sb.storage.from('reels').getPublicUrl(filePath);
+  const videoUrl=urlData?.publicUrl;
+  if(!videoUrl){toast('Failed to get URL');return}
+
+  const caption=document.getElementById('reel-caption')?.value.trim()||null;
+  const{error}=await sb.from('reels').insert({
+    user_id:currentUser.id,video_url:videoUrl,caption,
+    linked_plan_id:selectedReelPlanId||null,is_public:true
+  });
+  if(error){toast('Error posting reel');console.error(error);return}
+  selectedReelPlanId=null;
+  closeModal();toast('Reel posted!');
+  switchFeedTab('reels');
 }
 
 /* =============================================================
