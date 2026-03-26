@@ -3969,15 +3969,55 @@ async function savePrivacyPage(){
 async function renderProfileActivityFeed(){
   const container=document.getElementById('profile-activity-feed');
   const activities=[];
+  const profileUserId=currentUser.id;
+  console.log('Profile user id:',profileUserId);
 
-  // Fetch workout logs
-  console.log('[ProfileFeed] fetching workout logs...');
-  const{data:logs,error:logErr}=await sb.from('workout_logs').select('*').eq('user_id',currentUser.id).order('start_time',{ascending:false}).limit(10);
-  console.log('[ProfileFeed] logs:',logs?.length,'error:',logErr);
+  // Fetch workout posts (same card as The Gym Floor feed)
+  const{data:posts,error:postErr}=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('user_id',profileUserId).order('created_at',{ascending:false}).limit(15);
+  console.log('Profile posts:',posts,'error:',postErr);
+  if(posts&&posts.length){
+    posts.forEach(p=>{
+      const wl=p.workout_logs;
+      const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
+      const vol=wl?calcVolume(wl.exercises):0;
+      const photos=p.photo_urls||[];
+      const isOwn=p.user_id===currentUser.id;
+      activities.push({
+        date:new Date(p.created_at),
+        type:'post',
+        html:`<div class="feed-card" id="post-${p.id}">
+          <div class="feed-header">
+            <div class="feed-avatar">${p.profiles?.avatar_url?`<img src="${p.profiles.avatar_url}">`:(p.profiles?.name||'?')[0].toUpperCase()}</div>
+            <div style="flex:1">
+              <div class="feed-user">${esc(p.profiles?.name)}</div>
+              <div class="feed-time">${timeAgo(p.created_at)}</div>
+            </div>
+            ${isOwn?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+          </div>
+          <div class="feed-summary"><strong>${esc(wl?.workout_name||'Workout')}</strong></div>
+          <div class="feed-stat-pills">
+            <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+            <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
+            <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+          </div>
+          ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+          ${renderFeedPhotos(photos)}
+          <div class="feed-actions">
+            <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
+            <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
+          </div>
+          <div id="comments-${p.id}" style="display:none"></div>
+        </div>`
+      });
+    });
+  }
+
+  // Fetch workout logs WITHOUT posts (so they still show)
+  const postLogIds=new Set((posts||[]).filter(p=>p.workout_log_id).map(p=>p.workout_log_id));
+  const{data:logs}=await sb.from('workout_logs').select('*').eq('user_id',profileUserId).order('start_time',{ascending:false}).limit(10);
   if(logs){
-    logs.forEach(l=>{
+    logs.filter(l=>!postLogIds.has(l.id)).forEach(l=>{
       const dur=l.end_time?Math.round((new Date(l.end_time)-new Date(l.start_time))/60000):0;
-      const exCount=l.exercises?l.exercises.length:0;
       const vol=calcVolume(l.exercises);
       activities.push({
         date:new Date(l.start_time),
@@ -3993,7 +4033,7 @@ async function renderProfileActivityFeed(){
           <div class="feed-stat-pills" style="padding:0;margin-bottom:4px">
             <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
             <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-            <span class="feed-stat-pill"><span class="pill-val">${exCount}</span> exercises</span>
+            <span class="feed-stat-pill"><span class="pill-val">${l.exercises?.length||0}</span> exercises</span>
           </div>
           <div class="small fg3">${new Date(l.start_time).toLocaleDateString()}</div>
         </div>`
