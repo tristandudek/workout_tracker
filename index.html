@@ -625,6 +625,10 @@ select.input{appearance:none;cursor:pointer;
 .plan-card .plan-name{font-family:var(--font-display);font-weight:700;font-size:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .plan-card .plan-desc{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px;line-height:1.4}
 .plan-card .plan-footer{margin-top:auto;padding-top:8px}
+.price-badge{display:inline-block;padding:2px 10px;font-size:.7rem;font-weight:700;border-radius:20px;font-family:var(--font-mono)}
+.price-badge.free{background:rgba(34,197,94,.1);color:#16a34a}
+.price-badge.paid{background:rgba(56,189,248,.1);color:var(--accent);font-size:.8rem}
+.price-badge.private{background:var(--bg3);color:var(--fg3)}
 .plan-card .plan-badge{position:absolute;top:10px;right:10px;background:var(--accent);color:#fff;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--font-body)}
 .plan-card .plan-creator{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--bg4);font-size:.78rem;color:var(--fg2)}
 .plan-card .plan-creator-avatar{width:24px;height:24px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0}
@@ -1126,9 +1130,29 @@ select.input{appearance:none;cursor:pointer;
     <button class="btn grow" onclick="addWorkoutToPlan()">+ Add Workout</button>
     <button class="btn btn-ghost grow" onclick="addRestDayToPlan()"><i data-lucide="moon" style="width:14px;height:14px"></i> + Rest Day</button>
   </div>
-  <div class="flex gap-sm mt-md mb-sm">
-    <span class="small fg2">Public</span>
-    <label class="toggle-switch"><input type="checkbox" id="plan-public" checked><span class="toggle-slider"></span></label>
+  <div class="divider"></div>
+  <div class="small" style="font-weight:600;margin-bottom:8px">Availability</div>
+  <div style="display:flex;flex-direction:column;gap:6px" id="plan-vis-options">
+    <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+      <input type="radio" name="plan-vis" value="private" style="margin-top:3px" onchange="document.getElementById('plan-price-section').style.display='none'">
+      <div><div class="small" style="font-weight:600">🔒 Private</div><div class="small fg3">Only you can see and use this plan</div></div>
+    </label>
+    <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+      <input type="radio" name="plan-vis" value="public_free" checked style="margin-top:3px" onchange="document.getElementById('plan-price-section').style.display='none'">
+      <div><div class="small" style="font-weight:600">🌐 Public — Free</div><div class="small fg3">Anyone can view and use this plan for free</div></div>
+    </label>
+    <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+      <input type="radio" name="plan-vis" value="public_paid" style="margin-top:3px" onchange="document.getElementById('plan-price-section').style.display='block'">
+      <div><div class="small" style="font-weight:600">💰 Public — Paid</div><div class="small fg3">Set a price for others to access this plan</div></div>
+    </label>
+  </div>
+  <div id="plan-price-section" style="display:none;margin-top:8px">
+    <div class="flex gap-sm" style="align-items:center">
+      <span class="small fg2">$</span>
+      <input class="input" id="plan-price" type="number" step="0.01" min="0.99" value="9.99" style="width:100px">
+      <span class="small fg3">USD</span>
+    </div>
+    <p class="small fg3 mt-sm">Payment processing coming soon. Plans marked as paid will show a price but purchases will be recorded as pending until payments are enabled.</p>
   </div>
   <div class="flex gap-sm mt-md">
     <button class="btn btn-primary grow" onclick="savePlan()">Save Plan</button>
@@ -3925,19 +3949,29 @@ async function renderPlansLibrary(){
     const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',uniqueIds);
     (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
   }
-  // Check saved
+  // Check saved and purchased
   const savedIds=new Set(savedPlans.map(p=>p.id));
+  const{data:purchases}=await sb.from('plan_purchases').select('plan_id').eq('buyer_id',currentUser.id);
+  const purchasedIds=new Set((purchases||[]).map(p=>p.plan_id));
 
   function planCard(p, isOwn, isSaved){
     const creator=p.profiles||{};
-    return `<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',${isOwn})">
-      <div class="plan-name">${esc(p.name)}</div>
-      ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div><span class="small accent" style="cursor:pointer" onclick="event.stopPropagation();openPlanDetail('${p.id}',${isOwn})">see more</span>`:''}
+    const vis=p.visibility||'public_free';
+    const isPaid=vis==='public_paid'&&p.price>0;
+    const hasPurchased=purchasedIds.has(p.id);
+    const priceBadge=vis==='private'?'<span class="price-badge private">🔒 Private</span>'
+      :isPaid?`<span class="price-badge paid">$${(+p.price).toFixed(2)}</span>`
+      :'<span class="price-badge free">FREE</span>';
+
+    return `<div class="plan-card" style="cursor:pointer" onclick="${isPaid&&!isOwn&&!hasPurchased?`event.stopPropagation();previewPaidPlan('${p.id}')`:`openPlanDetail('${p.id}',${isOwn})`}">
+      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${priceBadge}</div>
+      ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
       <div class="plan-footer">
         <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${adoptCounts[p.id]||0} followers</div>
         ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
           ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
+            :isPaid&&!hasPurchased?`<button class="btn btn-sm btn-primary" onclick="purchasePlan('${p.id}',${p.price})">Get Plan — $${(+p.price).toFixed(2)}</button>`
             :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i></button>`}`}
         </div>
       </div>
@@ -4502,12 +4536,14 @@ async function savePlan(){
   if(!name){toast('Enter a plan name');return}
   if(!planWorkouts.length){toast('Add at least one workout');return}
   const desc=document.getElementById('plan-desc').value.trim();
-  const isPublic=document.getElementById('plan-public').checked;
+  const vis=document.querySelector('input[name="plan-vis"]:checked')?.value||'public_free';
+  const isPublic=vis!=='private';
+  const price=vis==='public_paid'?+(document.getElementById('plan-price')?.value||0):0;
 
   if(editingPlanId){
-    await sb.from('workout_plans').update({name,description:desc,workouts:planWorkouts,is_public:isPublic}).eq('id',editingPlanId);
+    await sb.from('workout_plans').update({name,description:desc,workouts:planWorkouts,is_public:isPublic,visibility:vis,price,currency:'USD'}).eq('id',editingPlanId);
   }else{
-    await sb.from('workout_plans').insert({user_id:currentUser.id,name,description:desc,workouts:planWorkouts,is_public:isPublic});
+    await sb.from('workout_plans').insert({user_id:currentUser.id,name,description:desc,workouts:planWorkouts,is_public:isPublic,visibility:vis,price,currency:'USD'});
   }
   toast(editingPlanId?'Plan updated!':'Plan created!');
   editingPlanId=null;
@@ -4518,6 +4554,48 @@ async function deletePlan(id){
   if(!confirm('Delete this plan?'))return;
   await sb.from('workout_plans').delete().eq('id',id);
   toast('Plan deleted');
+  if(currentView==='plans-library')await renderPlansLibrary();
+}
+
+async function previewPaidPlan(planId){
+  const{data:plan}=await sb.from('workout_plans').select('*,profiles(name,avatar_url)').eq('id',planId).single();
+  if(!plan)return;
+  const{count:adopters}=await sb.from('plan_adoptions').select('*',{count:'exact',head:true}).eq('plan_id',planId);
+  openModal(`
+    <div class="modal-header"><h2>${esc(plan.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body text-center">
+      ${plan.profiles?`<div class="flex gap-sm mb-md" style="justify-content:center;align-items:center"><div class="feed-avatar" style="width:28px;height:28px;font-size:.65rem">${plan.profiles.avatar_url?`<img src="${plan.profiles.avatar_url}">`:(plan.profiles.name||'?')[0].toUpperCase()}</div><span class="small fg2">by ${esc(plan.profiles.name)}</span></div>`:''}
+      ${plan.description?`<p class="fg2 small mb-md" style="line-height:1.5">${esc(plan.description)}</p>`:''}
+      <div class="feed-stat-pills mb-md" style="padding:0;justify-content:center">
+        <span class="feed-stat-pill"><span class="pill-val">${(plan.workouts||[]).length}</span> workouts</span>
+        <span class="feed-stat-pill"><span class="pill-val">${adopters||0}</span> athletes using</span>
+      </div>
+      <div class="divider"></div>
+      <p class="small fg3 mb-md">Full workout details are available after purchase.</p>
+      <span class="price-badge paid" style="font-size:1.2rem;padding:6px 20px">$${(+plan.price).toFixed(2)}</span>
+    </div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn btn-primary" style="min-width:200px" onclick="purchasePlan('${planId}',${plan.price})"><i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Get Plan — $${(+plan.price).toFixed(2)}</button>
+    </div>
+  `);
+}
+
+async function purchasePlan(planId,price){
+  const{data:plan}=await sb.from('workout_plans').select('user_id').eq('id',planId).single();
+  if(!plan){toast('Plan not found');return}
+  const{error}=await sb.from('plan_purchases').insert({
+    plan_id:planId,buyer_id:currentUser.id,seller_id:plan.user_id,
+    price_paid:price,currency:'USD',payment_status:'pending'
+  });
+  if(error){
+    if(error.message.includes('duplicate'))toast('You already own this plan');
+    else{toast('Error purchasing');console.error(error)}
+    return;
+  }
+  // Also adopt the plan
+  await adoptPlan(planId);
+  closeModal();
+  toast('Plan purchased! (Payment pending — processing coming soon)');
   if(currentView==='plans-library')await renderPlansLibrary();
 }
 
