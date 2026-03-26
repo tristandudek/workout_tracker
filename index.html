@@ -611,17 +611,19 @@ select.input{appearance:none;cursor:pointer;
 .photo-upload-area input[type="file"]{display:none}
 
 /* Plans */
-.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:900px){.plans-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:500px){.plans-grid{grid-template-columns:1fr}}
-.plan-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease;position:relative;display:flex;flex-direction:column}
+.plan-card{background:var(--bg);border:1px solid var(--bg4);padding:16px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:all .2s ease;position:relative;display:flex;flex-direction:column;height:220px;overflow:hidden}
 .plan-card:hover{box-shadow:var(--shadow-hover)}
-.plan-card .plan-name{font-family:var(--font-display);font-weight:700;font-size:1rem}
+.plan-card .plan-name{font-family:var(--font-display);font-weight:700;font-size:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.plan-card .plan-desc{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:4px;line-height:1.4}
+.plan-card .plan-footer{margin-top:auto;padding-top:8px}
 .plan-card .plan-badge{position:absolute;top:10px;right:10px;background:var(--accent);color:#fff;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;font-family:var(--font-body)}
 .plan-card .plan-creator{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--bg4);font-size:.78rem;color:var(--fg2)}
 .plan-card .plan-creator-avatar{width:24px;height:24px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0}
 .plan-card .plan-creator-avatar img{width:100%;height:100%;object-fit:cover}
-.plan-create-tile{background:var(--bg);border:2px dashed var(--bg4);padding:16px;border-radius:var(--radius2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s ease;min-height:180px;color:var(--fg3)}
+.plan-create-tile{background:var(--bg);border:2px dashed var(--bg4);padding:16px;border-radius:var(--radius2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s ease;height:220px;color:var(--fg3)}
 .plan-create-tile:hover{border-color:var(--accent);color:var(--accent)}
 .plan-card .plan-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
 .plan-card .plan-adopters{font-size:.72rem;color:var(--accent);margin-top:4px}
@@ -3713,15 +3715,16 @@ async function renderPlansLibrary(){
 
   function planCard(p, isOwn, isSaved){
     const creator=p.profiles||{};
-    return `<div class="plan-card" style="cursor:pointer" onclick="console.log('Plan clicked:','${p.id}');openPlanDetail('${p.id}',${isOwn})">
+    return `<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',${isOwn})">
       <div class="plan-name">${esc(p.name)}</div>
-      ${p.description?`<div class="small fg2" style="margin-top:4px;line-height:1.4">${esc(p.description)}</div>`:''}
-      <div class="plan-meta" style="margin-top:8px">${(p.workouts||[]).length} workouts</div>
-      <div class="plan-adopters">${adoptCounts[p.id]||0} followers</div>
-      ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap" onclick="event.stopPropagation()">
-        ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
-          :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use Plan</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save</button>`}`}
+      ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div><span class="small accent" style="cursor:pointer" onclick="event.stopPropagation();openPlanDetail('${p.id}',${isOwn})">see more</span>`:''}
+      <div class="plan-footer">
+        <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${adoptCounts[p.id]||0} followers</div>
+        ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
+          ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
+            :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i></button>`}`}
+        </div>
       </div>
     </div>`;
   }
@@ -3783,14 +3786,17 @@ async function renderProfilePlans(userId, isOwn){
     adopted=new Set((myAdoptions||[]).map(a=>a.plan_id));
   }
 
-  container.innerHTML=plans.map(p=>`<div class="plan-card">
+  container.innerHTML=`<div class="plans-grid">${plans.map(p=>`<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',${isOwn})">
     <div class="plan-name">${esc(p.name)}</div>
-    ${p.description?`<div class="small fg2 mt-sm">${esc(p.description)}</div>`:''}
-    <div class="plan-meta">${(p.workouts||[]).length} workouts</div>
-    <div class="plan-adopters">${adoptCounts[p.id]||0} athletes using &middot; ${completionCounts[p.id]||0} completions</div>
-    ${!isOwn?(adopted.has(p.id)?`<span class="tag tag-muscle mt-sm">Using this plan</span>`:`<button class="btn btn-sm btn-primary mt-sm" onclick="adoptPlan('${p.id}')">Use This Plan</button>`):''}
-    ${isOwn?`<div class="flex gap-sm mt-sm"><button class="btn btn-sm" onclick="editPlan('${p.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')">Delete</button></div>`:''}
-  </div>`).join('');
+    ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
+    <div class="plan-footer">
+      <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${adoptCounts[p.id]||0} followers</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
+        ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i></button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
+          :(adopted.has(p.id)?'<span class="tag tag-muscle">Using</span>':`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button>`)}
+      </div>
+    </div>
+  </div>`).join('')}</div>`;
 }
 
 async function renderMyInfo(){
