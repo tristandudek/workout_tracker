@@ -4098,26 +4098,20 @@ async function toggleTilePublic(section, key, btn){
 function openAddTileModal(section){
   if(section==='workout'){
     openModal(`
-      <div class="modal-header"><h2>Workout Metric Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <div class="modal-body">
+      <div class="modal-header"><h2>Edit Workout Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto">
         <h3 style="font-size:.82rem;margin-bottom:10px" class="fg2">Standard Tiles</h3>
         <div id="wm-tile-toggles"></div>
-        <h3 style="font-size:.82rem;margin:16px 0 10px" class="fg2">1RM Tiles <span class="fg4 small">(up to 5)</span></h3>
-        <div id="rm-tile-list"></div>
-        <div class="search-wrap mt-sm" style="margin-bottom:0">
-          <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
-          <input class="input" id="rm-search" placeholder="Search exercise to add 1RM tile..." oninput="searchRmExercise()">
-        </div>
-        <div id="rm-search-results" style="max-height:200px;overflow-y:auto"></div>
+        <h3 style="font-size:.82rem;margin:18px 0 10px" class="fg2">1RM Tiles</h3>
+        <div id="rm-tile-rows"></div>
       </div>
     `);
     renderWmToggles();
-    renderRmTileList();
-    if(typeof lucide!=='undefined')lucide.createIcons();
+    renderRmRows();
   }else{
     openModal(`
-      <div class="modal-header"><h2>Creator & Engagement Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-      <div class="modal-body">
+      <div class="modal-header"><h2>Edit Engagement Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto">
         <div id="em-tile-toggles"></div>
       </div>
     `);
@@ -4125,135 +4119,182 @@ function openAddTileModal(section){
   }
 }
 
+function tileToggleBtn(on, label, color){
+  const bg=on?(color==='green'?'#22c55e':'var(--accent)'):'var(--bg4)';
+  const txt=on?'#fff':'var(--fg4)';
+  return `<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:12px;font-size:.65rem;font-weight:700;background:${bg};color:${txt};cursor:pointer;white-space:nowrap;user-select:none">${label}</span>`;
+}
+
 async function renderWmToggles(){
   const ts=await getTileSettings();
   const wm=ts.workout_metrics||{};
-  const tiles=[
-    {key:'workouts',label:'Workouts'},
-    {key:'streak',label:'Day Streak'},
-    {key:'volume',label:'Volume'}
-  ];
+  const tiles=[{key:'workouts',label:'Workouts'},{key:'streak',label:'Day Streak'},{key:'volume',label:'Volume'}];
   const container=document.getElementById('wm-tile-toggles');
   container.innerHTML=tiles.map(t=>{
-    const on=!(wm[t.key]&&wm[t.key].visible===false);
+    const included=!(wm[t.key]&&wm[t.key].visible===false);
+    const isPublic=!(wm[t.key]&&wm[t.key].public===false);
     return `<div class="tile-modal-tile">
-      <span class="tile-name">${t.label}</span>
-      <button class="tile-toggle ${on?'on':''}" onclick="toggleWmTileVisible('${t.key}',this)"></button>
+      <span class="tile-name" style="flex:1">${t.label}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span onclick="toggleWmInclude('${t.key}')" style="cursor:pointer">${tileToggleBtn(included,included?'Included':'Not Shown','blue')}</span>
+        ${included?`<span onclick="toggleWmPublic('${t.key}')" style="cursor:pointer">${tileToggleBtn(isPublic,isPublic?'Public':'Private','green')}</span>`:''}
+      </div>
     </div>`;
   }).join('');
 }
 
-async function toggleWmTileVisible(key, btn){
+async function toggleWmInclude(key){
   const ts=await getTileSettings();
   if(!ts.workout_metrics)ts.workout_metrics={};
   if(!ts.workout_metrics[key])ts.workout_metrics[key]={visible:true,public:true};
   ts.workout_metrics[key].visible=!ts.workout_metrics[key].visible;
-  btn.classList.toggle('on',ts.workout_metrics[key].visible);
   await saveTileSettings(ts);
+  renderWmToggles();
+}
+
+async function toggleWmPublic(key){
+  const ts=await getTileSettings();
+  if(!ts.workout_metrics)ts.workout_metrics={};
+  if(!ts.workout_metrics[key])ts.workout_metrics[key]={visible:true,public:true};
+  ts.workout_metrics[key].public=!ts.workout_metrics[key].public;
+  await saveTileSettings(ts);
+  renderWmToggles();
 }
 
 async function renderEmToggles(){
   const ts=await getTileSettings();
   const em=ts.engagement_metrics||{};
-  const tiles=[
-    {key:'followers',label:'Followers'},
-    {key:'following',label:'Following'},
-    {key:'plans_created',label:'Plans Created'},
-    {key:'completed_by',label:'Completed by Followers'},
-    {key:'saved_plans',label:'Saved Plans'}
-  ];
+  const tiles=[{key:'followers',label:'Followers'},{key:'following',label:'Following'},{key:'plans_created',label:'Plans Created'},{key:'completed_by',label:'Completed by Followers'},{key:'saved_plans',label:'Saved Plans'}];
   const container=document.getElementById('em-tile-toggles');
   container.innerHTML=tiles.map(t=>{
-    const on=!(em[t.key]&&em[t.key].visible===false);
+    const included=!(em[t.key]&&em[t.key].visible===false);
+    const isPublic=!(em[t.key]&&em[t.key].public===false);
     return `<div class="tile-modal-tile">
-      <span class="tile-name">${t.label}</span>
-      <button class="tile-toggle ${on?'on':''}" onclick="toggleEmTileVisible('${t.key}',this)"></button>
+      <span class="tile-name" style="flex:1">${t.label}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span onclick="toggleEmInclude('${t.key}')" style="cursor:pointer">${tileToggleBtn(included,included?'Included':'Not Shown','blue')}</span>
+        ${included?`<span onclick="toggleEmPublic('${t.key}')" style="cursor:pointer">${tileToggleBtn(isPublic,isPublic?'Public':'Private','green')}</span>`:''}
+      </div>
     </div>`;
   }).join('');
 }
 
-async function toggleEmTileVisible(key, btn){
+async function toggleEmInclude(key){
   const ts=await getTileSettings();
   if(!ts.engagement_metrics)ts.engagement_metrics={};
   if(!ts.engagement_metrics[key])ts.engagement_metrics[key]={visible:true,public:true};
   ts.engagement_metrics[key].visible=!ts.engagement_metrics[key].visible;
-  btn.classList.toggle('on',ts.engagement_metrics[key].visible);
   await saveTileSettings(ts);
+  renderEmToggles();
 }
 
-async function renderRmTileList(){
+async function toggleEmPublic(key){
+  const ts=await getTileSettings();
+  if(!ts.engagement_metrics)ts.engagement_metrics={};
+  if(!ts.engagement_metrics[key])ts.engagement_metrics[key]={visible:true,public:true};
+  ts.engagement_metrics[key].public=!ts.engagement_metrics[key].public;
+  await saveTileSettings(ts);
+  renderEmToggles();
+}
+
+async function renderRmRows(){
   const ts=await getTileSettings();
   const rmIds=ts['1rm_tiles']||[];
-  const container=document.getElementById('rm-tile-list');
-  if(!rmIds.length){container.innerHTML='<p class="fg4 small">No 1RM tiles added yet.</p>';return}
-  const{data:rows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',currentUser.id).in('exercise_id',rmIds);
-  if(!rows||!rows.length){container.innerHTML='<p class="fg4 small">No 1RM tiles added yet.</p>';return}
-  container.innerHTML=rows.map(r=>`<div class="tile-modal-tile">
-    <span class="tile-name">${esc(r.exercise_name)} — ${r.estimated_1rm?Math.round(r.estimated_1rm)+' '+r.weight_unit:'No data'}</span>
-    <button class="btn btn-sm btn-danger" onclick="removeRmTile('${r.exercise_id}')" style="padding:3px 8px;font-size:.65rem">Remove</button>
-  </div>`).join('');
+  // Fetch existing 1RM data
+  let rmMap={};
+  if(rmIds.length){
+    const{data:rows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',currentUser.id).in('exercise_id',rmIds);
+    (rows||[]).forEach(r=>rmMap[r.exercise_id]=r);
+  }
+  const container=document.getElementById('rm-tile-rows');
+  let html='';
+  for(let i=0;i<5;i++){
+    const exId=rmIds[i]||null;
+    const rm=exId?rmMap[exId]:null;
+    const included=!!exId;
+    const isPublic=rm?rm.is_public!==false:true;
+    html+=`<div class="tile-modal-tile" style="flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+        <span class="tile-name" style="white-space:nowrap">1RM Tile ${i+1}</span>
+        ${rm?`<span class="fg3 small" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(rm.exercise_name)} — ${rm.estimated_1rm?Math.round(rm.estimated_1rm)+' '+rm.weight_unit:'No data'}</span>`:''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${included?`<span onclick="toggleRmPublic('${exId}')" style="cursor:pointer">${tileToggleBtn(isPublic,isPublic?'Public':'Private','green')}</span>
+          <button class="btn btn-sm" onclick="clearRmSlot(${i})" style="padding:2px 8px;font-size:.6rem;color:#ef4444;border-color:#ef4444">Remove</button>`
+          :`<span class="fg4 small" style="font-style:italic">Empty</span>`}
+      </div>
+      ${!included?`<div style="width:100%;margin-top:6px" id="rm-search-wrap-${i}">
+        <div class="search-wrap" style="margin-bottom:0">
+          <span class="search-icon"><i data-lucide="search" style="width:14px;height:14px"></i></span>
+          <input class="input" id="rm-search-${i}" placeholder="Search exercise..." oninput="searchRmForSlot(${i})" style="font-size:.8rem">
+        </div>
+        <div id="rm-results-${i}" style="max-height:150px;overflow-y:auto"></div>
+      </div>`:''}
+    </div>`;
+  }
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
-let rmSearchTimeout=null;
-function searchRmExercise(){
-  const q=document.getElementById('rm-search').value.trim();
-  const container=document.getElementById('rm-search-results');
-  if(rmSearchTimeout)clearTimeout(rmSearchTimeout);
+let rmSlotSearchTimeout=null;
+function searchRmForSlot(slot){
+  const q=document.getElementById('rm-search-'+slot)?.value.trim()||'';
+  const container=document.getElementById('rm-results-'+slot);
+  if(rmSlotSearchTimeout)clearTimeout(rmSlotSearchTimeout);
   if(!q){container.innerHTML='';return}
-  rmSearchTimeout=setTimeout(async()=>{
+  rmSlotSearchTimeout=setTimeout(async()=>{
     const exs=await getExercises();
-    const matches=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())).slice(0,10);
     const ts=await getTileSettings();
     const existing=new Set(ts['1rm_tiles']||[]);
-    container.innerHTML=matches.map(e=>`<div class="tile-modal-tile" style="${existing.has(e.id)?'opacity:.5':''}">
-      <span class="tile-name" style="font-size:.8rem">${esc(e.name)}</span>
-      ${existing.has(e.id)?'<span class="fg4 small">Added</span>':`<button class="btn btn-sm btn-primary" onclick="addRmTile('${e.id}','${esc(e.name)}')" style="padding:3px 10px;font-size:.65rem">Add</button>`}
-    </div>`).join('');
+    const matches=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())&&!existing.has(e.id)).slice(0,8);
+    container.innerHTML=matches.map(e=>`<div class="tile-modal-tile" style="padding:6px 10px">
+      <span style="flex:1;font-size:.8rem">${esc(e.name)}<span class="fg4 small" style="margin-left:6px">${esc(e.equipment||'')}</span></span>
+      <button class="btn btn-sm btn-primary" onclick="addRmToSlot(${slot},'${e.id}','${esc(e.name)}')" style="padding:2px 10px;font-size:.62rem">Select</button>
+    </div>`).join('')||'<p class="fg4 small" style="padding:6px">No exercises found.</p>';
   },200);
 }
 
-async function addRmTile(exerciseId, exerciseName){
+async function addRmToSlot(slot, exerciseId, exerciseName){
   const ts=await getTileSettings();
   const rmIds=ts['1rm_tiles']||[];
-  if(rmIds.length>=5){toast('Maximum 5 1RM tiles');return}
   if(rmIds.includes(exerciseId)){toast('Already added');return}
-  // Calculate estimated 1RM from workout logs
+  // Calculate estimated 1RM
   const logs=await getLogs();
-  let best1rm=0;
-  let bestWeight=0;let bestReps=0;
-  logs.forEach(l=>{
-    l.exercises.forEach(ex=>{
-      if(ex.exerciseId===exerciseId){
-        ex.sets.forEach(s=>{
-          if(s.completed&&s.weight>0&&s.reps>0){
-            const e1rm=s.weight*(1+s.reps/30);
-            if(e1rm>best1rm){best1rm=e1rm;bestWeight=s.weight;bestReps=s.reps}
-          }
-        });
-      }
-    });
-  });
-  // Upsert 1RM tile
+  let best1rm=0,bestWeight=0,bestReps=0;
+  logs.forEach(l=>{l.exercises.forEach(ex=>{if(ex.exerciseId===exerciseId){ex.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}})}})});
   await sb.from('profile_1rm_tiles').upsert({
     user_id:currentUser.id,exercise_id:exerciseId,exercise_name:exerciseName,
     weight:bestWeight,weight_unit:getUnit(),reps:bestReps,
-    estimated_1rm:best1rm||null,is_public:true,display_order:rmIds.length
+    estimated_1rm:best1rm||null,is_public:true,display_order:slot
   },{onConflict:'user_id,exercise_id'});
-  rmIds.push(exerciseId);
-  ts['1rm_tiles']=rmIds;
+  // Insert at slot position
+  while(rmIds.length<slot)rmIds.push(null);
+  rmIds[slot]=exerciseId;
+  ts['1rm_tiles']=rmIds.filter(Boolean);
   await saveTileSettings(ts);
-  toast(exerciseName+' 1RM tile added');
-  renderRmTileList();
-  searchRmExercise();
+  toast(exerciseName+' added');
+  renderRmRows();
 }
 
-async function removeRmTile(exerciseId){
+async function clearRmSlot(slot){
   const ts=await getTileSettings();
-  ts['1rm_tiles']=(ts['1rm_tiles']||[]).filter(id=>id!==exerciseId);
-  await saveTileSettings(ts);
-  await sb.from('profile_1rm_tiles').delete().eq('user_id',currentUser.id).eq('exercise_id',exerciseId);
+  const rmIds=ts['1rm_tiles']||[];
+  const exId=rmIds[slot];
+  if(exId){
+    await sb.from('profile_1rm_tiles').delete().eq('user_id',currentUser.id).eq('exercise_id',exId);
+    rmIds.splice(slot,1);
+    ts['1rm_tiles']=rmIds;
+    await saveTileSettings(ts);
+  }
   toast('Tile removed');
-  renderRmTileList();
+  renderRmRows();
+}
+
+async function toggleRmPublic(exerciseId){
+  const{data:row}=await sb.from('profile_1rm_tiles').select('is_public').eq('user_id',currentUser.id).eq('exercise_id',exerciseId).single();
+  const newVal=!(row?.is_public!==false);
+  await sb.from('profile_1rm_tiles').update({is_public:newVal}).eq('user_id',currentUser.id).eq('exercise_id',exerciseId);
+  renderRmRows();
 }
 
 async function renderMetricsChart(){
