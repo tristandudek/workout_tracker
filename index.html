@@ -5151,12 +5151,18 @@ async function submitWorkoutPost(){
   if(shareToFeed)toast('Workout posted to the feed!');
 }
 
-function showShareWorkoutModalV2(dur,totalSets,totalVol){
+async function showShareWorkoutModalV2(dur,totalSets,totalVol){
   pendingPostPhotos=[];
   const wo=activeWorkout;
+  // Fetch user's communities for the selector
+  const{data:memberships}=await sb.from('community_members').select('community_id,communities(id,name)').eq('user_id',currentUser.id);
+  const comms=(memberships||[]).filter(m=>m.communities).map(m=>m.communities);
+  const hasCommunities=comms.length>0;
+  const defaultVis=hasCommunities?'feed_communities':'public';
+
   openModal(`
     <div class="modal-header"><h2>Share Your Workout 💪</h2><button class="modal-close" onclick="closeModal();finishCleanup()">&times;</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
       <div class="feed-stat-pills mb-md" style="padding:0">
         <span class="feed-stat-pill"><span class="pill-val">${esc(wo?.workoutName||'Workout')}</span></span>
         <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
@@ -5167,9 +5173,30 @@ function showShareWorkoutModalV2(dur,totalSets,totalVol){
       <button class="btn btn-block mb-sm" onclick="document.getElementById('share-photos-v2').click()" style="height:44px">📷 Add Photos</button>
       <input type="file" id="share-photos-v2" accept="image/*" multiple style="display:none" onchange="previewSharePhotosV2(event)">
       <div id="share-preview-v2" class="share-photo-strip"></div>
-      <div class="flex gap-sm mt-sm" style="align-items:center">
-        <label class="toggle-switch"><input type="checkbox" id="share-toggle-v2" checked><span class="toggle-slider"></span></label>
-        <span class="small fg2">Post to The Gym Floor</span>
+
+      <div class="divider"></div>
+      <div class="small fg2 mb-sm" style="font-weight:600">Who can see this post?</div>
+      <div style="display:flex;flex-direction:column;gap:6px" id="share-vis-options">
+        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+          <input type="radio" name="share-vis" value="public" ${defaultVis==='public'?'checked':''} onchange="updateShareVisUI()" style="margin-top:3px">
+          <div><div class="small" style="font-weight:600">🌐 Public Feed</div><div class="small fg3">Share to The Gym Floor — visible to everyone</div></div>
+        </label>
+        ${hasCommunities?`
+        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+          <input type="radio" name="share-vis" value="communities" onchange="updateShareVisUI()" style="margin-top:3px">
+          <div><div class="small" style="font-weight:600">👥 Communities Only</div><div class="small fg3">Post only to selected communities</div></div>
+        </label>
+        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+          <input type="radio" name="share-vis" value="feed_communities" ${defaultVis==='feed_communities'?'checked':''} onchange="updateShareVisUI()" style="margin-top:3px">
+          <div><div class="small" style="font-weight:600">🌐 + 👥 Feed & Communities</div><div class="small fg3">Share to The Gym Floor AND selected communities</div></div>
+        </label>`:''}
+        <label class="card" style="cursor:pointer;padding:10px 14px;margin:0;display:flex;gap:10px;align-items:flex-start">
+          <input type="radio" name="share-vis" value="private" onchange="updateShareVisUI()" style="margin-top:3px">
+          <div><div class="small" style="font-weight:600">🔒 Keep Private</div><div class="small fg3">Only visible to you in your profile history</div></div>
+        </label>
+      </div>
+      <div id="share-comm-list" style="display:none;margin-top:8px;padding-left:12px">
+        ${comms.map(c=>`<label class="flex gap-sm mb-sm" style="align-items:center;cursor:pointer"><input type="checkbox" class="share-comm-check" value="${c.id}" checked> <span class="small">${esc(c.name)}</span></label>`).join('')}
       </div>
     </div>
     <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
@@ -5177,6 +5204,13 @@ function showShareWorkoutModalV2(dur,totalSets,totalVol){
       <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
     </div>
   `);
+  updateShareVisUI();
+}
+
+function updateShareVisUI(){
+  const vis=document.querySelector('input[name="share-vis"]:checked')?.value;
+  const commList=document.getElementById('share-comm-list');
+  if(commList)commList.style.display=(vis==='communities'||vis==='feed_communities')?'block':'none';
 }
 
 function previewSharePhotosV2(event){
@@ -5204,17 +5238,32 @@ async function submitPostV2(){
     }
   }
   console.log('All photo URLs:',photoUrls);
-  if(shareToFeed&&activeWorkout&&activeWorkout._logId){
-    console.log('Creating post for log:',activeWorkout._logId);
+  // Determine visibility
+  const vis=document.querySelector('input[name="share-vis"]:checked')?.value||'private';
+  const selectedComms=[...document.querySelectorAll('.share-comm-check:checked')].map(el=>el.value);
+  const isPublic=vis==='public'||vis==='feed_communities';
+  const communityIds=(vis==='communities'||vis==='feed_communities')?selectedComms:[];
+
+  if(vis!=='private'&&activeWorkout&&activeWorkout._logId){
+    console.log('Creating post, visibility:',vis,'communities:',communityIds);
     const{data:post,error:postErr}=await sb.from('workout_posts').insert({
       user_id:currentUser.id,
       workout_log_id:activeWorkout._logId,
       caption:caption||null,
       photo_urls:photoUrls,
-      is_public:true
+      is_public:isPublic,
+      community_ids:communityIds
     }).select().single();
     if(postErr){console.error('Post error:',postErr);toast('Error posting')}
-    else{console.log('Post created:',post);toast('Workout posted to the feed!')}
+    else{console.log('Post created:',post);toast(isPublic?'Posted to the feed!':'Posted to communities!')}
+  }else if(vis==='private'&&activeWorkout&&activeWorkout._logId){
+    // Private post — just for profile history
+    const{error:postErr}=await sb.from('workout_posts').insert({
+      user_id:currentUser.id,workout_log_id:activeWorkout._logId,
+      caption:caption||null,photo_urls:photoUrls,is_public:false,community_ids:[]
+    });
+    if(postErr)console.error('Post error:',postErr);
+    else toast('Workout saved to your profile!');
   }
   closeModal();
   finishCleanup();
@@ -5456,7 +5505,13 @@ async function renderCommunityFeed(communityId, members){
   const memberIds=members.map(m=>m.user_id);
   const container=document.getElementById('community-feed-tab');
   if(!memberIds.length){container.innerHTML='<p class="fg3 small">No members yet.</p>';return}
-  const{data:posts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  // Get posts: public from members OR explicitly posted to this community
+  const{data:publicPosts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  const{data:commPosts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(20);
+  // Merge and dedupe
+  const postMap={};
+  [...(publicPosts||[]),...(commPosts||[])].forEach(p=>postMap[p.id]=p);
+  const posts=Object.values(postMap).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   if(!posts||!posts.length){container.innerHTML='<p class="fg3 small">No activity yet in this community.</p>';return}
   // Sort: pin challenge_completion posts to top
   posts.sort((a,b)=>{
