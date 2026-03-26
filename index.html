@@ -4062,66 +4062,95 @@ function switchProfileTab(idx){
 })();
 
 async function renderProfile(){
+  try{
   currentProfile=await fetchProfile();
   if(!currentProfile){toast('Could not load profile');return}
   const p=currentProfile;
-  console.log('Rendering profile for:',currentUser.id);
-  console.log('Tile settings:',p.tile_settings);
+  const uid=currentUser.id;
+  console.log('Profile user id:',uid);
+  console.log('Raw tile settings from DB:',p.tile_settings);
+  console.log('Is own profile: true');
 
   // Avatar
   const avatarEl=document.getElementById('profile-avatar');
-  if(p.avatar_url){
-    avatarEl.innerHTML=`<img src="${p.avatar_url}" alt="">`;
-  }else{
-    avatarEl.innerHTML=(p.name||'?')[0].toUpperCase();
+  if(avatarEl){
+    if(p.avatar_url)avatarEl.innerHTML=`<img src="${p.avatar_url}" alt="">`;
+    else avatarEl.innerHTML=(p.name||'?')[0].toUpperCase();
   }
 
-  document.getElementById('profile-display-name').textContent=p.name;
-  document.getElementById('profile-username-display').textContent='@'+p.username;
-  document.getElementById('profile-member-number').textContent=p.member_number?'Member #'+p.member_number:'';
-  document.getElementById('profile-bio-display').textContent=p.bio||'';
+  const nameEl=document.getElementById('profile-display-name');if(nameEl)nameEl.textContent=p.name||'';
+  const userEl=document.getElementById('profile-username-display');if(userEl)userEl.textContent='@'+(p.username||'');
+  const memEl=document.getElementById('profile-member-number');if(memEl)memEl.textContent=p.member_number?'Member #'+p.member_number:'';
+  const bioEl=document.getElementById('profile-bio-display');if(bioEl)bioEl.textContent=p.bio||'';
 
-  // Edit Profile button (own profile)
+  // Edit Profile button
   const actionEl=document.getElementById('profile-action-btns');
   if(actionEl)actionEl.innerHTML=`<button class="btn btn-sm" onclick="nav('my-info')" style="width:100%"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit Profile</button>`;
 
-  // Stats
-  const logs=await getLogs();
-  const totalWorkouts=logs.length;
-  const{count:followersCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',currentUser.id);
-  const{count:followingCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',currentUser.id);
-  const{count:postsCount}=await sb.from('workout_posts').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
-  const{count:plansCount}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
+  // ---- Fetch all stats with fallback to 0 ----
+  let totalWorkouts=0,streak=0,totalVolume=0;
+  try{
+    const logs=await getLogs();
+    totalWorkouts=logs.length;
+    logs.forEach(l=>{if(l.exercises)l.exercises.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)totalVolume+=(s.weight||0)*(s.reps||0)})})});
+    if(logs.length){
+      const dates=[...new Set(logs.map(l=>new Date(l.startTime).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
+      let d=new Date();d.setHours(0,0,0,0);
+      for(const ds of dates){const dd=new Date(ds);dd.setHours(0,0,0,0);if(Math.round((d-dd)/86400000)<=1){streak++;d=dd}else break}
+    }
+  }catch(e){console.error('Stats calc error:',e)}
 
-  document.getElementById('profile-stats').innerHTML=`<div class="profile-inline-stats">
-    <div class="profile-inline-stat"><div class="pis-val">${postsCount||0}</div><div class="pis-lbl">Posts</div></div>
+  let followersCount=0,followingCount=0,plansCreatedCount=0,othersDoneCount=0,savedPlansCount=0,postsCount=0;
+  try{
+    const r1=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',uid);followersCount=r1.count||0;
+    const r2=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',uid);followingCount=r2.count||0;
+    const r3=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',uid);plansCreatedCount=r3.count||0;
+    const r4=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',uid).neq('user_id',uid);othersDoneCount=r4.count||0;
+    const r5=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',uid);savedPlansCount=r5.count||0;
+    const r6=await sb.from('workout_posts').select('*',{count:'exact',head:true}).eq('user_id',uid);postsCount=r6.count||0;
+  }catch(e){console.error('Count fetch error:',e)}
+
+  console.log('Stats:',{totalWorkouts,streak,totalVolume,followersCount,followingCount,plansCreatedCount,othersDoneCount,savedPlansCount,postsCount});
+
+  // ---- Render inline stats (top right next to avatar) ----
+  const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
+  const statsEl=document.getElementById('profile-stats');
+  if(statsEl)statsEl.innerHTML=`<div class="profile-inline-stats">
+    <div class="profile-inline-stat"><div class="pis-val">${postsCount}</div><div class="pis-lbl">Posts</div></div>
     <div class="profile-inline-stat"><div class="pis-val">${totalWorkouts}</div><div class="pis-lbl">Workouts</div></div>
-    <div class="profile-inline-stat" onclick="openFollowList('followers','${currentUser.id}')" style="cursor:pointer"><div class="pis-val">${followersCount||0}</div><div class="pis-lbl">Followers</div></div>
-    <div class="profile-inline-stat" onclick="openFollowList('following','${currentUser.id}')" style="cursor:pointer"><div class="pis-val">${followingCount||0}</div><div class="pis-lbl">Following</div></div>
+    <div class="profile-inline-stat" onclick="openFollowList('followers','${uid}')" style="cursor:pointer"><div class="pis-val">${followersCount}</div><div class="pis-lbl">Followers</div></div>
+    <div class="profile-inline-stat" onclick="openFollowList('following','${uid}')" style="cursor:pointer"><div class="pis-val">${followingCount}</div><div class="pis-lbl">Following</div></div>
   </div>`;
 
-  // Body metrics chart
-  await renderMetricsChart();
-  console.log('Body metrics chart rendered');
+  // ---- Body metrics chart ----
+  try{await renderMetricsChart()}catch(e){console.error('Chart error:',e)}
 
-  // Reset to Posts tab
+  // ---- Reset to Posts tab ----
   switchProfileTab(0);
 
-  // Load posts grid and plans
+  // ---- Load posts grid and plans ----
   renderProfilePostsGrid();
   renderProfilePlans(currentUser.id, true);
 
   if(typeof lucide!=='undefined')lucide.createIcons();
+  }catch(err){console.error('renderProfile fatal error:',err);toast('Error loading profile')}
 }
 
 async function renderProfilePostsGrid(){
   const grid=document.getElementById('profile-posts-grid');
-  if(!grid)return;
+  if(!grid){console.error('profile-posts-grid element not found');return}
   grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1;text-align:center;padding:20px">Loading...</p>';
-  // Fetch workout posts
-  const{data:posts}=await sb.from('workout_posts').select('id,photo_urls,caption,likes_count,comments_count,created_at,workout_logs(workout_name)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
-  // Fetch clips
-  const{data:clips}=await sb.from('reels').select('id,video_url,thumbnail_url,likes_count,comments_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  let posts=[],clips=[];
+  try{
+    const{data:p,error:pe}=await sb.from('workout_posts').select('id,photo_urls,caption,likes_count,comments_count,created_at,workout_logs(workout_name)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+    posts=p||[];
+    console.log('Posts fetched:',posts.length,'error:',pe);
+  }catch(e){console.error('Posts fetch error:',e)}
+  try{
+    const{data:c,error:ce}=await sb.from('reels').select('id,video_url,thumbnail_url,likes_count,comments_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+    clips=c||[];
+    console.log('Reels fetched:',clips.length,'error:',ce);
+  }catch(e){console.error('Reels fetch error:',e)}
   // Merge and sort
   const items=[];
   (posts||[]).forEach(p=>{
