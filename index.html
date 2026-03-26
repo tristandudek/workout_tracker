@@ -1070,7 +1070,10 @@ select.input{appearance:none;cursor:pointer;
   <input class="input mb-sm" id="plan-name" placeholder="Plan name">
   <textarea class="input mb-md" id="plan-desc" placeholder="Description (optional)"></textarea>
   <div id="plan-workouts-list"></div>
-  <button class="btn btn-block mt-sm" onclick="addWorkoutToPlan()">+ Add Workout</button>
+  <div class="flex gap-sm mt-sm">
+    <button class="btn grow" onclick="addWorkoutToPlan()">+ Add Workout</button>
+    <button class="btn btn-ghost grow" onclick="addRestDayToPlan()"><i data-lucide="moon" style="width:14px;height:14px"></i> + Rest Day</button>
+  </div>
   <div class="flex gap-sm mt-md mb-sm">
     <span class="small fg2">Public</span>
     <label class="toggle-switch"><input type="checkbox" id="plan-public" checked><span class="toggle-slider"></span></label>
@@ -2686,6 +2689,11 @@ async function showPlanWorkouts(planId){
     <div class="modal-header"><h2>${esc(plan.name)}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body" style="max-height:65vh;overflow-y:auto">
       ${(plan.workouts||[]).map((pw,i)=>{
+        if(pw.type==='rest'){
+          return `<div class="wo-card" style="margin-bottom:6px;opacity:.5;cursor:default">
+            <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name" style="color:var(--fg3);display:flex;align-items:center;gap:6px"><i data-lucide="moon" style="width:14px;height:14px"></i> Rest Day</div></div>
+          </div>`;
+        }
         const wo=wos.find(w=>w.id===pw.workout_template_id);
         return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${pw.workout_template_id}')">
           <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name">${wo?esc(wo.name):'Unknown'}</div><div class="wo-meta">${wo?wo.exercises.length+' exercises':'—'}</div></div>
@@ -4114,6 +4122,17 @@ async function renderPlanWorkouts(){
   const wos=await getWorkouts();
   const container=document.getElementById('plan-workouts-list');
   container.innerHTML=planWorkouts.map((pw,i)=>{
+    if(pw.type==='rest'){
+      return `<div class="plan-workout-item" style="background:var(--bg2);opacity:.8">
+        <span class="pw-label">W${pw.week||1}D${pw.day||1}</span>
+        <span class="pw-name" style="display:flex;align-items:center;gap:6px;color:var(--fg3)"><i data-lucide="moon" style="width:14px;height:14px"></i> Rest Day</span>
+        <div class="flex gap-sm">
+          <input type="number" class="input" style="width:40px;padding:4px;font-size:.75rem" value="${pw.week||1}" min="1" placeholder="W" onchange="planWorkouts[${i}].week=+this.value;renderPlanWorkouts()">
+          <input type="number" class="input" style="width:40px;padding:4px;font-size:.75rem" value="${pw.day||1}" min="1" max="7" placeholder="D" onchange="planWorkouts[${i}].day=+this.value;renderPlanWorkouts()">
+          <button class="btn btn-sm btn-danger" style="padding:4px 8px" onclick="planWorkouts.splice(${i},1);renderPlanWorkouts()">&times;</button>
+        </div>
+      </div>`;
+    }
     const wo=wos.find(w=>w.id===pw.workout_template_id);
     return `<div class="plan-workout-item">
       <span class="pw-label">W${pw.week||1}D${pw.day||1}</span>
@@ -4125,6 +4144,12 @@ async function renderPlanWorkouts(){
       </div>
     </div>`;
   }).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function addRestDayToPlan(){
+  planWorkouts.push({type:'rest',note:'Active recovery',week:1,day:planWorkouts.length+1});
+  renderPlanWorkouts();
 }
 
 let _returnToPlanAfterCreate=false;
@@ -4180,6 +4205,11 @@ async function openPlanDetail(planId, isOwn){
   const wos=await getWorkouts();
   const allExs=await getExercises();
   const workoutList=(plan.workouts||[]).map((pw,i)=>{
+    if(pw.type==='rest'){
+      return `<div class="wo-card" style="margin-bottom:6px;opacity:.6">
+        <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name" style="display:flex;align-items:center;gap:6px;color:var(--fg3)"><i data-lucide="moon" style="width:14px;height:14px"></i> Rest Day</div>${pw.note?`<div class="wo-meta">${esc(pw.note)}</div>`:''}</div>
+      </div>`;
+    }
     const wo=wos.find(w=>w.id===pw.workout_template_id);
     return `<div class="wo-card" style="margin-bottom:6px">
       <div class="wo-info">
