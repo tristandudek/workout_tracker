@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Forgd</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏋️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -87,6 +88,27 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 }
 .feed-search-results.open{display:block}
 .feed-search-results .user-card{margin:0;border:none;border-bottom:1px solid var(--bg4)}
+.discover-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--bg2);border:1.5px solid var(--accent);color:var(--accent);font-size:.72rem;font-weight:700;cursor:pointer;padding:4px 10px;border-radius:20px;white-space:nowrap;font-family:var(--font-display);letter-spacing:.01em;transition:background .15s;z-index:2}
+.discover-btn:hover{background:rgba(56,189,248,.1)}
+.discover-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.discover-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);padding:16px;text-align:center;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.discover-card:hover{border-color:var(--accent);box-shadow:0 2px 12px rgba(56,189,248,.08)}
+.discover-avatar{width:56px;height:56px;border-radius:50%;margin:0 auto 8px;overflow:hidden;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:var(--accent);font-family:var(--font-display)}
+.discover-avatar img{width:100%;height:100%;object-fit:cover}
+.discover-name{font-weight:700;font-size:.88rem;color:var(--fg1);margin-bottom:2px}
+.discover-username{font-size:.75rem;color:var(--fg3);margin-bottom:2px}
+.discover-member-num{font-size:.68rem;color:var(--fg4);margin-bottom:8px}
+.discover-stats{display:flex;justify-content:center;gap:14px;font-size:.72rem;color:var(--fg3);margin-bottom:10px}
+.discover-stats span{font-family:var(--font-mono)}
+.discover-follow-btn{padding:5px 16px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;border:1.5px solid var(--accent);transition:all .15s}
+.discover-follow-btn.follow{background:var(--accent);color:#fff}
+.discover-follow-btn.following{background:transparent;color:var(--accent)}
+.discover-follow-btn.following:hover{border-color:#ef4444;color:#ef4444}
+.discover-sort-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.discover-sort-btn{padding:5px 12px;border-radius:20px;font-size:.72rem;font-weight:600;border:1px solid var(--bg4);background:var(--bg2);color:var(--fg2);cursor:pointer;transition:all .15s}
+.discover-sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media(max-width:900px){.discover-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.discover-grid{grid-template-columns:1fr}}
 
 @media(min-width:768px){
   .sidebar{display:flex}
@@ -475,10 +497,17 @@ select.input{appearance:none;cursor:pointer;
    ============================================================ */
 #profile-badge{
   position:fixed;top:0;right:0;left:0;z-index:100;height:56px;
-  display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:0 16px;background:var(--bg);border-bottom:1px solid var(--bg4);
 }
 @media(min-width:768px){#profile-badge{left:240px}}
+.header-logo{font-family:var(--font-display);font-weight:900;font-size:1.15rem;color:var(--fg);letter-spacing:.02em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+@media(min-width:768px){.header-logo{display:none}}
+.header-right{display:flex;align-items:center;gap:10px}
+.start-wo-header{display:flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.72rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.start-wo-header:hover{opacity:.85}
+.start-wo-header .start-wo-text{display:inline}
+@media(max-width:767px){.start-wo-header .start-wo-text{display:none}.start-wo-header{padding:6px 8px}}
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
@@ -847,6 +876,9 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- TOP RIGHT BAR -->
 <div id="profile-badge">
+  <div class="header-logo" onclick="nav('feed')">Forgd</div>
+  <div class="header-right">
+  <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:14px;height:14px"></i><span class="start-wo-text">Start Workout</span></button>
   <button class="notif-bell" onclick="nav('messages')" style="position:relative">
     <i data-lucide="message-square" style="width:18px;height:18px"></i>
     <span class="notif-badge hidden" id="msg-count" style="position:absolute;top:-2px;right:-4px">0</span>
@@ -875,6 +907,7 @@ select.input{appearance:none;cursor:pointer;
       <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
     </div>
   </div>
+  </div><!-- /header-right -->
 </div>
 
 <div id="app">
@@ -906,9 +939,10 @@ select.input{appearance:none;cursor:pointer;
 <div class="view" id="view-feed" data-view="feed">
   <h2 class="mt-md mb-md">The Lab</h2>
   <div class="feed-search-wrap">
-    <div class="search-wrap" style="margin-bottom:0">
+    <div class="search-wrap" style="margin-bottom:0;position:relative">
       <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
-      <input class="input" id="feed-search-input" placeholder="Search athletes..." oninput="feedSearchUsers()" onfocus="feedSearchFocus()" onblur="setTimeout(()=>closeFeedSearch(),200)">
+      <input class="input" id="feed-search-input" placeholder="Search athletes..." style="padding-right:130px" oninput="feedSearchUsers()" onfocus="feedSearchFocus()" onblur="setTimeout(()=>closeFeedSearch(),200)">
+      <button class="discover-btn" onclick="nav('discover')">Discover Athletes &rarr;</button>
     </div>
     <div class="feed-search-results" id="feed-search-results"></div>
   </div>
@@ -1241,6 +1275,26 @@ select.input{appearance:none;cursor:pointer;
 </div>
 
 <!-- ============================================================
+     DISCOVER ATHLETES VIEW
+     ============================================================ -->
+<div class="view" id="view-discover" data-view="discover">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('feed')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to The Lab</button>
+  <h2 style="margin-bottom:4px">Discover Athletes</h2>
+  <p class="fg3 small mb-md">Find and follow athletes on Forgd</p>
+  <div class="search-wrap mb-md">
+    <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+    <input class="input" id="discover-search" placeholder="Search by name or username..." oninput="filterDiscoverAthletes()">
+  </div>
+  <div class="discover-sort-bar" id="discover-sort-bar">
+    <button class="discover-sort-btn active" onclick="sortDiscover('all',this)">All Athletes</button>
+    <button class="discover-sort-btn" onclick="sortDiscover('followers',this)">Most Followers</button>
+    <button class="discover-sort-btn" onclick="sortDiscover('workouts',this)">Most Workouts</button>
+    <button class="discover-sort-btn" onclick="sortDiscover('newest',this)">Newest Members</button>
+  </div>
+  <div id="discover-grid" class="discover-grid"></div>
+</div>
+
+<!-- ============================================================
      MESSAGES VIEW
      ============================================================ -->
 <div class="view" id="view-messages" data-view="messages">
@@ -1293,10 +1347,10 @@ select.input{appearance:none;cursor:pointer;
 
 <!-- NAV BAR (mobile only) -->
 <nav class="nav" id="main-nav">
-  <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon"><i data-lucide="radio" style="width:20px;height:20px"></i></span>Floor</button>
-  <button class="nav-btn" data-nav="start" onclick="startWorkoutFlow()"><span class="nav-icon"><i data-lucide="play" style="width:20px;height:20px"></i></span>Start</button>
+  <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon"><i data-lucide="radio" style="width:20px;height:20px"></i></span>The Lab</button>
   <button class="nav-btn" data-nav="workouts" onclick="nav('workouts')"><span class="nav-icon"><i data-lucide="dumbbell" style="width:20px;height:20px"></i></span>Workouts</button>
-  <button class="nav-btn" data-nav="profile" onclick="nav('profile')"><span class="nav-icon"><i data-lucide="user-circle" style="width:20px;height:20px"></i></span>Profile</button>
+  <button class="nav-btn" data-nav="plans-library" onclick="nav('plans-library')"><span class="nav-icon"><i data-lucide="calendar" style="width:20px;height:20px"></i></span>Plans</button>
+  <button class="nav-btn" data-nav="communities" onclick="nav('communities')"><span class="nav-icon"><i data-lucide="users" style="width:20px;height:20px"></i></span>Communities</button>
 </nav>
 
 </div><!-- #app-wrapper -->
@@ -2182,6 +2236,7 @@ async function nav(view){
   if(view==='messages')await renderMessages();
   if(view==='my-activity')await renderMyActivity();
   if(view==='plans-library')await renderPlansLibrary();
+  if(view==='discover')await renderDiscoverAthletes();
   window.scrollTo(0,0);
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
@@ -2932,8 +2987,9 @@ async function startWorkoutFlow(){
 
 async function showStartFromPlan(){
   const{data:myPlans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  const{data:savedRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*,profiles(name))').eq('user_id',currentUser.id);
-  const savedPlans=(savedRows||[]).map(s=>s.workout_plans).filter(Boolean);
+  const{data:savedRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*)').eq('user_id',currentUser.id);
+  const rawSavedPlans2=(savedRows||[]).map(s=>s.workout_plans).filter(Boolean);
+  const savedPlans=await attachProfiles(rawSavedPlans2);
   const wos=await getWorkouts();
 
   let html=`<div class="modal-header"><h2>From Plan</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
@@ -3975,10 +4031,12 @@ async function renderPlansLibrary(){
   // My creations
   const{data:myPlans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
   // Saved plans
-  const{data:savedPlanRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*,profiles(id,name,username,avatar_url))').eq('user_id',currentUser.id);
-  const savedPlans=(savedPlanRows||[]).map(sp=>sp.workout_plans).filter(Boolean);
+  const{data:savedPlanRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*)').eq('user_id',currentUser.id);
+  const rawSavedPlans=(savedPlanRows||[]).map(sp=>sp.workout_plans).filter(Boolean);
+  const savedPlans=await attachProfiles(rawSavedPlans);
   // All public for discovery
-  const{data:allPublic}=await sb.from('workout_plans').select('*,profiles(id,name,username,avatar_url)').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+  const{data:rawAllPublic}=await sb.from('workout_plans').select('*').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+  const allPublic=await attachProfiles(rawAllPublic||[]);
 
   // Get adoption counts
   const allIds=[...(myPlans||[]).map(p=>p.id),...savedPlans.map(p=>p.id),...(allPublic||[]).map(p=>p.id)];
@@ -4092,11 +4150,14 @@ async function renderMyActivity(){
   const activities=[];
 
   // Likes
-  const{data:likes}=await sb.from('post_likes').select('*,workout_posts(id,caption,user_id,created_at,profiles:user_id(name,username))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  const{data:likes}=await sb.from('post_likes').select('*,workout_posts(id,caption,user_id,created_at)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
   if(likes){
+    const likePostUserIds=[...new Set(likes.map(l=>l.workout_posts?.user_id).filter(Boolean))];
+    const{data:likeProfiles}=likePostUserIds.length?await sb.from('profiles').select('id,name,username').in('id',likePostUserIds):{data:[]};
+    const lpMap={};(likeProfiles||[]).forEach(p=>lpMap[p.id]=p);
     likes.forEach(l=>{
       if(!l.workout_posts)return;
-      const author=l.workout_posts.profiles;
+      const author=lpMap[l.workout_posts.user_id]||{};
       activities.push({
         date:new Date(l.created_at),
         html:`<div class="card"><div class="small"><span class="accent">You</span> liked <strong>${esc(author?.name||'someone')}</strong>'s workout</div><div class="small fg3 mt-sm">${timeAgo(l.created_at)}</div></div>`
@@ -4105,11 +4166,14 @@ async function renderMyActivity(){
   }
 
   // Comments
-  const{data:comments}=await sb.from('post_comments').select('*,workout_posts(id,user_id,profiles:user_id(name,username))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  const{data:comments}=await sb.from('post_comments').select('*,workout_posts(id,user_id)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
   if(comments){
+    const commentPostUserIds=[...new Set(comments.map(c=>c.workout_posts?.user_id).filter(Boolean))];
+    const{data:commentProfiles}=commentPostUserIds.length?await sb.from('profiles').select('id,name,username').in('id',commentPostUserIds):{data:[]};
+    const cpMap={};(commentProfiles||[]).forEach(p=>cpMap[p.id]=p);
     comments.forEach(c=>{
       if(!c.workout_posts)return;
-      const author=c.workout_posts.profiles;
+      const author=cpMap[c.workout_posts.user_id]||{};
       activities.push({
         date:new Date(c.created_at),
         html:`<div class="card"><div class="small"><span class="accent">You</span> commented on <strong>${esc(author?.name||'someone')}</strong>'s post</div><div class="small fg2 mt-sm" style="font-style:italic">"${esc(c.content.length>100?c.content.slice(0,100)+'...':c.content)}"</div><div class="small fg3 mt-sm">${timeAgo(c.created_at)}</div></div>`
@@ -4213,7 +4277,8 @@ async function renderProfileActivityFeed(){
   console.log('Profile user id:',profileUserId);
 
   // Fetch workout posts (same card as The Lab feed)
-  const{data:posts,error:postErr}=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('user_id',profileUserId).order('created_at',{ascending:false}).limit(15);
+  const{data:rawProfilePosts,error:postErr}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').eq('user_id',profileUserId).order('created_at',{ascending:false}).limit(15);
+  const posts=await attachProfiles(rawProfilePosts||[]);
   console.log('Profile posts:',posts,'error:',postErr);
   if(posts&&posts.length){
     posts.forEach(p=>{
@@ -4628,7 +4693,9 @@ async function deletePlan(id){
 }
 
 async function previewPaidPlan(planId){
-  const{data:plan}=await sb.from('workout_plans').select('*,profiles(name,avatar_url)').eq('id',planId).single();
+  const{data:rawPlan}=await sb.from('workout_plans').select('*').eq('id',planId).single();
+  const{data:planAuthor}=rawPlan?await sb.from('profiles').select('id,name,avatar_url').eq('id',rawPlan.user_id).single():{data:null};
+  const plan=rawPlan?{...rawPlan,profiles:planAuthor}:null;
   if(!plan)return;
   const{count:adopters}=await sb.from('plan_adoptions').select('*',{count:'exact',head:true}).eq('plan_id',planId);
   openModal(`
@@ -4670,7 +4737,9 @@ async function purchasePlan(planId,price){
 }
 
 async function openPlanDetail(planId, isOwn){
-  const{data:plan}=await sb.from('workout_plans').select('*,profiles(name,avatar_url)').eq('id',planId).single();
+  const{data:rawPlanDetail}=await sb.from('workout_plans').select('*').eq('id',planId).single();
+  const{data:planDetailAuthor}=rawPlanDetail?await sb.from('profiles').select('id,name,avatar_url').eq('id',rawPlanDetail.user_id).single():{data:null};
+  const plan=rawPlanDetail?{...rawPlanDetail,profiles:planDetailAuthor}:null;
   if(!plan){toast('Plan not found');return}
   const wos=await getWorkouts();
   const allExs=await getExercises();
@@ -4784,8 +4853,9 @@ async function renderFeed(){
     const{data:members}=await sb.from('community_members').select('user_id').eq('community_id',feedCommunityFilter);
     const memberIds=(members||[]).map(m=>m.user_id);
     if(memberIds.length){
-      const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
-      data=(res.data||[]).map(p=>{
+      const res=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
+      const postsWithProfiles=await attachProfiles(res.data||[]);
+      data=postsWithProfiles.map(p=>{
         const wl=p.workout_logs;
         const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
         return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
@@ -4795,17 +4865,19 @@ async function renderFeed(){
     // Your Feed: own posts + posts from people you follow
     const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
     const feedUserIds=[currentUser.id,...(myFollows||[]).map(f=>f.following_id)];
-    const res=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',feedUserIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
-    data=(res.data||[]).map(p=>{
+    const res=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',feedUserIds).eq('is_public',true).order('created_at',{ascending:false}).limit(30);
+    const postsWithProfiles2=await attachProfiles(res.data||[]);
+    data=postsWithProfiles2.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
       return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
     });
   }else{
     // Suggested: all public posts except own
-    const res=await sb.from('workout_posts').select('*,profiles:user_id(name,username,avatar_url),workout_logs:workout_log_id(workout_name,start_time,end_time,exercises)').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+    const res=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
     console.log('Feed posts:',res.data?.length,'error:',res.error);
-    data=(res.data||[]).map(p=>{
+    const postsWithProfiles3=await attachProfiles(res.data||[]);
+    data=postsWithProfiles3.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
       return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_volume:0,i_liked:false};
@@ -4921,7 +4993,8 @@ async function toggleComments(postId){
 }
 
 async function loadComments(postId){
-  const{data}=await sb.from('post_comments').select('*,profiles(name,username,avatar_url)').eq('post_id',postId).order('created_at');
+  const{data:rawComments}=await sb.from('post_comments').select('*').eq('post_id',postId).order('created_at');
+  const data=await attachProfiles(rawComments||[]);
   const container=document.getElementById('comments-'+postId);
   container.innerHTML=`
     <div class="comment-thread">
@@ -5028,6 +5101,116 @@ function feedSearchFocus(){
 }
 function closeFeedSearch(){
   document.getElementById('feed-search-results').classList.remove('open');
+}
+
+/* =============================================================
+   DISCOVER ATHLETES
+   ============================================================= */
+let discoverAllAthletes=[];
+let discoverSort='all';
+
+async function renderDiscoverAthletes(){
+  const grid=document.getElementById('discover-grid');
+  grid.innerHTML='<p class="fg3 small">Loading athletes...</p>';
+  // Fetch all profiles except self
+  const{data:profiles}=await sb.from('profiles').select('id,name,username,avatar_url,created_at').neq('id',currentUser.id).order('created_at',{ascending:true});
+  if(!profiles||!profiles.length){grid.innerHTML='<p class="fg3 small">No athletes found.</p>';return}
+  // Get follow status for all
+  const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
+  const followingSet=new Set((myFollows||[]).map(f=>f.following_id));
+  // Get follower counts
+  const{data:followerCounts}=await sb.from('follows').select('following_id');
+  const followerMap={};
+  (followerCounts||[]).forEach(f=>{followerMap[f.following_id]=(followerMap[f.following_id]||0)+1});
+  // Get workout counts
+  const{data:workoutCounts}=await sb.from('workout_logs').select('user_id');
+  const workoutMap={};
+  (workoutCounts||[]).forEach(w=>{workoutMap[w.user_id]=(workoutMap[w.user_id]||0)+1});
+  // Build athlete objects
+  discoverAllAthletes=profiles.map((p,i)=>({
+    ...p,
+    memberNum:i+1,
+    followers:followerMap[p.id]||0,
+    workouts:workoutMap[p.id]||0,
+    isFollowing:followingSet.has(p.id)
+  }));
+  discoverSort='all';
+  document.querySelectorAll('.discover-sort-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.discover-sort-btn')?.classList.add('active');
+  document.getElementById('discover-search').value='';
+  renderDiscoverGrid(discoverAllAthletes);
+}
+
+function sortDiscover(sort, btn){
+  discoverSort=sort;
+  document.querySelectorAll('.discover-sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterDiscoverAthletes();
+}
+
+function filterDiscoverAthletes(){
+  const q=(document.getElementById('discover-search')?.value||'').trim().toLowerCase();
+  let filtered=discoverAllAthletes;
+  if(q){
+    filtered=filtered.filter(a=>(a.name||'').toLowerCase().includes(q)||(a.username||'').toLowerCase().includes(q));
+  }
+  // Sort
+  switch(discoverSort){
+    case 'followers':filtered=[...filtered].sort((a,b)=>b.followers-a.followers);break;
+    case 'workouts':filtered=[...filtered].sort((a,b)=>b.workouts-a.workouts);break;
+    case 'newest':filtered=[...filtered].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));break;
+    default:filtered=[...filtered].sort((a,b)=>a.memberNum-b.memberNum);
+  }
+  renderDiscoverGrid(filtered);
+}
+
+function renderDiscoverGrid(athletes){
+  const grid=document.getElementById('discover-grid');
+  if(!athletes.length){grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1">No athletes match your search.</p>';return}
+  grid.innerHTML=athletes.map(a=>{
+    const avatarInner=a.avatar_url?`<img src="${a.avatar_url}">`:(a.name||'?')[0].toUpperCase();
+    const btnClass=a.isFollowing?'following':'follow';
+    const btnText=a.isFollowing?'Following':'Follow';
+    return `<div class="discover-card" onclick="openPublicProfile('${a.id}')">
+      <div class="discover-avatar">${avatarInner}</div>
+      <div class="discover-name">${esc(a.name)}</div>
+      <div class="discover-username">@${esc(a.username)}</div>
+      <div class="discover-member-num">Member #${a.memberNum}</div>
+      <div class="discover-stats">
+        <span>${a.workouts} workouts</span>
+        <span>${a.followers} followers</span>
+      </div>
+      <button class="discover-follow-btn ${btnClass}" data-uid="${a.id}" data-following="${a.isFollowing}" onclick="event.stopPropagation();discoverToggleFollow('${a.id}',this)">${btnText}</button>
+    </div>`;
+  }).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function discoverToggleFollow(userId, btn){
+  const isFollowing=btn.dataset.following==='true';
+  if(isFollowing){
+    const ok=await unfollowUser(userId);
+    if(ok){
+      btn.textContent='Follow';btn.dataset.following='false';
+      btn.classList.remove('following');btn.classList.add('follow');
+      // Update local data
+      const a=discoverAllAthletes.find(x=>x.id===userId);
+      if(a){a.isFollowing=false;a.followers=Math.max(0,a.followers-1)}
+      // Update count display
+      const card=btn.closest('.discover-card');
+      if(card){const stats=card.querySelectorAll('.discover-stats span');if(stats[1])stats[1].textContent=(a?.followers||0)+' followers'}
+    }
+  }else{
+    const ok=await followUser(userId);
+    if(ok){
+      btn.textContent='Following';btn.dataset.following='true';
+      btn.classList.remove('follow');btn.classList.add('following');
+      const a=discoverAllAthletes.find(x=>x.id===userId);
+      if(a){a.isFollowing=true;a.followers++}
+      const card=btn.closest('.discover-card');
+      if(card){const stats=card.querySelectorAll('.discover-stats span');if(stats[1])stats[1].textContent=(a?.followers||0)+' followers'}
+    }
+  }
 }
 
 /* =============================================================
@@ -5591,7 +5774,9 @@ async function saveCreateCommunity(){
   const{data,error}=await sb.from('communities').insert({name,description:desc,is_private:isPrivate,created_by:currentUser.id}).select().single();
   if(error){toast('Error creating');console.error(error);return}
   // Add creator as admin
-  await sb.from('community_members').insert({community_id:data.id,user_id:currentUser.id,role:'admin'});
+  const{data:memberData,error:memberErr}=await sb.from('community_members').insert({community_id:data.id,user_id:currentUser.id,role:'admin',joined_at:new Date().toISOString()}).select().single();
+  console.log('Creator added as admin:',memberData,'error:',memberErr);
+  if(memberErr)console.error('Failed to add creator as member:',memberErr);
   closeModal();toast('Community created!');
   await renderCommunities();
   loadSidebarCommunities();
@@ -5605,23 +5790,30 @@ async function openCommunityDetail(communityId){
 
   const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
   if(!comm){toast('Community not found');return}
-  const{data:members}=await sb.from('community_members').select('*,profiles(name,username,avatar_url)').eq('community_id',communityId);
+
+  // Check if current user is the creator
+  const isCreator=comm.created_by===currentUser.id;
 
   // Direct query for own membership to avoid RLS issues
   let{data:myRecord,error:myErr}=await sb.from('community_members').select('*').eq('community_id',communityId).eq('user_id',currentUser.id).maybeSingle();
   console.log('Member record:',myRecord,'error:',myErr);
-  // Also check if user is the creator (should always be admin)
-  const isCreator=comm.created_by===currentUser.id;
-  // If creator but no membership record, fix it
+
+  // If creator but no membership record, auto-fix it
   if(isCreator&&!myRecord){
     console.log('Creator missing membership, inserting as admin');
-    const{data:inserted}=await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'admin'}).select().single();
+    const{data:inserted,error:insertErr}=await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'admin',joined_at:new Date().toISOString()}).select().single();
+    console.log('Creator auto-fix result:',inserted,'error:',insertErr);
+    if(insertErr)console.error('Failed to auto-fix creator membership:',insertErr);
     myRecord=inserted;
   }
+
+  // Fetch members AFTER potential creator fix so list is complete
+  const members=await fetchCommunityMembers(communityId);
+
   const isAdmin=myRecord&&myRecord.role==='admin';
   const isMember=!!myRecord;
   const showAdminTools=isAdmin||isCreator;
-  console.log('Is admin:',isAdmin,'Is creator:',isCreator,'Show admin tools:',showAdminTools);
+  console.log('Is admin:',isAdmin,'Is creator:',isCreator,'Show admin tools:',showAdminTools,'Members count:',(members||[]).length);
 
   const header=document.getElementById('community-detail-header');
   header.innerHTML=`${comm.cover_photo_url?`<div style="width:100%;height:200px;position:relative;border-radius:var(--radius2);overflow:hidden;margin-bottom:12px">
@@ -5655,26 +5847,73 @@ function showCommunityTab(tab, el){
   if(tab==='challenges'&&viewingCommunityId)renderChallengesTab(viewingCommunityId);
 }
 
+let pendingCommunityPostPhotos=[];
+
 async function renderCommunityFeed(communityId, members){
   const memberIds=members.map(m=>m.user_id);
   const container=document.getElementById('community-feed-tab');
   if(!memberIds.length){container.innerHTML='<p class="fg3 small">No members yet.</p>';return}
-  // Get posts: public from members OR explicitly posted to this community
-  const{data:publicPosts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
-  const{data:commPosts}=await sb.from('workout_posts').select('*,profiles(name,username,avatar_url),workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(20);
-  // Merge and dedupe
+
+  // Post composer
+  const avatarHtml=currentProfile?.avatar_url?`<img src="${currentProfile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:(currentProfile?.name||'?')[0].toUpperCase();
+  const composerHtml=`<div class="feed-card" style="margin-bottom:12px">
+    <div class="flex gap-sm" style="align-items:flex-start">
+      <div class="feed-avatar">${avatarHtml}</div>
+      <div style="flex:1">
+        <textarea class="input" id="cp-content" placeholder="Share something with the community..." rows="2" style="resize:vertical;min-height:48px"></textarea>
+        <div id="cp-photo-preview" class="flex gap-sm mt-sm" style="flex-wrap:wrap;display:none"></div>
+        <div class="flex gap-sm mt-sm" style="justify-content:space-between;align-items:center">
+          <label class="btn btn-sm" style="cursor:pointer;margin:0"><i data-lucide="image" style="width:14px;height:14px"></i> Photo<input type="file" accept="image/*" multiple style="display:none" onchange="previewCommunityPostPhotos(this.files)"></label>
+          <button class="btn btn-sm btn-primary" onclick="createCommunityPost('${communityId}')">Post</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // Get workout posts: public from members OR explicitly posted to this community
+  const{data:rawPublicPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  const publicPosts=await attachProfiles(rawPublicPosts||[]);
+  const{data:rawCommPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(20);
+  const commPosts=await attachProfiles(rawCommPosts||[]);
+  // Get community direct posts
+  const{data:rawDirectPosts}=await sb.from('community_posts').select('*').eq('community_id',communityId).order('created_at',{ascending:false}).limit(30);
+  const directPosts=await attachProfiles(rawDirectPosts||[]);
+  // Check which community posts current user has liked
+  const cpIds=(directPosts||[]).map(p=>p.id);
+  let myLikedCpIds=new Set();
+  if(cpIds.length){
+    const{data:myLikes}=await sb.from('community_post_likes').select('post_id').in('post_id',cpIds).eq('user_id',currentUser.id);
+    myLikedCpIds=new Set((myLikes||[]).map(l=>l.post_id));
+  }
+
+  // Merge workout posts and dedupe
   const postMap={};
-  [...(publicPosts||[]),...(commPosts||[])].forEach(p=>postMap[p.id]=p);
-  const posts=Object.values(postMap).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-  if(!posts||!posts.length){container.innerHTML='<p class="fg3 small">No activity yet in this community.</p>';return}
+  [...(publicPosts||[]),...(commPosts||[])].forEach(p=>{postMap[p.id]={...p,_type:'workout'}});
+  const workoutPosts=Object.values(postMap);
+  // Tag community direct posts
+  const communityDirectPosts=(directPosts||[]).map(p=>({...p,_type:'community'}));
+  // Combine all posts
+  const allPosts=[...workoutPosts,...communityDirectPosts].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
+  if(!allPosts.length){
+    container.innerHTML=composerHtml+'<p class="fg3 small">No activity yet in this community. Be the first to post!</p>';
+    if(typeof lucide!=='undefined')lucide.createIcons();
+    return;
+  }
+
   // Sort: pin challenge_completion posts to top
-  posts.sort((a,b)=>{
+  allPosts.sort((a,b)=>{
     if(a.post_type==='challenge_completion'&&b.post_type!=='challenge_completion')return -1;
     if(b.post_type==='challenge_completion'&&a.post_type!=='challenge_completion')return 1;
     return new Date(b.created_at)-new Date(a.created_at);
   });
-  container.innerHTML=posts.map(p=>{
-    // Special rendering for challenge completion posts
+
+  container.innerHTML=composerHtml+allPosts.map(p=>{
+    // Community direct post
+    if(p._type==='community'){
+      return renderCommunityPostCard(p, myLikedCpIds.has(p.id));
+    }
+    // Challenge completion post
     if(p.post_type==='challenge_completion'){
       return `<div class="feed-card challenge-post">
         <div class="challenge-post-header">
@@ -5690,6 +5929,7 @@ async function renderCommunityFeed(communityId, members){
         <div id="comments-${p.id}" style="display:none"></div>
       </div>`;
     }
+    // Workout post
     const photos=p.photo_urls||[];
     const wl=p.workout_logs;
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
@@ -5712,10 +5952,175 @@ async function renderCommunityFeed(communityId, members){
       <div id="comments-${p.id}" style="display:none"></div>
     </div>`;
   }).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function renderCommunityPostCard(p, isLiked){
+  const photos=p.photo_urls||[];
+  return `<div class="feed-card" id="cp-${p.id}">
+    <div class="feed-header">
+      <div class="feed-avatar" onclick="openPublicProfile('${p.user_id}')">${p.profiles?.avatar_url?`<img src="${p.profiles.avatar_url}">`:(p.profiles?.name||'?')[0].toUpperCase()}</div>
+      <div style="flex:1">
+        <div class="feed-user" onclick="openPublicProfile('${p.user_id}')">${esc(p.profiles?.name)}</div>
+        <div class="feed-time">${timeAgo(p.created_at)}</div>
+      </div>
+      ${p.user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();toggleCpMenu('${p.id}')">&#8943;</button><div class="post-menu" id="cp-menu-${p.id}"><button class="post-menu-item" onclick="deleteCommunityPost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+    </div>
+    <div class="feed-caption" style="white-space:pre-line">${esc(p.content)}</div>
+    ${renderFeedPhotos(photos)}
+    <div class="feed-actions">
+      <button class="feed-action ${isLiked?'liked':''}" onclick="toggleCpLike('${p.id}',this)">${isLiked?'&#10084;':'&#9825;'} <span class="count">${p.likes_count||0}</span></button>
+      <button class="feed-action" onclick="toggleCpComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
+    </div>
+    <div id="cp-comments-${p.id}" style="display:none"></div>
+  </div>`;
+}
+
+function previewCommunityPostPhotos(files){
+  pendingCommunityPostPhotos=[...files];
+  const preview=document.getElementById('cp-photo-preview');
+  if(!files.length){preview.style.display='none';return}
+  preview.style.display='flex';
+  preview.innerHTML='';
+  for(const f of files){
+    const url=URL.createObjectURL(f);
+    preview.innerHTML+=`<div style="position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden"><img src="${url}" style="width:100%;height:100%;object-fit:cover"><button onclick="removeCpPhoto(this)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;line-height:1">&times;</button></div>`;
+  }
+}
+
+function removeCpPhoto(btn){
+  const wrap=btn.parentElement;
+  const idx=[...wrap.parentElement.children].indexOf(wrap);
+  pendingCommunityPostPhotos.splice(idx,1);
+  wrap.remove();
+  if(!pendingCommunityPostPhotos.length)document.getElementById('cp-photo-preview').style.display='none';
+}
+
+async function createCommunityPost(communityId){
+  const content=document.getElementById('cp-content').value.trim();
+  if(!content&&!pendingCommunityPostPhotos.length){toast('Write something or add a photo');return}
+  const photoUrls=[];
+  for(const file of pendingCommunityPostPhotos){
+    const filePath=`${currentUser.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'')}`;
+    const{error:upErr}=await sb.storage.from('post-photos').upload(filePath,file,{upsert:true,contentType:file.type});
+    if(upErr){console.error('Upload error:',upErr);continue}
+    const{data:urlData}=sb.storage.from('post-photos').getPublicUrl(filePath);
+    if(urlData?.publicUrl)photoUrls.push(urlData.publicUrl);
+  }
+  const{error}=await sb.from('community_posts').insert({community_id:communityId,user_id:currentUser.id,content:content||'',photo_urls:photoUrls});
+  if(error){toast('Error creating post');console.error(error);return}
+  pendingCommunityPostPhotos=[];
+  toast('Posted!');
+  // Re-render feed
+  const members=await fetchCommunityMembers(communityId);
+  await renderCommunityFeed(communityId,members);
+}
+
+function toggleCpMenu(postId){
+  const menu=document.getElementById('cp-menu-'+postId);
+  if(menu)menu.classList.toggle('show');
+}
+
+async function deleteCommunityPost(postId){
+  if(!confirm('Delete this post?'))return;
+  const{data:post}=await sb.from('community_posts').select('photo_urls').eq('id',postId).single();
+  if(post?.photo_urls?.length){
+    for(const url of post.photo_urls){
+      try{const path=new URL(url).pathname.split('/storage/v1/object/public/post-photos/')[1];if(path)await sb.storage.from('post-photos').remove([path])}catch(e){}
+    }
+  }
+  const{error}=await sb.from('community_posts').delete().eq('id',postId);
+  if(error){toast('Error deleting');return}
+  const el=document.getElementById('cp-'+postId);
+  if(el)el.remove();
+  toast('Post deleted');
+}
+
+async function toggleCpLike(postId, btn){
+  const isLiked=btn.classList.contains('liked');
+  if(isLiked){
+    await sb.from('community_post_likes').delete().eq('post_id',postId).eq('user_id',currentUser.id);
+    btn.classList.remove('liked');
+    btn.innerHTML=`&#9825; <span class="count">${Math.max(0,parseInt(btn.querySelector('.count').textContent)-1)}</span>`;
+  }else{
+    await sb.from('community_post_likes').insert({user_id:currentUser.id,post_id:postId});
+    btn.classList.add('liked');
+    btn.innerHTML=`&#10084; <span class="count">${parseInt(btn.querySelector('.count').textContent)+1}</span>`;
+  }
+}
+
+async function toggleCpComments(postId){
+  const container=document.getElementById('cp-comments-'+postId);
+  if(container.style.display==='none'){
+    container.style.display='block';
+    await loadCpComments(postId);
+  }else{
+    container.style.display='none';
+  }
+}
+
+async function loadCpComments(postId){
+  const{data:rawCpComments}=await sb.from('community_post_comments').select('*').eq('post_id',postId).order('created_at');
+  const data=await attachProfiles(rawCpComments||[]);
+  const container=document.getElementById('cp-comments-'+postId);
+  container.innerHTML=`
+    <div class="comment-thread">
+      ${(data||[]).map(c=>`<div class="comment-item">
+        <div class="comment-avatar">${c.profiles?.avatar_url?`<img src="${c.profiles.avatar_url}">`:(c.profiles?.name||'?')[0].toUpperCase()}</div>
+        <div class="comment-body">
+          <span class="comment-user">${esc(c.profiles?.name||'User')}</span>
+          ${esc(c.content)}
+          <span class="comment-time">${timeAgo(c.created_at)}</span>
+          ${c.user_id===currentUser.id?`<button class="comment-del" onclick="deleteCpComment('${c.id}','${postId}')">&times;</button>`:''}
+        </div>
+      </div>`).join('')}
+      ${!data?.length?'<p class="fg3 small" style="padding:4px 0">No comments yet.</p>':''}
+    </div>
+    <div class="comment-input-row">
+      <input class="input" id="cp-comment-input-${postId}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addCpComment('${postId}')">
+      <button class="btn btn-sm btn-primary" onclick="addCpComment('${postId}')">Post</button>
+    </div>
+  `;
+}
+
+async function addCpComment(postId){
+  const input=document.getElementById('cp-comment-input-'+postId);
+  const content=input.value.trim();
+  if(!content)return;
+  await sb.from('community_post_comments').insert({user_id:currentUser.id,post_id:postId,content});
+  input.value='';
+  await loadCpComments(postId);
+}
+
+async function deleteCpComment(commentId, postId){
+  await sb.from('community_post_comments').delete().eq('id',commentId);
+  await loadCpComments(postId);
+}
+
+async function fetchCommunityMembers(communityId){
+  const{data:rawMembers,error:mErr}=await sb.from('community_members').select('*').eq('community_id',communityId);
+  console.log('Members fetched:',rawMembers,'error:',mErr);
+  if(!rawMembers||!rawMembers.length)return[];
+  const userIds=rawMembers.map(m=>m.user_id);
+  const{data:profiles,error:pErr}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',userIds);
+  console.log('Profiles fetched:',profiles,'error:',pErr);
+  const profileMap={};
+  (profiles||[]).forEach(p=>profileMap[p.id]=p);
+  return rawMembers.map(m=>({...m,profiles:profileMap[m.user_id]||null}));
+}
+
+async function attachProfiles(rows){
+  if(!rows||!rows.length)return rows||[];
+  const ids=[...new Set(rows.map(r=>r.user_id).filter(Boolean))];
+  if(!ids.length)return rows;
+  const{data:profiles}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',ids);
+  const pm={};(profiles||[]).forEach(p=>pm[p.id]=p);
+  return rows.map(r=>({...r,profiles:pm[r.user_id]||null}));
 }
 
 function renderCommunityMembers(members, isAdmin, communityId){
   const container=document.getElementById('community-members-tab');
+  console.log('Rendering members:',members.length,members);
   // Sort: admins first, then alphabetically
   const sorted=[...members].sort((a,b)=>{
     if(a.role==='admin'&&b.role!=='admin')return -1;
@@ -5873,8 +6278,10 @@ async function sendInvite(communityId, userId, userName, btn){
 }
 
 async function handleCommunityInviteNotif(inviteId){
-  const{data:invite}=await sb.from('community_invites').select('*,communities(name,description),profiles:invited_by(name)').eq('id',inviteId).single();
-  if(!invite){toast('Invite not found');return}
+  const{data:rawInvite}=await sb.from('community_invites').select('*,communities(name,description)').eq('id',inviteId).single();
+  if(!rawInvite){toast('Invite not found');return}
+  const{data:inviterProfile}=rawInvite.invited_by?await sb.from('profiles').select('name').eq('id',rawInvite.invited_by).single():{data:null};
+  const invite={...rawInvite,profiles:inviterProfile};
   const commName=invite.communities?.name||'a community';
   const commDesc=invite.communities?.description||'';
   const inviterName=invite.profiles?.name||'Someone';
@@ -6143,8 +6550,8 @@ async function generateChallengePost(challenge){
   const totalRequired=c.workouts_per_week*weeks;
 
   // Get all members
-  const{data:members}=await sb.from('community_members').select('user_id,profiles:user_id(name,username,avatar_url)').eq('community_id',c.community_id);
-  if(!members)return;
+  const members=await fetchCommunityMembers(c.community_id);
+  if(!members||!members.length)return;
 
   // Get completions
   const{data:completions}=await sb.from('challenge_completions').select('user_id').eq('challenge_id',c.id);
@@ -6494,7 +6901,8 @@ function fmtCount(n){return n>=1000?(n/1000).toFixed(1)+'k':n.toString()}
 
 async function renderReelsFeed(){
   const container=document.getElementById('reels-feed-container');
-  const{data:reels}=await sb.from('reels').select('*,profiles:user_id(name,username,avatar_url),workout_plans:linked_plan_id(name,price,visibility)').eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  const{data:rawReels}=await sb.from('reels').select('*,workout_plans:linked_plan_id(name,price,visibility)').eq('is_public',true).order('created_at',{ascending:false}).limit(20);
+  const reels=await attachProfiles(rawReels||[]);
   if(!reels||!reels.length){container.innerHTML='<p class="fg3 small text-center" style="padding:40px">No reels yet. Be the first to create one!</p>';return}
   // Check which ones user liked
   const reelIds=reels.map(r=>r.id);
@@ -6566,7 +6974,8 @@ async function openReelComments(reelId){
   const sheet=document.getElementById('reel-comments-sheet-'+reelId);
   if(sheet.style.display==='none'){
     sheet.style.display='block';
-    const{data:comments}=await sb.from('reel_comments').select('*,profiles(name,username,avatar_url)').eq('reel_id',reelId).order('created_at');
+    const{data:rawReelComments}=await sb.from('reel_comments').select('*').eq('reel_id',reelId).order('created_at');
+    const comments=await attachProfiles(rawReelComments||[]);
     sheet.innerHTML=`
       <div style="padding:12px 16px;border-bottom:1px solid var(--bg4);font-weight:600;font-size:.9rem">Comments</div>
       <div style="max-height:200px;overflow-y:auto;padding:8px 16px">
