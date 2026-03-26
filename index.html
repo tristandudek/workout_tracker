@@ -134,6 +134,7 @@ input,textarea,select,button{font-family:inherit;font-size:inherit}
 }
 @media(max-width:767px){
   .sidebar{display:none!important}
+  .hide-mobile{display:none!important}
 }
 
 /* ============================================================
@@ -1430,11 +1431,15 @@ select.input{appearance:none;cursor:pointer;
      MESSAGES VIEW
      ============================================================ -->
 <div class="view" id="view-messages" data-view="messages">
-  <h2 class="mt-md mb-md">Messages</h2>
+  <div class="flex between mt-md mb-md" style="align-items:center">
+    <h2>Messages</h2>
+    <button class="btn btn-sm btn-primary" onclick="openNewMessageModal()"><i data-lucide="pencil-line" style="width:14px;height:14px"></i><span class="hide-mobile" style="margin-left:4px">New Message</span></button>
+  </div>
   <div id="msg-requests" class="mb-md"></div>
   <div id="msg-conversations" class="convo-list"></div>
   <div id="msg-empty" class="text-center mt-lg hidden">
-    <p class="fg3">No messages yet. Start a conversation from someone's profile.</p>
+    <p class="fg3">No messages yet.</p>
+    <button class="btn btn-primary mt-sm" onclick="openNewMessageModal()"><i data-lucide="pencil-line" style="width:14px;height:14px"></i> New Message</button>
   </div>
 </div>
 
@@ -7668,6 +7673,42 @@ async function sendMessage(){
   const container=document.getElementById('chat-messages');
   container.innerHTML+=`<div class="chat-bubble mine">${esc(content)}<div class="chat-time">just now</div></div>`;
   container.scrollTop=container.scrollHeight;
+}
+
+function openNewMessageModal(){
+  openModal(`
+    <div class="modal-header"><h2>New Message</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="search-wrap" style="margin-bottom:8px">
+        <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+        <input class="input" id="new-msg-search" placeholder="Search for an athlete..." oninput="searchNewMsgRecipient()">
+      </div>
+      <div id="new-msg-results" style="max-height:300px;overflow-y:auto"></div>
+    </div>
+  `);
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  setTimeout(()=>{const el=document.getElementById('new-msg-search');if(el)el.focus()},100);
+}
+
+let newMsgSearchTimeout=null;
+function searchNewMsgRecipient(){
+  const q=document.getElementById('new-msg-search')?.value.trim()||'';
+  const container=document.getElementById('new-msg-results');
+  if(newMsgSearchTimeout)clearTimeout(newMsgSearchTimeout);
+  if(!q){container.innerHTML='';return}
+  newMsgSearchTimeout=setTimeout(async()=>{
+    const{data}=await sb.from('profiles').select('id,name,username,avatar_url').or(`name.ilike.%${q}%,username.ilike.%${q}%`).neq('id',currentUser.id).limit(10);
+    if(!data||!data.length){container.innerHTML='<p class="fg3 small" style="padding:12px">No athletes found.</p>';return}
+    container.innerHTML=(data||[]).map(u=>`<div class="member-row" style="cursor:pointer" onclick="closeModal();openOrCreateConversation('${u.id}')">
+      <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+      <div class="member-info" style="flex:1">
+        <div class="member-name">${esc(u.name)}</div>
+        <div class="member-user">@${esc(u.username)}</div>
+      </div>
+      <i data-lucide="message-circle" style="width:16px;height:16px;color:var(--accent)"></i>
+    </div>`).join('');
+    if(typeof lucide!=='undefined')lucide.createIcons();
+  },250);
 }
 
 async function openOrCreateConversation(otherUserId){
