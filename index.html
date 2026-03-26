@@ -4031,7 +4031,7 @@ async function renderProfile(){
       ${wmTile('streak',streak,'Day Streak')}
       ${wmTile('volume',volFmt,'Volume ('+getUnit()+')')}
       ${rmTilesHtml}
-      <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">+</div><div class="add-lbl">Add Tile</div></div>
+      <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
     </div>
     <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
@@ -4040,7 +4040,7 @@ async function renderProfile(){
       ${emTile('plans_created',plansCreatedCount||0,'Plans Created',' style="cursor:pointer" onclick="openPlansCreatedModal(\''+currentUser.id+'\',true)"')}
       ${emTile('completed_by',othersDoneCount||0,'Completed by Followers',' style="cursor:pointer" onclick="openCompletedByModal(\''+currentUser.id+'\')"')}
       ${emTile('saved_plans',savedPlansCount||0,'Saved Plans',' style="cursor:pointer" onclick="openSavedPlansModal(\''+currentUser.id+'\')"')}
-      <div class="add-tile-box" onclick="openAddTileModal('engagement')"><div class="add-icon">+</div><div class="add-lbl">Add Tile</div></div>
+      <div class="add-tile-box" onclick="openAddTileModal('engagement')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
     </div>
   `;
 
