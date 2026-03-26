@@ -675,6 +675,8 @@ select.input{appearance:none;cursor:pointer;
 .feed-stat-pills{display:flex;gap:6px;padding:0 14px 10px;flex-wrap:wrap}
 .feed-stat-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg2);border:1px solid var(--bg4);border-radius:20px;font-size:.75rem;font-family:var(--font-body);color:var(--fg2);font-weight:500}
 .feed-stat-pill .pill-val{font-family:var(--font-mono);font-weight:600;color:var(--fg)}
+.feed-exercises{padding:0 14px 8px;font-size:.78rem;color:var(--fg3);line-height:1.6}
+.feed-exercises .fe-more{color:var(--accent);font-weight:600;cursor:pointer}
 .feed-caption{padding:0 14px 10px;font-size:.88rem;line-height:1.5}
 .feed-photos{display:flex;gap:4px;padding:0 14px 10px;overflow-x:auto;scrollbar-width:none}
 .feed-photos::-webkit-scrollbar{display:none}
@@ -2391,6 +2393,24 @@ function fuzzySearchExercises(exs,q){
 }
 
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+function renderExerciseSummary(exercises){
+  if(!exercises||!exercises.length)return'';
+  const MAX_SHOW=5;
+  const items=exercises.map(ex=>{
+    const completedSets=ex.sets?ex.sets.filter(s=>s.completed).length:0;
+    const totalSets=ex.sets?ex.sets.length:0;
+    const setCount=completedSets||totalSets;
+    return{name:ex.exerciseName||ex.name||'Exercise',sets:setCount};
+  });
+  const shown=items.slice(0,MAX_SHOW);
+  const remaining=items.length-MAX_SHOW;
+  let html='<div class="feed-exercises">';
+  html+=shown.map(e=>`${esc(e.name)} — ${e.sets} set${e.sets!==1?'s':''}`).join('<br>');
+  if(remaining>0)html+=`<br><span class="fe-more">and ${remaining} more...</span>`;
+  html+='</div>';
+  return html;
+}
+
 function renderFeedPhotos(raw){
   let photos=raw;
   if(typeof photos==='string'){try{photos=JSON.parse(photos)}catch(e){photos=[]}}
@@ -4702,6 +4722,7 @@ async function renderProfileActivityFeed(){
             <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
             <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
           </div>
+          ${renderExerciseSummary(wl?.exercises)}
           ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
           ${renderFeedPhotos(photos)}
           <div class="feed-actions">
@@ -5255,7 +5276,7 @@ async function renderFeed(){
       data=postsWithProfiles.map(p=>{
         const wl=p.workout_logs;
         const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
+        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_exercises:wl?.exercises||[],i_liked:false};
       });
     }else{data=[]}
   }else if(feedActiveTab==='following'){
@@ -5267,7 +5288,7 @@ async function renderFeed(){
     data=postsWithProfiles2.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,i_liked:false};
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_exercises:wl?.exercises||[],i_liked:false};
     });
   }else{
     // Suggested: all public posts except own
@@ -5277,7 +5298,7 @@ async function renderFeed(){
     data=postsWithProfiles3.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_volume:0,i_liked:false};
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_volume:0,workout_exercises:wl?.exercises||[],i_liked:false};
     });
     error=res.error;
   }
@@ -5318,6 +5339,7 @@ async function renderFeed(){
         <span class="feed-stat-pill"><span class="pill-val">${p.workout_exercise_count}</span> exercises</span>
         ${p.workout_volume?`<span class="feed-stat-pill"><span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
       </div>
+      ${renderExerciseSummary(p.workout_exercises)}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
@@ -6399,6 +6421,7 @@ async function renderCommunityFeed(communityId, members){
         ${p.user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
+      ${wl?renderExerciseSummary(wl.exercises):''}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
