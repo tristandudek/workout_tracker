@@ -1057,22 +1057,51 @@ select.input{appearance:none;cursor:pointer;
   <h2 class="mb-md">Privacy Settings</h2>
   <div class="profile-section">
     <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
-    <div class="privacy-row">
-      <span class="privacy-label">Workout History</span>
-      <label class="toggle-switch"><input type="checkbox" id="ps-workouts"><span class="toggle-slider"></span></label>
+
+    <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0">
+      <div class="flex between" style="align-items:center">
+        <div class="flex gap-sm" style="align-items:center"><i data-lucide="dumbbell" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label">Workout History</span></div>
+        <div class="flex gap-sm" style="align-items:center">
+          <label class="toggle-switch"><input type="checkbox" id="ps-workouts" onchange="updatePrivacyBadge(this,'ps-workouts-badge')"><span class="toggle-slider"></span></label>
+          <span id="ps-workouts-badge" class="tag" style="font-size:.6rem;padding:2px 8px">Private</span>
+        </div>
+      </div>
+      <div class="small fg3" id="ps-workouts-desc" style="padding-left:24px">Workout history is only visible to you</div>
     </div>
-    <div class="privacy-row">
-      <span class="privacy-label">Weight</span>
-      <label class="toggle-switch"><input type="checkbox" id="ps-weight"><span class="toggle-slider"></span></label>
+
+    <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0">
+      <div class="flex between" style="align-items:center">
+        <div class="flex gap-sm" style="align-items:center"><i data-lucide="trending-up" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label">Weight</span></div>
+        <div class="flex gap-sm" style="align-items:center">
+          <label class="toggle-switch"><input type="checkbox" id="ps-weight" onchange="updatePrivacyBadge(this,'ps-weight-badge')"><span class="toggle-slider"></span></label>
+          <span id="ps-weight-badge" class="tag" style="font-size:.6rem;padding:2px 8px">Private</span>
+        </div>
+      </div>
+      <div class="small fg3" id="ps-weight-desc" style="padding-left:24px">Weight data is only visible to you</div>
     </div>
-    <div class="privacy-row">
-      <span class="privacy-label">Body Fat %</span>
-      <label class="toggle-switch"><input type="checkbox" id="ps-bodyfat"><span class="toggle-slider"></span></label>
+
+    <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0">
+      <div class="flex between" style="align-items:center">
+        <div class="flex gap-sm" style="align-items:center"><i data-lucide="percent" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label">Body Fat %</span></div>
+        <div class="flex gap-sm" style="align-items:center">
+          <label class="toggle-switch"><input type="checkbox" id="ps-bodyfat" onchange="updatePrivacyBadge(this,'ps-bodyfat-badge')"><span class="toggle-slider"></span></label>
+          <span id="ps-bodyfat-badge" class="tag" style="font-size:.6rem;padding:2px 8px">Private</span>
+        </div>
+      </div>
+      <div class="small fg3" id="ps-bodyfat-desc" style="padding-left:24px">Body fat data is only visible to you</div>
     </div>
-    <div class="privacy-row">
-      <span class="privacy-label">Progress Photos</span>
-      <label class="toggle-switch"><input type="checkbox" id="ps-photos"><span class="toggle-slider"></span></label>
+
+    <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0">
+      <div class="flex between" style="align-items:center">
+        <div class="flex gap-sm" style="align-items:center"><i data-lucide="image" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label">Progress Photos</span></div>
+        <div class="flex gap-sm" style="align-items:center">
+          <label class="toggle-switch"><input type="checkbox" id="ps-photos" onchange="updatePrivacyBadge(this,'ps-photos-badge')"><span class="toggle-slider"></span></label>
+          <span id="ps-photos-badge" class="tag" style="font-size:.6rem;padding:2px 8px">Private</span>
+        </div>
+      </div>
+      <div class="small fg3" id="ps-photos-desc" style="padding-left:24px">Progress photos are only visible to you</div>
     </div>
+
     <button class="btn btn-primary mt-md" onclick="savePrivacyPage()">Save Changes</button>
   </div>
 </div>
@@ -3993,13 +4022,41 @@ async function saveMyInfoPage(){
   toast('Information saved!');
 }
 
+const privacyDescs={
+  workouts:{on:'Completed workouts appear on your profile and feed',off:'Workout history is only visible to you'},
+  weight:{on:'Your weight history is visible on your profile',off:'Weight data is only visible to you'},
+  bodyfat:{on:'Your body fat history is visible on your profile',off:'Body fat data is only visible to you'},
+  photos:{on:'Progress photos appear on your public profile',off:'Progress photos are only visible to you'}
+};
+
+function updatePrivacyBadge(checkbox,badgeId){
+  const badge=document.getElementById(badgeId);
+  const key=badgeId.replace('ps-','').replace('-badge','');
+  const descEl=document.getElementById('ps-'+key+'-desc');
+  if(checkbox.checked){
+    badge.textContent='Public';badge.style.borderColor='var(--success)';badge.style.color='var(--success)';badge.style.background='rgba(34,197,94,.08)';
+    if(descEl)descEl.textContent=privacyDescs[key]?.on||'';
+  }else{
+    badge.textContent='Private';badge.style.borderColor='var(--fg3)';badge.style.color='var(--fg3)';badge.style.background='';
+    if(descEl)descEl.textContent=privacyDescs[key]?.off||'';
+  }
+}
+
 async function renderPrivacy(){
   if(!currentProfile)currentProfile=await fetchProfile();
   if(!currentProfile)return;
-  document.getElementById('ps-workouts').checked=!!currentProfile.is_workouts_public;
-  document.getElementById('ps-weight').checked=!!currentProfile.is_weight_public;
-  document.getElementById('ps-bodyfat').checked=!!currentProfile.is_body_fat_public;
-  document.getElementById('ps-photos').checked=!!currentProfile.is_photos_public;
+  const checks=[
+    ['ps-workouts','ps-workouts-badge',!!currentProfile.is_workouts_public],
+    ['ps-weight','ps-weight-badge',!!currentProfile.is_weight_public],
+    ['ps-bodyfat','ps-bodyfat-badge',!!currentProfile.is_body_fat_public],
+    ['ps-photos','ps-photos-badge',!!currentProfile.is_photos_public]
+  ];
+  checks.forEach(([id,badge,val])=>{
+    const el=document.getElementById(id);
+    el.checked=val;
+    updatePrivacyBadge(el,badge);
+  });
+  if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
 async function savePrivacyPage(){
