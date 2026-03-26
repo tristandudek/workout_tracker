@@ -1410,6 +1410,21 @@ select.input{appearance:none;cursor:pointer;
 <!-- ============================================================
      DISCOVER ATHLETES VIEW
      ============================================================ -->
+<!-- ============================================================
+     BROWSE PLANS VIEW
+     ============================================================ -->
+<div class="view" id="view-browse-plans" data-view="browse-plans">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('gym')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back</button>
+  <h2 style="margin-bottom:4px">Browse Plans</h2>
+  <p class="fg3 small mb-md">Search and discover workout plans</p>
+  <div class="search-wrap mb-sm">
+    <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+    <input class="input" id="browse-plans-search" placeholder="Search plans by name..." oninput="filterBrowsePlans()">
+  </div>
+  <div id="browse-plans-filters" class="filter-bar mb-md" style="overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>
+  <div id="browse-plans-grid" class="plans-grid"></div>
+</div>
+
 <div class="view" id="view-discover" data-view="discover">
   <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('feed')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to The Lab</button>
   <h2 style="margin-bottom:4px">Discover Athletes</h2>
@@ -2379,6 +2394,7 @@ async function nav(view){
   if(view==='my-activity')await renderMyActivity();
   if(view==='plans-library')await renderPlansLibrary();
   if(view==='discover')await renderDiscoverAthletes();
+  if(view==='browse-plans')await renderBrowsePlans();
   if(view==='clips')await renderReelsFeed();
   if(view==='gym')await renderGymPage();
   window.scrollTo(0,0);
@@ -2864,13 +2880,103 @@ async function renderGymPlans(){
     </div>`).join('');
   }else{html+='<p class="fg3 small mb-md">No plans created yet.</p>'}
   html+=`<h3 class="fg2 mb-sm mt-md" style="font-size:.82rem">Saved Plans</h3>`;
+  // Browse Plans tile first
+  html+=`<div class="wo-card" style="margin-bottom:6px;cursor:pointer;border:2px dashed var(--accent)" onclick="nav('browse-plans')">
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <i data-lucide="compass" style="width:20px;height:20px;color:var(--accent)"></i>
+      <div><div class="wo-name" style="color:var(--accent)">Browse Plans</div><div class="wo-meta">Search and discover plans</div></div>
+    </div>
+    <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--accent)"></i>
+  </div>`;
   if(savedPlans.length){
     html+=savedPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
       <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
       ${planPriceBadge(p)}
     </div>`).join('');
-  }else{html+='<p class="fg3 small">No saved plans yet. <span class="accent" style="cursor:pointer" onclick="nav(\'plans-library\')">Browse plans</span></p>'}
+  }
   container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+let browsePlansData=[];
+let browsePlansFilters=new Set(['all']);
+
+async function renderBrowsePlans(){
+  const grid=document.getElementById('browse-plans-grid');
+  grid.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
+  browsePlansFilters=new Set(['all']);
+  document.getElementById('browse-plans-search').value='';
+
+  // Fetch all public plans from other users
+  const{data:rawPlans}=await sb.from('workout_plans').select('*').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(100);
+  const plans=await attachProfiles(rawPlans||[]);
+
+  // Get adoption counts
+  const planIds=plans.map(p=>p.id);
+  let adoptCounts={};
+  if(planIds.length){
+    const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
+    (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
+  }
+  // Sort by most adopted
+  plans.sort((a,b)=>(adoptCounts[b.id]||0)-(adoptCounts[a.id]||0));
+  plans.forEach(p=>p._adoptCount=adoptCounts[p.id]||0);
+  browsePlansData=plans;
+
+  // Render filters
+  const filterChips=['All','Free','Paid'];
+  document.getElementById('browse-plans-filters').innerHTML=filterChips.map(f=>{
+    const key=f.toLowerCase();
+    const active=browsePlansFilters.has(key)||(key==='all'&&browsePlansFilters.has('all'));
+    return `<div class="chip ${active?'active':''}" onclick="toggleBrowsePlanFilter('${key}')">${f}</div>`;
+  }).join('');
+
+  filterBrowsePlans();
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function toggleBrowsePlanFilter(key){
+  if(key==='all'){
+    browsePlansFilters=new Set(['all']);
+  }else{
+    browsePlansFilters.delete('all');
+    if(browsePlansFilters.has(key))browsePlansFilters.delete(key);
+    else browsePlansFilters.add(key);
+    if(!browsePlansFilters.size)browsePlansFilters.add('all');
+  }
+  // Update chip UI
+  document.querySelectorAll('#browse-plans-filters .chip').forEach(c=>{
+    const k=c.textContent.toLowerCase();
+    c.classList.toggle('active',browsePlansFilters.has(k)||(browsePlansFilters.has('all')&&k==='all'));
+  });
+  filterBrowsePlans();
+}
+
+function filterBrowsePlans(){
+  const q=(document.getElementById('browse-plans-search')?.value||'').trim().toLowerCase();
+  let filtered=browsePlansData;
+  if(q)filtered=filtered.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.description||'').toLowerCase().includes(q));
+  if(!browsePlansFilters.has('all')){
+    if(browsePlansFilters.has('free'))filtered=filtered.filter(p=>!p.price||p.price<=0);
+    if(browsePlansFilters.has('paid'))filtered=filtered.filter(p=>p.price>0);
+  }
+  const grid=document.getElementById('browse-plans-grid');
+  if(!filtered.length){grid.innerHTML='<p class="fg3 small" style="text-align:center;padding:30px">No plans found matching your search.</p>';return}
+  grid.innerHTML=filtered.map(p=>{
+    const creator=p.profiles||{};
+    return `<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
+      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${planPriceBadge(p)}</div>
+      ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
+      <div class="plan-footer">
+        <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${p._adoptCount} athletes using</div>
+        <div class="plan-creator">
+          <div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div>
+          <span>${esc(creator.name||'Unknown')}</span>
+        </div>
+        <button class="btn btn-sm btn-primary mt-sm" onclick="event.stopPropagation();adoptPlan('${p.id}')">Use This Plan</button>
+      </div>
+    </div>`;
+  }).join('');
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
