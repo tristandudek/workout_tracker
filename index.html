@@ -1210,7 +1210,7 @@ select.input{appearance:none;cursor:pointer;
     <div class="profile-tab-slider" id="profile-tab-slider">
       <!-- Tab 0: Posts Grid -->
       <div class="profile-tab-panel" id="profile-panel-posts">
-        <div id="profile-posts-grid" class="profile-posts-grid"></div>
+        <div id="profile-posts-grid"></div>
       </div>
       <!-- Tab 1: Clips -->
       <div class="profile-tab-panel" id="profile-panel-clips">
@@ -4262,138 +4262,84 @@ async function renderProfile(){
 }
 
 async function renderProfilePostsGrid(){
-  const grid=document.getElementById('profile-posts-grid');
-  if(!grid){console.error('profile-posts-grid not found');return}
-  grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1;text-align:center;padding:20px">Loading...</p>';
+  const container=document.getElementById('profile-posts-grid');
+  if(!container){console.error('profile-posts-grid not found');return}
+  container.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
 
-  // Fetch posts with full workout data
   let posts=[];
   try{
     const{data:p,error:pe}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
     posts=p||[];
-    console.log('Profile posts query:',posts,pe);
+    console.log('Profile posts query:',posts.length,pe);
   }catch(e){console.error('Posts fetch error:',e)}
 
-  // Fetch clips
-  let clips=[];
-  try{
-    const{data:c,error:ce}=await sb.from('reels').select('id,video_url,thumbnail_url,likes_count,comments_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
-    clips=c||[];
-    console.log('Profile reels query:',clips.length,ce);
-  }catch(e){console.error('Reels fetch error:',e)}
+  if(!posts.length){
+    container.innerHTML='<p class="fg3 small" style="text-align:center;padding:40px">No posts yet — complete a workout to share your first post</p>';
+    return;
+  }
 
-  // Build grid items
-  const items=[];
-  posts.forEach(p=>{
-    const photo=(p.photo_urls&&p.photo_urls.length)?p.photo_urls[0]:null;
+  const prof=currentProfile||{};
+  container.innerHTML=posts.map(p=>{
     const wl=p.workout_logs;
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
     let vol=0;
     if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
-    const volStr=vol>=1000?(vol/1000).toFixed(1)+'k':vol.toLocaleString();
-    items.push({type:'post',id:p.id,thumb:photo,name:wl?.workout_name||'Workout',dur,volStr,exCount:wl?.exercises?.length||0,caption:p.caption,likes:p.likes_count||0,comments:p.comments_count||0,date:p.created_at,raw:p});
-  });
-  clips.forEach(c=>{
-    items.push({type:'clip',id:c.id,thumb:c.thumbnail_url,videoUrl:c.video_url,likes:c.likes_count||0,comments:c.comments_count||0,date:c.created_at});
-  });
-  items.sort((a,b)=>new Date(b.date)-new Date(a.date));
-
-  if(!items.length){
-    grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1;text-align:center;padding:40px">No posts yet. Complete a workout and share it!</p>';
-    return;
-  }
-
-  grid.innerHTML=items.map(item=>{
-    if(item.type==='clip'){
-      return `<div class="profile-post-thumb" onclick="nav('clips')">
-        ${item.thumb?`<img src="${item.thumb}" loading="lazy">`:`<video src="${item.videoUrl}" muted preload="metadata"></video>`}
-        <div class="ppt-overlay" style="opacity:1;background:rgba(0,0,0,.2)"><i data-lucide="play" style="width:20px;height:20px"></i></div>
-      </div>`;
-    }
-    if(item.thumb){
-      return `<div class="profile-post-thumb" onclick="openProfilePost('${item.id}')">
-        <img src="${item.thumb}" loading="lazy">
-        <div class="ppt-overlay">&#10084; ${item.likes} &#128172; ${item.comments}</div>
-      </div>`;
-    }
-    // No photo — dark card placeholder
-    return `<div class="profile-post-thumb" onclick="openProfilePost('${item.id}')" style="background:#1a1a2e">
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;text-align:center">
-        <div style="color:#fff;font-family:var(--font-display);font-weight:700;font-size:.7rem;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(item.name)}</div>
-        <div style="color:rgba(255,255,255,.5);font-size:.6rem;font-family:var(--font-mono);margin-top:4px">${item.dur}m · ${item.volStr} ${getUnit()}</div>
+    const photos=p.photo_urls||[];
+    const isOwn=p.user_id===currentUser.id;
+    return `<div class="feed-card" id="post-${p.id}">
+      <div class="feed-header">
+        <div class="feed-avatar">${prof.avatar_url?`<img src="${prof.avatar_url}">`:(prof.name||'?')[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div class="feed-user">${esc(prof.name||'')}</div>
+          <div class="feed-time">${timeAgo(p.created_at)}</div>
+        </div>
+        ${isOwn?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
       </div>
-      <div class="ppt-overlay">&#10084; ${item.likes} &#128172; ${item.comments}</div>
+      ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
+      <div class="feed-stat-pills">
+        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
+        <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
+        <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+      </div>
+      ${renderExerciseSummary(wl?.exercises)}
+      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${renderFeedPhotos(photos)}
+      <div class="feed-actions">
+        <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
+        <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
+      </div>
+      <div id="comments-${p.id}" style="display:none"></div>
     </div>`;
   }).join('');
-  if(typeof lucide!=='undefined')lucide.createIcons();
-}
-
-async function openProfilePost(postId){
-  const{data:p,error}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').eq('id',postId).single();
-  if(!p){toast('Post not found');return}
-  const{data:prof}=await sb.from('profiles').select('name,username,avatar_url').eq('id',p.user_id).single();
-  const wl=p.workout_logs;
-  const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-  let vol=0;
-  if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
-  const photos=p.photo_urls||[];
-  const isOwn=p.user_id===currentUser.id;
-  openModal(`
-    <div class="modal-header"><h2>Post</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body" style="max-height:75vh;overflow-y:auto">
-      <div class="feed-card" style="border:none;box-shadow:none;margin:0">
-        <div class="feed-header">
-          <div class="feed-avatar">${prof?.avatar_url?`<img src="${prof.avatar_url}">`:(prof?.name||'?')[0].toUpperCase()}</div>
-          <div style="flex:1">
-            <div class="feed-user">${esc(prof?.name||'User')}</div>
-            <div class="feed-time">${timeAgo(p.created_at)}</div>
-          </div>
-          ${isOwn?`<button class="btn btn-sm btn-danger" onclick="deletePost('${p.id}');closeModal()"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`:''}
-        </div>
-        ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
-        <div class="feed-stat-pills">
-          <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
-          <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-          <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
-        </div>
-        ${renderExerciseSummary(wl?.exercises)}
-        ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
-        ${renderFeedPhotos(photos)}
-        <div class="feed-actions">
-          <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
-          <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
-        </div>
-        <div id="comments-${p.id}" style="display:none"></div>
-      </div>
-    </div>
-  `);
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
 async function renderProfileClipsGrid(){
   const container=document.getElementById('profile-clips-grid');
   if(!container)return;
-  const isOwn=true;
   container.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
   const{data:clips,error}=await sb.from('reels').select('id,video_url,thumbnail_url,caption,likes_count,comments_count,views_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
   console.log('Profile clips:',clips?.length,error);
-  let html=isOwn?`<div style="margin-bottom:12px"><button class="btn btn-sm btn-primary" onclick="openCreateReel()"><i data-lucide="plus" style="width:14px;height:14px"></i> Upload Clip</button></div>`:'';
+
+  // Upload tile (first tile on own profile)
+  const uploadTile=`<div class="profile-post-thumb" onclick="openCreateReel()" style="background:var(--bg2);border:2px dashed var(--bg4);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px">
+    <i data-lucide="camera" style="width:20px;height:20px;color:var(--fg4)"></i>
+    <span style="font-size:.6rem;color:var(--fg4);font-weight:600">Upload Clip</span>
+  </div>`;
+
   if(!clips||!clips.length){
-    container.innerHTML=html+'<p class="fg3 small" style="text-align:center;padding:30px">No clips yet.</p>';
+    container.innerHTML=`<div class="profile-posts-grid" style="gap:1px">${uploadTile}</div><p class="fg3 small" style="text-align:center;padding:20px">No clips yet.</p>`;
     if(typeof lucide!=='undefined')lucide.createIcons();
     return;
   }
-  html+=`<div class="profile-posts-grid">${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000">
+
+  const fmtViews=n=>n>=1000?(n/1000).toFixed(1)+'k':n.toString();
+  container.innerHTML=`<div class="profile-posts-grid" style="gap:1px">${uploadTile}${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000">
     ${c.thumbnail_url?`<img src="${c.thumbnail_url}" loading="lazy">`:`<video src="${c.video_url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`}
-    <div class="ppt-overlay" style="opacity:1;background:linear-gradient(transparent 50%,rgba(0,0,0,.6))">
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"><i data-lucide="play" style="width:24px;height:24px"></i></div>
-      <div style="position:absolute;bottom:6px;left:8px;font-size:.6rem;display:flex;gap:6px">
-        <span>&#10084; ${c.likes_count||0}</span>
-        <span>&#9654; ${c.views_count||0}</span>
-      </div>
-    </div>
+    <div style="position:absolute;inset:0;background:linear-gradient(transparent 60%,rgba(0,0,0,.6));pointer-events:none"></div>
+    <div style="position:absolute;bottom:6px;left:6px;color:#fff;font-size:.65rem"><i data-lucide="play" style="width:12px;height:12px;vertical-align:middle"></i></div>
+    <div style="position:absolute;bottom:6px;right:6px;color:rgba(255,255,255,.8);font-size:.6rem;font-family:var(--font-mono)">👁 ${fmtViews(c.views_count||0)}</div>
   </div>`).join('')}</div>`;
-  container.innerHTML=html;
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
