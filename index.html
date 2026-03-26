@@ -5578,13 +5578,19 @@ async function openCommunityDetail(communityId){
   console.log('Is admin:',isAdmin,'Is creator:',isCreator,'Show admin tools:',showAdminTools);
 
   const header=document.getElementById('community-detail-header');
-  header.innerHTML=`<div class="community-header">
-    <h2>${esc(comm.name)}</h2>
-    <p class="fg2 small">${esc(comm.description||'')} &middot; ${(members||[]).length} members</p>
-    <div class="flex gap-sm mt-sm">
-      ${showAdminTools?`<button class="btn btn-sm btn-primary" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Invite Members</button><button class="btn btn-sm" onclick="toast('Edit coming soon')"><i data-lucide="pencil" style="width:14px;height:14px"></i> Edit Community</button>`:''}
-      ${isMember&&!showAdminTools?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave Community</button>`:''}
+  header.innerHTML=`${comm.cover_photo_url?`<div style="width:100%;height:200px;position:relative;border-radius:var(--radius2);overflow:hidden;margin-bottom:12px">
+    <img src="${comm.cover_photo_url}" style="width:100%;height:100%;object-fit:cover">
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 20px;background:linear-gradient(transparent,rgba(0,0,0,.7))">
+      <h2 style="color:#fff">${esc(comm.name)}</h2>
+      <p style="color:rgba(255,255,255,.8);font-size:.82rem">${esc(comm.description||'')} · ${(members||[]).length} members</p>
     </div>
+  </div>`:`<div class="community-header">
+    <h2>${esc(comm.name)}</h2>
+    <p class="fg2 small">${esc(comm.description||'')} · ${(members||[]).length} members</p>
+  </div>`}
+  <div class="flex gap-sm mt-sm mb-sm">
+    ${showAdminTools?`<button class="btn btn-sm btn-primary" onclick="openInviteMembers('${communityId}')"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Invite Members</button><button class="btn btn-sm" onclick="openEditCommunity('${communityId}')"><i data-lucide="pencil" style="width:14px;height:14px"></i> Edit</button>`:''}
+    ${isMember&&!showAdminTools?`<button class="btn btn-sm btn-danger" onclick="leaveCommunity('${communityId}')">Leave Community</button>`:''}
   </div>`;
 
   if(typeof lucide!=='undefined')lucide.createIcons();
@@ -5711,6 +5717,64 @@ async function leaveCommunity(communityId){
   await sb.from('community_members').delete().eq('community_id',communityId).eq('user_id',currentUser.id);
   toast('Left community');
   await nav('communities');
+}
+
+async function openEditCommunity(communityId){
+  const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
+  if(!comm)return;
+  openModal(`
+    <div class="modal-header"><h2>Edit Community</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="profile-field"><label>Community Name</label><input class="input" id="ec-name" value="${esc(comm.name)}"></div>
+      <div class="profile-field"><label>Description</label><textarea class="input" id="ec-desc" style="min-height:50px">${esc(comm.description||'')}</textarea></div>
+      <div class="profile-field">
+        <label>Cover Photo</label>
+        ${comm.cover_photo_url?`<div class="mb-sm"><img src="${comm.cover_photo_url}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--radius)"><button class="btn btn-sm btn-danger mt-sm" onclick="removeCommunityPhoto('${communityId}')">Remove Photo</button></div>`:''}
+        <div class="photo-upload-area" onclick="document.getElementById('ec-cover-input').click()" style="padding:10px">
+          <p class="fg3 small"><i data-lucide="image" style="width:14px;height:14px;vertical-align:middle"></i> Upload Cover Photo</p>
+          <input type="file" id="ec-cover-input" accept="image/*" style="display:none" onchange="previewEditCover(event)">
+        </div>
+        <div id="ec-cover-preview"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditCommunity('${communityId}')">Save Changes</button>
+    </div>
+  `);
+}
+
+function previewEditCover(event){
+  const file=event.target.files[0];if(!file)return;
+  document.getElementById('ec-cover-preview').innerHTML=`<img src="${URL.createObjectURL(file)}" style="width:100%;max-height:120px;object-fit:cover;border-radius:var(--radius);margin-top:8px">`;
+}
+
+async function saveEditCommunity(communityId){
+  const name=document.getElementById('ec-name').value.trim();
+  if(!name){toast('Name required');return}
+  const description=document.getElementById('ec-desc').value.trim();
+  let cover_photo_url=undefined; // undefined = don't update
+  const coverInput=document.getElementById('ec-cover-input');
+  if(coverInput&&coverInput.files[0]){
+    const file=coverInput.files[0];
+    const path=`community-covers/${communityId}/cover.${file.name.split('.').pop()}`;
+    const{data,error}=await sb.storage.from('avatars').upload(path,file,{upsert:true,contentType:file.type});
+    if(error){toast('Cover upload failed');console.error(error)}
+    else{const{data:urlData}=sb.storage.from('avatars').getPublicUrl(path);cover_photo_url=urlData?.publicUrl+'?t='+Date.now()}
+  }
+  const updates={name,description};
+  if(cover_photo_url!==undefined)updates.cover_photo_url=cover_photo_url;
+  const{error}=await sb.from('communities').update(updates).eq('id',communityId);
+  if(error){toast('Error saving');console.error(error);return}
+  closeModal();toast('Community updated!');
+  await openCommunityDetail(communityId);
+  loadSidebarCommunities();
+}
+
+async function removeCommunityPhoto(communityId){
+  await sb.from('communities').update({cover_photo_url:null}).eq('id',communityId);
+  closeModal();toast('Cover photo removed');
+  await openCommunityDetail(communityId);
 }
 
 async function openInviteMembers(communityId){
