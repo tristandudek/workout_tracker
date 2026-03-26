@@ -625,6 +625,19 @@ select.input{appearance:none;cursor:pointer;
 .plan-card .plan-creator-avatar img{width:100%;height:100%;object-fit:cover}
 .plan-create-tile{background:var(--bg);border:2px dashed var(--bg4);padding:16px;border-radius:var(--radius2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s ease;height:220px;color:var(--fg3)}
 .plan-create-tile:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Workout Folders */
+.folders-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.folder-tile{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg);border:1px solid var(--bg4);border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;transition:all .15s;min-width:140px}
+.folder-tile:hover{box-shadow:var(--shadow-hover)}
+.folder-tile .folder-icon{flex-shrink:0}
+.folder-tile .folder-name{font-family:var(--font-display);font-weight:700;font-size:.85rem}
+.folder-tile .folder-count{font-size:.7rem;color:var(--fg3)}
+.folder-new{border:2px dashed var(--bg4);background:var(--bg);color:var(--fg3);font-size:.82rem;font-family:var(--font-body)}
+.folder-new:hover{border-color:var(--accent);color:var(--accent)}
+.folder-colors{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.folder-color-btn{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color .15s}
+.folder-color-btn:hover,.folder-color-btn.active{border-color:var(--fg)}
 .plan-card .plan-meta{font-size:.75rem;color:var(--fg2);margin-top:2px}
 .plan-card .plan-adopters{font-size:.72rem;color:var(--accent);margin-top:4px}
 .plan-workout-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border:1px solid var(--bg4);margin-bottom:4px}
@@ -903,10 +916,11 @@ select.input{appearance:none;cursor:pointer;
      MY WORKOUTS VIEW
      ============================================================ -->
 <div class="view" id="view-workouts" data-view="workouts">
-  <div class="flex between mb-md mt-md">
-    <h2>My Workouts</h2>
+  <div class="flex between mb-md mt-md" id="workouts-header">
+    <h2 id="workouts-title">My Workouts</h2>
     <button class="btn btn-sm btn-primary" onclick="openCreateWorkout()">+ New</button>
   </div>
+  <div id="workouts-folders" class="folders-row"></div>
   <div id="workouts-list"></div>
   <div id="workouts-empty" class="text-center mt-lg hidden">
     <p class="fg3">No saved workouts yet.</p>
@@ -1822,7 +1836,7 @@ async function getWorkouts(){
   if(error){toast('Error loading workouts');console.error(error);return[]}
   _workoutCache=data.map(r=>({
     id:r.id,name:r.name,description:r.description,exercises:r.exercises,
-    workout_types:r.workout_types,createdAt:r.created_at,source_plan_id:r.source_plan_id
+    workout_types:r.workout_types,createdAt:r.created_at,source_plan_id:r.source_plan_id,folder_id:r.folder_id
   }));
   return _workoutCache;
 }
@@ -2370,13 +2384,58 @@ async function deleteCustomExercise(id){
 /* =============================================================
    MY WORKOUTS
    ============================================================= */
+let currentFolderId=null;
+
 async function renderWorkouts(){
   const wos=await getWorkouts();
   const list=document.getElementById('workouts-list');
   const empty=document.getElementById('workouts-empty');
-  if(!wos.length){list.innerHTML='';empty.classList.remove('hidden');return}
-  empty.classList.add('hidden');
-  list.innerHTML=wos.map(w=>`<div class="wo-card">
+  const foldersEl=document.getElementById('workouts-folders');
+  const titleEl=document.getElementById('workouts-title');
+
+  // Fetch folders
+  const{data:folders}=await sb.from('workout_folders').select('*').eq('user_id',currentUser.id).order('name');
+
+  if(currentFolderId){
+    // Inside a folder
+    const folder=(folders||[]).find(f=>f.id===currentFolderId);
+    titleEl.innerHTML=`<span style="cursor:pointer;color:var(--fg3)" onclick="currentFolderId=null;renderWorkouts()"><i data-lucide="arrow-left" style="width:16px;height:16px;vertical-align:middle"></i></span> ${esc(folder?folder.name:'Folder')}`;
+    foldersEl.innerHTML='';
+    const folderWos=wos.filter(w=>w.folder_id===currentFolderId);
+    if(!folderWos.length){list.innerHTML='<p class="fg3 small">No workouts in this folder.</p>';empty.classList.add('hidden')}
+    else{empty.classList.add('hidden');list.innerHTML=renderWoCards(folderWos)}
+  }else{
+    // Root view
+    titleEl.textContent='My Workouts';
+    // Render folders
+    let fHtml=`<div class="folder-tile folder-new" onclick="openCreateFolder()"><i data-lucide="plus" style="width:16px;height:16px"></i> New Folder</div>`;
+    if(folders&&folders.length){
+      const woCounts={};wos.forEach(w=>{if(w.folder_id)woCounts[w.folder_id]=(woCounts[w.folder_id]||0)+1});
+      fHtml+=(folders||[]).map(f=>`<div class="folder-tile" onclick="currentFolderId='${f.id}';renderWorkouts()">
+        <span class="folder-icon" style="color:${f.color||'var(--accent)'}"><i data-lucide="folder" style="width:20px;height:20px"></i></span>
+        <div><div class="folder-name">${esc(f.name)}</div><div class="folder-count">${woCounts[f.id]||0} workouts</div></div>
+      </div>`).join('');
+    }
+    foldersEl.innerHTML=fHtml;
+
+    // Uncategorized workouts
+    const uncategorized=wos.filter(w=>!w.folder_id);
+    if(!wos.length){list.innerHTML='';empty.classList.remove('hidden')}
+    else{
+      empty.classList.add('hidden');
+      let html='';
+      if(uncategorized.length){
+        if(folders&&folders.length)html+=`<h3 class="fg2 mb-sm" style="font-size:.82rem">Uncategorized</h3>`;
+        html+=renderWoCards(uncategorized);
+      }
+      list.innerHTML=html;
+    }
+  }
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function renderWoCards(wos){
+  return wos.map(w=>`<div class="wo-card">
     <div class="wo-info">
       <div class="wo-name">${esc(w.name)}</div>
       ${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}
@@ -2386,7 +2445,14 @@ async function renderWorkouts(){
     <div class="wo-actions">
       <button class="btn btn-sm btn-primary" onclick="startFromTemplate('${w.id}')">Start</button>
       <button class="btn btn-sm" onclick="editWorkoutTemplate('${w.id}')">Edit</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteWorkout('${w.id}')">&#x2715;</button>
+      <div class="post-menu-wrap" style="position:relative" onclick="event.stopPropagation()">
+        <button class="post-menu-btn" onclick="togglePostMenu('wo-${w.id}')">&#8943;</button>
+        <div class="post-menu" id="post-menu-wo-${w.id}">
+          <button class="post-menu-item" style="color:var(--fg)" onclick="openMoveToFolder('${w.id}')"><i data-lucide="folder" style="width:12px;height:12px"></i> Move to Folder</button>
+          ${w.folder_id?`<button class="post-menu-item" style="color:var(--fg)" onclick="removeFromFolder('${w.id}')"><i data-lucide="folder-minus" style="width:12px;height:12px"></i> Remove from Folder</button>`:''}
+          <button class="post-menu-item" onclick="deleteWorkout('${w.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>
+        </div>
+      </div>
     </div>
   </div>`).join('');
 }
@@ -2396,6 +2462,60 @@ async function deleteWorkout(id){
   if(error){toast('Error deleting');console.error(error);return}
   invalidateCache('workouts');
   await renderWorkouts();toast('Deleted');
+}
+
+const FOLDER_COLORS=['#38bdf8','#22c55e','#ef4444','#f97316','#a855f7','#ec4899','#6b7280'];
+
+function openCreateFolder(){
+  openModal(`
+    <div class="modal-header"><h2>New Folder</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <input class="input mb-sm" id="folder-name" placeholder="Folder name">
+      <div class="small fg2 mb-sm">Color</div>
+      <div class="folder-colors" id="folder-colors">
+        ${FOLDER_COLORS.map((c,i)=>`<div class="folder-color-btn ${i===0?'active':''}" style="background:${c}" data-color="${c}" onclick="document.querySelectorAll('.folder-color-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')"></div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveFolder()">Create</button></div>
+  `);
+}
+
+async function saveFolder(){
+  const name=document.getElementById('folder-name').value.trim();
+  if(!name){toast('Enter a folder name');return}
+  const activeColor=document.querySelector('.folder-color-btn.active');
+  const color=activeColor?activeColor.dataset.color:'#38bdf8';
+  const{error}=await sb.from('workout_folders').insert({user_id:currentUser.id,name,color});
+  if(error){toast('Error creating folder');return}
+  closeModal();toast('Folder created!');
+  await renderWorkouts();
+}
+
+async function openMoveToFolder(workoutId){
+  const{data:folders}=await sb.from('workout_folders').select('*').eq('user_id',currentUser.id).order('name');
+  if(!folders||!folders.length){toast('Create a folder first');return}
+  openModal(`
+    <div class="modal-header"><h2>Move to Folder</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${folders.map(f=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="moveWorkoutToFolder('${workoutId}','${f.id}')">
+        <div class="wo-info"><div class="wo-name" style="display:flex;align-items:center;gap:6px"><span style="color:${f.color}"><i data-lucide="folder" style="width:16px;height:16px"></i></span>${esc(f.name)}</div></div>
+      </div>`).join('')}
+    </div>
+  `);
+}
+
+async function moveWorkoutToFolder(workoutId,folderId){
+  await sb.from('workout_templates').update({folder_id:folderId}).eq('id',workoutId);
+  invalidateCache('workouts');
+  closeModal();toast('Moved!');
+  await renderWorkouts();
+}
+
+async function removeFromFolder(workoutId){
+  await sb.from('workout_templates').update({folder_id:null}).eq('id',workoutId);
+  invalidateCache('workouts');
+  toast('Removed from folder');
+  await renderWorkouts();
 }
 
 /* =============================================================
