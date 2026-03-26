@@ -4444,25 +4444,33 @@ async function editPlan(id){
   if(!plan)return;
   editingPlanId=id;
   planWorkouts=(plan.workouts||[]).map(w=>({...w}));
-  const titleEl=document.getElementById('plan-edit-title');
-  if(titleEl)titleEl.textContent='Edit Plan';
-  const nameEl=document.getElementById('plan-name');
-  if(nameEl)nameEl.value=plan.name;
-  const descEl=document.getElementById('plan-desc');
-  if(descEl)descEl.value=plan.description||'';
-  // Set visibility radio
-  const vis=plan.visibility||'public_free';
-  const visRadio=document.querySelector(`input[name="plan-vis"][value="${vis}"]`);
-  if(visRadio){visRadio.checked=true;visRadio.dispatchEvent(new Event('change'))}
-  // Set price if paid
-  if(vis==='public_paid'){
-    const priceEl=document.getElementById('plan-price');
-    if(priceEl)priceEl.value=plan.price||9.99;
-    const priceSection=document.getElementById('plan-price-section');
-    if(priceSection)priceSection.style.display='block';
-  }
-  renderPlanWorkouts();
-  nav('plan-edit');
+  // Navigate first so DOM elements are visible
+  await nav('plan-edit');
+  await renderPlanWorkouts();
+  // Now set form values with a small delay to ensure DOM is ready
+  setTimeout(()=>{
+    try{
+      const titleEl=document.getElementById('plan-edit-title');
+      if(titleEl)titleEl.textContent='Edit Plan';
+      const nameEl=document.getElementById('plan-name');
+      if(nameEl)nameEl.value=plan.name;
+      const descEl=document.getElementById('plan-desc');
+      if(descEl)descEl.value=plan.description||'';
+      // Set visibility radio
+      const vis=plan.visibility||'public_free';
+      console.log('editPlan setting visibility:',vis);
+      const visRadio=document.querySelector(`input[name="plan-vis"][value="${vis}"]`);
+      console.log('visRadio element:',visRadio);
+      if(visRadio){visRadio.checked=true;visRadio.dispatchEvent(new Event('change'))}
+      // Set price if paid
+      if(vis==='public_paid'){
+        const priceEl=document.getElementById('plan-price');
+        if(priceEl)priceEl.value=plan.price||9.99;
+        const priceSection=document.getElementById('plan-price-section');
+        if(priceSection)priceSection.style.display='block';
+      }
+    }catch(e){console.error('editPlan form error:',e)}
+  },50);
 }
 
 let planDragIdx=null;
