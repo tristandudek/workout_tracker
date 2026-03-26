@@ -280,6 +280,12 @@ select.input{appearance:none;cursor:pointer;
 .ex-info-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:280px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s;text-align:left}
 .ex-info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
 .ex-info-btn:hover .ex-info-tip{display:block;opacity:1}
+.ex-video-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:var(--accent);cursor:pointer;border-radius:50%;transition:color .15s;margin-left:4px}
+.ex-video-btn:hover{color:var(--accent2)}
+.video-modal-content{background:#000;border-radius:12px;overflow:hidden;max-width:640px;width:100%;position:relative}
+.video-modal-content video{width:100%;display:block}
+.video-modal-content iframe{width:100%;height:360px;border:none}
+.video-modal-close{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;z-index:2}
 .set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
 .set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
 .set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
@@ -1863,7 +1869,7 @@ async function getExercises(){
   _exerciseCache=data.map(r=>({
     id:r.id,name:r.name,muscleGroups:r.muscle_groups,equipment:r.equipment,
     instructions:r.instructions,diagram:r.diagram,custom:r.is_custom,
-    photo_url:r.photo_url,video_url:r.video_url,workout_type:r.workout_type,tracking_type:r.tracking_type||'reps'
+    photo_url:r.photo_url,video_url:r.video_url,video_type:r.video_type,workout_type:r.workout_type,tracking_type:r.tracking_type||'reps'
   }));
   return _exerciseCache;
 }
@@ -2155,6 +2161,29 @@ function renderFeedPhotos(raw){
   return `<div class="feed-photos ph-${Math.min(photos.length,4)}">${photos.map(u=>`<img src="${u}" loading="lazy" onerror="console.log('Image failed:',this.src);this.style.display='none'">`).join('')}</div>`;
 }
 const ST_TIPS={superset:'Two or more exercises performed back-to-back with no rest between them. Rest only after completing all exercises in the group. Great for saving time and increasing intensity.',drop:'Perform a set to near failure, then immediately reduce the weight by 10-25% and continue for more reps. Repeat for each drop. Maximizes muscle fatigue and volume in less time.',ascending_pyramid:'Start with a lighter weight and higher reps, increasing the weight and decreasing reps with each set. Builds towards your heaviest lift while warming up the muscle.',descending_pyramid:'Start with your heaviest weight and lowest reps, decreasing weight and increasing reps each set. Allows maximum effort on the first set when fresh.',rest_pause:'Perform a set to near failure, rest for 10-20 seconds, then continue with the same weight for additional reps. The brief rest allows partial recovery to squeeze out more volume.'};
+function exVideoBtn(videoUrl,videoType,exName){
+  if(!videoUrl)return'';
+  return `<span class="ex-video-btn" onclick="event.stopPropagation();openVideoModal('${esc(videoUrl)}','${videoType||'link'}','${esc(exName)}')"><i data-lucide="play-circle" style="width:16px;height:16px"></i></span>`;
+}
+
+function openVideoModal(url,type,name){
+  let content='';
+  if(type==='upload'){
+    content=`<video controls style="width:100%;max-height:80vh"><source src="${url}">Your browser does not support video.</video>`;
+  }else{
+    // Check if YouTube
+    const ytMatch=url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/);
+    if(ytMatch){
+      content=`<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
+    }else{
+      const domain=new URL(url).hostname.replace('www.','');
+      content=`<div style="padding:40px;text-align:center"><p class="mb-md" style="color:#fff">Video hosted on ${esc(domain)}</p><a href="${url}" target="_blank" class="btn btn-primary">Watch on ${esc(domain)}</a></div>`;
+    }
+  }
+  document.getElementById('modal-content').innerHTML=`<div class="video-modal-content"><button class="video-modal-close" onclick="closeModal()">&times;</button><div style="font-size:.85rem;color:#fff;padding:10px 14px;font-family:var(--font-display);font-weight:700">${esc(name)} — How To</div>${content}</div>`;
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+
 function stBadgeHtml(st){
   if(st==='standard'||!st)return'';
   const cls=st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st;
@@ -2336,8 +2365,21 @@ function openAddCustomExercise(){
         </div>
       </div>
       <div class="profile-field">
-        <label>Demo Video URL (optional)</label>
-        <input class="input" id="custom-video-url" placeholder="YouTube or video link">
+        <label>Demo Video (optional)</label>
+        <div class="flex gap-sm mb-sm">
+          <div class="chip active" id="vid-tab-link" onclick="document.getElementById('vid-link-section').style.display='block';document.getElementById('vid-upload-section').style.display='none';this.classList.add('active');document.getElementById('vid-tab-upload').classList.remove('active')">Paste Link</div>
+          <div class="chip" id="vid-tab-upload" onclick="document.getElementById('vid-upload-section').style.display='block';document.getElementById('vid-link-section').style.display='none';this.classList.add('active');document.getElementById('vid-tab-link').classList.remove('active')">Upload Video</div>
+        </div>
+        <div id="vid-link-section">
+          <input class="input" id="custom-video-url" placeholder="YouTube, Instagram or TikTok URL">
+        </div>
+        <div id="vid-upload-section" style="display:none">
+          <div class="photo-upload-area" onclick="document.getElementById('custom-video-file').click()" style="padding:10px">
+            <p class="fg3 small"><i data-lucide="video" style="width:14px;height:14px;vertical-align:middle"></i> Upload Video (max 50MB)</p>
+            <input type="file" id="custom-video-file" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="document.getElementById('vid-file-name').textContent=this.files[0]?this.files[0].name:''">
+          </div>
+          <div id="vid-file-name" class="small fg2 mt-sm"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-primary" onclick="saveCustomExercise()">Add Exercise</button></div>
@@ -2360,12 +2402,24 @@ async function saveCustomExercise(){
     photoUrl=await uploadFile('exercise-photos',file,path);
   }
 
-  const videoUrl=(document.getElementById('custom-video-url')?.value||'').trim()||null;
+  let videoUrl=null;let videoType=null;
+  const linkUrl=(document.getElementById('custom-video-url')?.value||'').trim();
+  const videoFileInput=document.getElementById('custom-video-file');
+  if(videoFileInput&&videoFileInput.files[0]){
+    const vFile=videoFileInput.files[0];
+    if(vFile.size>50*1024*1024){toast('Video must be under 50MB');return}
+    const vPath=`${currentUser.id}/${Date.now()}_${vFile.name.replace(/[^a-zA-Z0-9._-]/g,'')}`;
+    const{data:vData,error:vErr}=await sb.storage.from('exercise-videos').upload(vPath,vFile,{upsert:true,contentType:vFile.type});
+    if(vErr){toast('Video upload failed');console.error(vErr)}
+    else{const{data:vUrl}=sb.storage.from('exercise-videos').getPublicUrl(vPath);videoUrl=vUrl?.publicUrl;videoType='upload'}
+  }else if(linkUrl){
+    videoUrl=linkUrl;videoType='link';
+  }
 
   const svg=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="10" fill="none" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="72" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="48" x2="40" y2="55" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="48" x2="80" y2="55" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="72" x2="45" y2="105" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="72" x2="75" y2="105" stroke="#38bdf8" stroke-width="2"/><text x="60" y="115" text-anchor="middle" font-size="10" fill="#38bdf8">CUSTOM</text></svg>`;
   const{error}=await sb.from('exercises').insert({
     name,muscle_groups:[muscle],equipment:equip,instructions:instr||'Custom exercise.',
-    diagram:svg,photo_url:photoUrl,video_url:videoUrl,
+    diagram:svg,photo_url:photoUrl,video_url:videoUrl,video_type:videoType,
     is_custom:true,created_by_user_id:currentUser.id
   });
   if(error){toast('Error saving exercise');console.error(error);return}
@@ -2780,7 +2834,7 @@ async function pickExercise(id){
     createExercises.push({exerciseId:id,targetSets:3,targetReps:'8-12',notes:'',restTime:90,setType:'standard'});
     closeModal();renderCreateExercises();
   }else if(pickerTarget==='active'){
-    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,instructions:ex.instructions||'',tracking_type:ex.tracking_type||'reps',setType:'standard',sets:[{weight:0,reps:0,completed:false}]});
+    activeWorkout.exercises.push({exerciseId:id,exerciseName:ex.name,instructions:ex.instructions||'',tracking_type:ex.tracking_type||'reps',video_url:ex.video_url||null,video_type:ex.video_type||null,setType:'standard',sets:[{weight:0,reps:0,completed:false}]});
     closeModal();renderActiveWorkout();
   }
 }
@@ -2927,7 +2981,7 @@ async function startFromTemplate(id){
         for(let j=0;j<(we.targetSets||3);j++)seSets.push({weight:0,reps:0,completed:false});
         return{exerciseId:se.exerciseId,exerciseName:seEx?seEx.name:(se.exerciseName||'Unknown'),targetReps:se.targetReps||'',sets:seSets};
       });
-      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',instructions:ex?ex.instructions:'',tracking_type:ex?ex.tracking_type:'reps',targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
+      return{exerciseId:we.exerciseId,exerciseName:ex?ex.name:'Unknown',instructions:ex?ex.instructions:'',tracking_type:ex?ex.tracking_type:'reps',video_url:ex?ex.video_url:null,video_type:ex?ex.video_type:null,targetSets:we.targetSets,targetReps:we.targetReps,restTime:we.restTime||0,setType:we.setType||'standard',drops:we.drops,restPauseDuration:we.restPauseDuration,supersetExercises:ssExs,sets};
     })
   };
   saveActiveWO(activeWorkout);
@@ -3108,7 +3162,7 @@ async function renderActiveWorkout(){
     const targetSetsNum=ae.targetSets||0;
     return `<div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
         <span class="drag">&#x2630;</span>
-        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()">&#8505;<span class="ex-info-tip">${esc(ae.instructions||'No description available')}</span></span></span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()">&#8505;<span class="ex-info-tip">${esc(ae.instructions||'No description available')}</span></span>${exVideoBtn(ae.video_url,ae.video_type,ae.exerciseName)}</span>
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
