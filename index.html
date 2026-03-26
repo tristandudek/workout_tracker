@@ -2867,11 +2867,10 @@ async function renderGymPlans(){
   if(myPlans&&myPlans.length){
     html+=myPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',true)">
       <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-      ${planPriceBadge(p)}
+      ${planPriceBadge(p,{isOwn:true})}
     </div>`).join('');
   }else{html+='<p class="fg3 small mb-md">No plans created yet.</p>'}
   html+=`<h3 class="fg2 mb-sm mt-md" style="font-size:.82rem">Saved Plans</h3>`;
-  // Browse Plans tile first
   html+=`<div class="wo-card" style="margin-bottom:6px;cursor:pointer;border:2px dashed var(--accent)" onclick="nav('browse-plans')">
     <div style="display:flex;align-items:center;gap:10px;flex:1">
       <i data-lucide="compass" style="width:20px;height:20px;color:var(--accent)"></i>
@@ -2882,7 +2881,7 @@ async function renderGymPlans(){
   if(savedPlans.length){
     html+=savedPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
       <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-      ${planPriceBadge(p)}
+      ${planPriceBadge(p,{saved:true})}
     </div>`).join('');
   }
   container.innerHTML=html;
@@ -2902,16 +2901,21 @@ async function renderBrowsePlans(){
   const{data:rawPlans}=await sb.from('workout_plans').select('*').eq('is_public',true).neq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(100);
   const plans=await attachProfiles(rawPlans||[]);
 
-  // Get adoption counts
+  // Get adoption counts + ownership status
   const planIds=plans.map(p=>p.id);
   let adoptCounts={};
+  let purchasedSet=new Set(),savedSet=new Set();
   if(planIds.length){
     const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
     (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
+    const{data:purchases}=await sb.from('plan_purchases').select('plan_id').eq('buyer_id',currentUser.id).in('plan_id',planIds);
+    purchasedSet=new Set((purchases||[]).map(x=>x.plan_id));
+    const{data:saved}=await sb.from('saved_plans').select('plan_id').eq('user_id',currentUser.id).in('plan_id',planIds);
+    savedSet=new Set((saved||[]).map(x=>x.plan_id));
   }
   // Sort by most adopted
   plans.sort((a,b)=>(adoptCounts[b.id]||0)-(adoptCounts[a.id]||0));
-  plans.forEach(p=>p._adoptCount=adoptCounts[p.id]||0);
+  plans.forEach(p=>{p._adoptCount=adoptCounts[p.id]||0;p._purchased=purchasedSet.has(p.id);p._saved=savedSet.has(p.id)});
   browsePlansData=plans;
 
   // Render filters
@@ -2955,8 +2959,13 @@ function filterBrowsePlans(){
   if(!filtered.length){grid.innerHTML='<p class="fg3 small" style="text-align:center;padding:30px">No plans found matching your search.</p>';return}
   grid.innerHTML=filtered.map(p=>{
     const creator=p.profiles||{};
+    const owned=p._purchased||p._saved;
+    const badge=planPriceBadge(p,{purchased:p._purchased,saved:p._saved});
+    const actionBtn=owned
+      ?`<button class="btn btn-sm mt-sm" onclick="event.stopPropagation();openPlanDetail('${p.id}',false)">View Plan</button>`
+      :`<button class="btn btn-sm btn-primary mt-sm" onclick="event.stopPropagation();adoptPlan('${p.id}')">Use This Plan</button>`;
     return `<div class="plan-card" style="cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
-      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${planPriceBadge(p)}</div>
+      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${badge}</div>
       ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
       <div class="plan-footer">
         <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${p._adoptCount} athletes using</div>
@@ -2964,7 +2973,7 @@ function filterBrowsePlans(){
           <div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div>
           <span>${esc(creator.name||'Unknown')}</span>
         </div>
-        <button class="btn btn-sm btn-primary mt-sm" onclick="event.stopPropagation();adoptPlan('${p.id}')">Use This Plan</button>
+        ${actionBtn}
       </div>
     </div>`;
   }).join('');
@@ -3373,14 +3382,14 @@ async function showStartFromPlan(){
       html+=`<h3 class="mb-sm fg2" style="font-size:.82rem">My Creations</h3>`;
       html+=myPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
         <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
-        ${planPriceBadge(p)}
+        ${planPriceBadge(p,{isOwn:true})}
       </div>`).join('');
     }
     if(savedPlans.length){
       html+=`<h3 class="mb-sm mt-md fg2" style="font-size:.82rem">Saved Plans</h3>`;
       html+=savedPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
         <div class="wo-info" style="flex:1"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
-        ${planPriceBadge(p)}
+        ${planPriceBadge(p,{saved:true})}
       </div>`).join('');
     }
   }else{
@@ -4822,18 +4831,20 @@ async function renderPlansLibrary(){
     const vis=p.visibility||'public_free';
     const isPaid=vis==='public_paid'&&p.price>0;
     const hasPurchased=purchasedIds.has(p.id);
-    const priceBadge=planPriceBadge(p);
+    const owned=hasPurchased||isSaved;
+    const badge=planPriceBadge(p,{isOwn,purchased:hasPurchased,saved:isSaved&&!hasPurchased});
 
-    return `<div class="plan-card" style="cursor:pointer" onclick="${isPaid&&!isOwn&&!hasPurchased?`event.stopPropagation();previewPaidPlan('${p.id}')`:`openPlanDetail('${p.id}',${isOwn})`}">
-      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${priceBadge}</div>
+    return `<div class="plan-card" style="cursor:pointer" onclick="${isPaid&&!isOwn&&!hasPurchased&&!isSaved?`event.stopPropagation();previewPaidPlan('${p.id}')`:`openPlanDetail('${p.id}',${isOwn})`}">
+      <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${badge}</div>
       ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
       <div class="plan-footer">
         <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${adoptCounts[p.id]||0} followers</div>
         ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
           ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
-            :isPaid&&!hasPurchased?`<button class="btn btn-sm btn-primary" onclick="purchasePlan('${p.id}',${p.price})">Get Plan — $${(+p.price).toFixed(2)}</button>`
-            :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button>${isSaved?`<button class="btn btn-sm btn-danger" onclick="unsavePlan('${p.id}')">Unsave</button>`:`<button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i></button>`}`}
+            :owned?`<button class="btn btn-sm" onclick="openPlanDetail('${p.id}',false)">View Plan</button>`
+            :isPaid?`<button class="btn btn-sm btn-primary" onclick="purchasePlan('${p.id}',${p.price})">Get Plan — $${(+p.price).toFixed(2)}</button>`
+            :`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button><button class="btn btn-sm" onclick="savePlanToLibrary('${p.id}')"><i data-lucide="bookmark" style="width:12px;height:12px"></i></button>`}
         </div>
       </div>
     </div>`;
@@ -6443,7 +6454,11 @@ function closeModal(){
    UTILS
    ============================================================= */
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function planPriceBadge(p){
+function planPriceBadge(p, opts){
+  const o=opts||{};
+  if(o.isOwn)return'';
+  if(o.purchased)return'<span class="price-badge" style="background:rgba(34,197,94,.1);color:#16a34a">✓ Owned</span>';
+  if(o.saved)return'<span class="price-badge" style="background:rgba(34,197,94,.1);color:#16a34a">✓ Saved</span>';
   if(p.visibility==='private')return'<span class="price-badge private">🔒 Private</span>';
   if(p.price>0)return`<span class="price-badge paid">$${(+p.price).toFixed(2)}</span>`;
   return'<span class="price-badge free">FREE</span>';
