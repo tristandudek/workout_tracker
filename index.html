@@ -265,9 +265,22 @@ select.input{appearance:none;cursor:pointer;
 /* Stats Strip */
 .stats-section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg3);font-family:var(--font-body);font-weight:600;margin-bottom:6px}
 .stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0 0 8px 0;width:100%}
-.stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow);overflow:hidden}
+.stat-box{background:var(--bg);padding:14px 12px;text-align:center;border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow);overflow:hidden;position:relative}
 .stat-box .val{font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat-box .lbl{font-size:.65rem;color:var(--fg3);margin-top:4px;font-family:var(--font-body);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-box .tile-eye{position:absolute;top:4px;right:4px;background:none;border:none;cursor:pointer;font-size:12px;opacity:0;transition:opacity .15s;padding:2px 4px;color:var(--fg4)}
+.stat-box:hover .tile-eye{opacity:1}
+.stat-box .tile-eye.private{color:#ef4444;opacity:.7}
+.add-tile-box{background:var(--bg);padding:14px 12px;text-align:center;border:2px dashed var(--bg4);border-radius:var(--radius2);cursor:pointer;transition:border-color .15s,background .15s;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px}
+.add-tile-box:hover{border-color:var(--accent);background:rgba(56,189,248,.03)}
+.add-tile-box .add-icon{font-size:1.2rem;color:var(--fg4);margin-bottom:2px}
+.add-tile-box .add-lbl{font-size:.65rem;color:var(--fg4);font-weight:600}
+.tile-modal-tile{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--bg4);border-radius:var(--radius);margin-bottom:6px}
+.tile-modal-tile .tile-name{font-size:.85rem;font-weight:600}
+.tile-toggle{width:36px;height:20px;border-radius:10px;background:var(--bg4);position:relative;cursor:pointer;border:none;transition:background .15s}
+.tile-toggle.on{background:var(--accent)}
+.tile-toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}
+.tile-toggle.on::after{transform:translateX(16px)}
 
 /* Workout Card */
 .wo-card{
@@ -285,9 +298,17 @@ select.input{appearance:none;cursor:pointer;
 .aw-header{
   position:sticky;top:56px;z-index:50;background:var(--bg2);
   border-bottom:1px solid var(--bg4);padding:12px 0;
-  display:flex;align-items:center;justify-content:space-between;
 }
-.aw-timer{font-family:var(--font-mono);font-size:1.3rem;font-weight:500;color:var(--accent)}
+.aw-row1{margin-bottom:8px}
+.aw-row1 #aw-name{font-family:var(--font-display);font-weight:700;font-size:1.2rem;line-height:1.3;word-wrap:break-word}
+.aw-row2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.aw-row2-left{display:flex;align-items:center;gap:8px}
+.aw-row2-right{display:flex;align-items:center;gap:6px}
+.aw-timer{font-family:var(--font-mono);font-size:1.2rem;font-weight:500;color:var(--accent)}
+.aw-discard-btn{background:none;border:1.5px solid #ef4444;color:#ef4444;border-radius:var(--radius);padding:5px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:var(--font-display);transition:background .15s}
+.aw-discard-btn:hover{background:rgba(239,68,68,.08)}
+.aw-finish-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:var(--font-display);transition:opacity .15s}
+.aw-finish-btn:hover{opacity:.85}
 .aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
@@ -1047,17 +1068,21 @@ select.input{appearance:none;cursor:pointer;
      ============================================================ -->
 <div class="view" id="view-active" data-view="active" style="padding-bottom:100px">
   <div class="aw-header">
-    <div>
-      <div id="aw-name" style="font-family:var(--font-display);font-weight:700;font-size:1.1rem"></div>
-      <div class="aw-timer" id="aw-timer">0:00</div>
+    <div class="aw-row1">
+      <div id="aw-name"></div>
     </div>
-    <div class="flex gap-sm">
-      <div class="unit-toggle" id="unit-toggle">
-        <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
-        <span data-unit="kg" onclick="setUnit('kg')">KG</span>
+    <div class="aw-row2">
+      <div class="aw-row2-left">
+        <div class="aw-timer" id="aw-timer">0:00</div>
+        <div class="unit-toggle" id="unit-toggle">
+          <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
+          <span data-unit="kg" onclick="setUnit('kg')">KG</span>
+        </div>
       </div>
-      <button class="btn btn-sm btn-danger" onclick="discardWorkout()"><i data-lucide="x" style="width:14px;height:14px"></i> Discard</button>
-      <button class="btn btn-sm btn-primary" onclick="finishWorkout()"><i data-lucide="check" style="width:14px;height:14px"></i> Finish</button>
+      <div class="aw-row2-right">
+        <button class="aw-discard-btn" onclick="discardWorkout()">Discard</button>
+        <button class="aw-finish-btn" onclick="finishWorkout()">Finish</button>
+      </div>
     </div>
   </div>
   <div id="aw-exercises" class="mt-sm"></div>
@@ -2401,7 +2426,7 @@ async function renderHome(){
     apc.classList.remove('hidden');
     apc.innerHTML=`<div class="active-plan-card">
       <div class="apc-title">Active Plan: ${esc(plan.name)}</div>
-      <div class="apc-meta">${workouts.length} workouts in plan</div>
+      <div class="apc-meta">${workouts.length} days in plan</div>
       ${workouts.length?`<button class="btn btn-sm btn-primary mt-sm" onclick="startPlanWorkout('${plan.id}',0)">Start Next Workout</button>`:''}
     </div>`;
   }else{apc.classList.add('hidden');apc.innerHTML=''}
@@ -3020,14 +3045,14 @@ async function showStartFromPlan(){
     if(myPlans&&myPlans.length){
       html+=`<h3 class="mb-sm fg2" style="font-size:.82rem">My Creations</h3>`;
       html+=myPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} workouts</div></div>
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
         <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
       </div>`).join('');
     }
     if(savedPlans.length){
       html+=`<h3 class="mb-sm mt-md fg2" style="font-size:.82rem">Saved Plans</h3>`;
       html+=savedPlans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="showPlanWorkouts('${p.id}')">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} workouts${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
+        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days${p.profiles?' · by '+esc(p.profiles.name):''}</div></div>
         <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
       </div>`).join('');
     }
@@ -3057,7 +3082,7 @@ async function showPlanWorkouts(planId){
           <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
         </div>`;
       }).join('')}
-      ${!(plan.workouts||[]).length?'<p class="fg3 small">No workouts in this plan.</p>':''}
+      ${!(plan.workouts||[]).length?'<p class="fg3 small">No days in this plan yet.</p>':''}
     </div>
   `);
 }
@@ -3941,20 +3966,65 @@ async function renderProfile(){
   const{count:savedPlansCount}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
   const{count:plansCreatedCount}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
 
+  // Tile settings
+  const ts=p.tile_settings||{};
+  const wm=ts.workout_metrics||{};
+  const em=ts.engagement_metrics||{};
+  const rmIds=ts['1rm_tiles']||[];
+
+  // 1RM tiles
+  let rmTilesHtml='';
+  if(rmIds.length){
+    const{data:rmRows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',currentUser.id).in('exercise_id',rmIds).order('display_order');
+    if(rmRows&&rmRows.length){
+      rmTilesHtml=rmRows.map(r=>{
+        const isPublic=r.is_public!==false;
+        return `<div class="stat-box">
+          <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('1rm','${r.exercise_id}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
+          <div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}</div>
+          <div class="lbl">${esc(r.exercise_name)} 1RM</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Helper for tile with eye toggle
+  function wmTile(key,val,label,extra=''){
+    if(wm[key]&&wm[key].visible===false)return'';
+    const isPublic=!(wm[key]&&wm[key].public===false);
+    return `<div class="stat-box"${extra}>
+      <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('wm','${key}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
+      <div class="val">${val}</div><div class="lbl">${label}</div>
+    </div>`;
+  }
+  function emTile(key,val,label,extra=''){
+    if(em[key]&&em[key].visible===false)return'';
+    const isPublic=!(em[key]&&em[key].public===false);
+    return `<div class="stat-box"${extra}>
+      <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('em','${key}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
+      <div class="val">${val}</div><div class="lbl">${label}</div>
+    </div>`;
+  }
+
+  const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
+
   document.getElementById('profile-stats').innerHTML=`
     <div class="stats-section-label">Workout Metrics</div>
     <div class="stats-strip">
-      <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
-      <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
-      <div class="stat-box"><div class="val">${totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString()}</div><div class="lbl">Volume (${getUnit()})</div></div>
-      <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers')"><div class="val">${followersCount||0}</div><div class="lbl">Followers</div></div>
-      <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following')"><div class="val">${followingCount||0}</div><div class="lbl">Following</div></div>
+      ${wmTile('workouts',totalWorkouts,'Workouts')}
+      ${wmTile('streak',streak,'Day Streak')}
+      ${wmTile('volume',volFmt,'Volume ('+getUnit()+')')}
+      ${rmTilesHtml}
+      <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">+</div><div class="add-lbl">Add Tile</div></div>
     </div>
-    <div class="stats-section-label" style="margin-top:24px">Engagement Metrics</div>
+    <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
-      <div class="stat-box"><div class="val">${plansCreatedCount||0}</div><div class="lbl">Plans Created</div></div>
-      <div class="stat-box"><div class="val">${othersDoneCount||0}</div><div class="lbl">Completed by Followers</div></div>
-      <div class="stat-box"><div class="val">${savedPlansCount||0}</div><div class="lbl">Saved Plans</div></div>
+      ${emTile('followers',followersCount||0,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\')"')}
+      ${emTile('following',followingCount||0,'Following',' style="cursor:pointer" onclick="openFollowList(\'following\')"')}
+      ${emTile('plans_created',plansCreatedCount||0,'Plans Created')}
+      ${emTile('completed_by',othersDoneCount||0,'Completed by Followers')}
+      ${emTile('saved_plans',savedPlansCount||0,'Saved Plans')}
+      <div class="add-tile-box" onclick="openAddTileModal('engagement')"><div class="add-icon">+</div><div class="add-lbl">Add Tile</div></div>
     </div>
   `;
 
@@ -3966,6 +4036,208 @@ async function renderProfile(){
 
   // Activity feed
   await renderProfileActivityFeed();
+}
+
+// ---- Tile Management ----
+async function getTileSettings(){
+  const p=currentProfile||await fetchProfile();
+  return p?.tile_settings||{};
+}
+
+async function saveTileSettings(ts){
+  await sb.from('profiles').update({tile_settings:ts}).eq('id',currentUser.id);
+  if(currentProfile)currentProfile.tile_settings=ts;
+}
+
+async function toggleTilePublic(section, key, btn){
+  const ts=await getTileSettings();
+  if(section==='wm'){
+    if(!ts.workout_metrics)ts.workout_metrics={};
+    if(!ts.workout_metrics[key])ts.workout_metrics[key]={visible:true,public:true};
+    ts.workout_metrics[key].public=!ts.workout_metrics[key].public;
+    const isPublic=ts.workout_metrics[key].public;
+    btn.textContent=isPublic?'👁':'🚫';
+    btn.classList.toggle('private',!isPublic);
+    btn.title=isPublic?'Public':'Private';
+  }else if(section==='em'){
+    if(!ts.engagement_metrics)ts.engagement_metrics={};
+    if(!ts.engagement_metrics[key])ts.engagement_metrics[key]={visible:true,public:true};
+    ts.engagement_metrics[key].public=!ts.engagement_metrics[key].public;
+    const isPublic=ts.engagement_metrics[key].public;
+    btn.textContent=isPublic?'👁':'🚫';
+    btn.classList.toggle('private',!isPublic);
+    btn.title=isPublic?'Public':'Private';
+  }else if(section==='1rm'){
+    const{data:row}=await sb.from('profile_1rm_tiles').select('is_public').eq('user_id',currentUser.id).eq('exercise_id',key).single();
+    const newVal=!(row?.is_public!==false);
+    await sb.from('profile_1rm_tiles').update({is_public:newVal}).eq('user_id',currentUser.id).eq('exercise_id',key);
+    btn.textContent=newVal?'👁':'🚫';
+    btn.classList.toggle('private',!newVal);
+    btn.title=newVal?'Public':'Private';
+    return;
+  }
+  await saveTileSettings(ts);
+}
+
+function openAddTileModal(section){
+  if(section==='workout'){
+    openModal(`
+      <div class="modal-header"><h2>Workout Metric Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body">
+        <h3 style="font-size:.82rem;margin-bottom:10px" class="fg2">Standard Tiles</h3>
+        <div id="wm-tile-toggles"></div>
+        <h3 style="font-size:.82rem;margin:16px 0 10px" class="fg2">1RM Tiles <span class="fg4 small">(up to 5)</span></h3>
+        <div id="rm-tile-list"></div>
+        <div class="search-wrap mt-sm" style="margin-bottom:0">
+          <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+          <input class="input" id="rm-search" placeholder="Search exercise to add 1RM tile..." oninput="searchRmExercise()">
+        </div>
+        <div id="rm-search-results" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    `);
+    renderWmToggles();
+    renderRmTileList();
+    if(typeof lucide!=='undefined')lucide.createIcons();
+  }else{
+    openModal(`
+      <div class="modal-header"><h2>Creator & Engagement Tiles</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body">
+        <div id="em-tile-toggles"></div>
+      </div>
+    `);
+    renderEmToggles();
+  }
+}
+
+async function renderWmToggles(){
+  const ts=await getTileSettings();
+  const wm=ts.workout_metrics||{};
+  const tiles=[
+    {key:'workouts',label:'Workouts'},
+    {key:'streak',label:'Day Streak'},
+    {key:'volume',label:'Volume'}
+  ];
+  const container=document.getElementById('wm-tile-toggles');
+  container.innerHTML=tiles.map(t=>{
+    const on=!(wm[t.key]&&wm[t.key].visible===false);
+    return `<div class="tile-modal-tile">
+      <span class="tile-name">${t.label}</span>
+      <button class="tile-toggle ${on?'on':''}" onclick="toggleWmTileVisible('${t.key}',this)"></button>
+    </div>`;
+  }).join('');
+}
+
+async function toggleWmTileVisible(key, btn){
+  const ts=await getTileSettings();
+  if(!ts.workout_metrics)ts.workout_metrics={};
+  if(!ts.workout_metrics[key])ts.workout_metrics[key]={visible:true,public:true};
+  ts.workout_metrics[key].visible=!ts.workout_metrics[key].visible;
+  btn.classList.toggle('on',ts.workout_metrics[key].visible);
+  await saveTileSettings(ts);
+}
+
+async function renderEmToggles(){
+  const ts=await getTileSettings();
+  const em=ts.engagement_metrics||{};
+  const tiles=[
+    {key:'followers',label:'Followers'},
+    {key:'following',label:'Following'},
+    {key:'plans_created',label:'Plans Created'},
+    {key:'completed_by',label:'Completed by Followers'},
+    {key:'saved_plans',label:'Saved Plans'}
+  ];
+  const container=document.getElementById('em-tile-toggles');
+  container.innerHTML=tiles.map(t=>{
+    const on=!(em[t.key]&&em[t.key].visible===false);
+    return `<div class="tile-modal-tile">
+      <span class="tile-name">${t.label}</span>
+      <button class="tile-toggle ${on?'on':''}" onclick="toggleEmTileVisible('${t.key}',this)"></button>
+    </div>`;
+  }).join('');
+}
+
+async function toggleEmTileVisible(key, btn){
+  const ts=await getTileSettings();
+  if(!ts.engagement_metrics)ts.engagement_metrics={};
+  if(!ts.engagement_metrics[key])ts.engagement_metrics[key]={visible:true,public:true};
+  ts.engagement_metrics[key].visible=!ts.engagement_metrics[key].visible;
+  btn.classList.toggle('on',ts.engagement_metrics[key].visible);
+  await saveTileSettings(ts);
+}
+
+async function renderRmTileList(){
+  const ts=await getTileSettings();
+  const rmIds=ts['1rm_tiles']||[];
+  const container=document.getElementById('rm-tile-list');
+  if(!rmIds.length){container.innerHTML='<p class="fg4 small">No 1RM tiles added yet.</p>';return}
+  const{data:rows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',currentUser.id).in('exercise_id',rmIds);
+  if(!rows||!rows.length){container.innerHTML='<p class="fg4 small">No 1RM tiles added yet.</p>';return}
+  container.innerHTML=rows.map(r=>`<div class="tile-modal-tile">
+    <span class="tile-name">${esc(r.exercise_name)} — ${r.estimated_1rm?Math.round(r.estimated_1rm)+' '+r.weight_unit:'No data'}</span>
+    <button class="btn btn-sm btn-danger" onclick="removeRmTile('${r.exercise_id}')" style="padding:3px 8px;font-size:.65rem">Remove</button>
+  </div>`).join('');
+}
+
+let rmSearchTimeout=null;
+function searchRmExercise(){
+  const q=document.getElementById('rm-search').value.trim();
+  const container=document.getElementById('rm-search-results');
+  if(rmSearchTimeout)clearTimeout(rmSearchTimeout);
+  if(!q){container.innerHTML='';return}
+  rmSearchTimeout=setTimeout(async()=>{
+    const exs=await getExercises();
+    const matches=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())).slice(0,10);
+    const ts=await getTileSettings();
+    const existing=new Set(ts['1rm_tiles']||[]);
+    container.innerHTML=matches.map(e=>`<div class="tile-modal-tile" style="${existing.has(e.id)?'opacity:.5':''}">
+      <span class="tile-name" style="font-size:.8rem">${esc(e.name)}</span>
+      ${existing.has(e.id)?'<span class="fg4 small">Added</span>':`<button class="btn btn-sm btn-primary" onclick="addRmTile('${e.id}','${esc(e.name)}')" style="padding:3px 10px;font-size:.65rem">Add</button>`}
+    </div>`).join('');
+  },200);
+}
+
+async function addRmTile(exerciseId, exerciseName){
+  const ts=await getTileSettings();
+  const rmIds=ts['1rm_tiles']||[];
+  if(rmIds.length>=5){toast('Maximum 5 1RM tiles');return}
+  if(rmIds.includes(exerciseId)){toast('Already added');return}
+  // Calculate estimated 1RM from workout logs
+  const logs=await getLogs();
+  let best1rm=0;
+  let bestWeight=0;let bestReps=0;
+  logs.forEach(l=>{
+    l.exercises.forEach(ex=>{
+      if(ex.exerciseId===exerciseId){
+        ex.sets.forEach(s=>{
+          if(s.completed&&s.weight>0&&s.reps>0){
+            const e1rm=s.weight*(1+s.reps/30);
+            if(e1rm>best1rm){best1rm=e1rm;bestWeight=s.weight;bestReps=s.reps}
+          }
+        });
+      }
+    });
+  });
+  // Upsert 1RM tile
+  await sb.from('profile_1rm_tiles').upsert({
+    user_id:currentUser.id,exercise_id:exerciseId,exercise_name:exerciseName,
+    weight:bestWeight,weight_unit:getUnit(),reps:bestReps,
+    estimated_1rm:best1rm||null,is_public:true,display_order:rmIds.length
+  },{onConflict:'user_id,exercise_id'});
+  rmIds.push(exerciseId);
+  ts['1rm_tiles']=rmIds;
+  await saveTileSettings(ts);
+  toast(exerciseName+' 1RM tile added');
+  renderRmTileList();
+  searchRmExercise();
+}
+
+async function removeRmTile(exerciseId){
+  const ts=await getTileSettings();
+  ts['1rm_tiles']=(ts['1rm_tiles']||[]).filter(id=>id!==exerciseId);
+  await saveTileSettings(ts);
+  await sb.from('profile_1rm_tiles').delete().eq('user_id',currentUser.id).eq('exercise_id',exerciseId);
+  toast('Tile removed');
+  renderRmTileList();
 }
 
 async function renderMetricsChart(){
@@ -4085,7 +4357,7 @@ async function renderPlansLibrary(){
       <div class="flex between" style="align-items:flex-start"><div class="plan-name">${esc(p.name)}</div>${priceBadge}</div>
       ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
       <div class="plan-footer">
-        <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${adoptCounts[p.id]||0} followers</div>
+        <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${adoptCounts[p.id]||0} followers</div>
         ${!isOwn?`<div class="plan-creator"><div class="plan-creator-avatar">${creator.avatar_url?`<img src="${creator.avatar_url}">`:(creator.name||'?')[0].toUpperCase()}</div><span>${esc(creator.name||'Unknown')}</span></div>`:''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
           ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
@@ -4157,7 +4429,7 @@ async function renderProfilePlans(userId, isOwn){
     <div class="plan-name">${esc(p.name)}</div>
     ${p.description?`<div class="plan-desc small fg2">${esc(p.description)}</div>`:''}
     <div class="plan-footer">
-      <div class="plan-meta">${(p.workouts||[]).length} workouts &middot; ${adoptCounts[p.id]||0} followers</div>
+      <div class="plan-meta">${(p.workouts||[]).length} days &middot; ${adoptCounts[p.id]||0} followers</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" onclick="event.stopPropagation()">
         ${isOwn?`<button class="btn btn-sm" onclick="editPlan('${p.id}')"><i data-lucide="pencil" style="width:12px;height:12px"></i></button><button class="btn btn-sm btn-danger" onclick="deletePlan('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>`
           :(adopted.has(p.id)?'<span class="tag tag-muscle">Using</span>':`<button class="btn btn-sm btn-primary" onclick="adoptPlan('${p.id}')">Use</button>`)}
@@ -4725,7 +4997,7 @@ async function previewPaidPlan(planId){
       ${plan.profiles?`<div class="flex gap-sm mb-md" style="justify-content:center;align-items:center"><div class="feed-avatar" style="width:28px;height:28px;font-size:.65rem">${plan.profiles.avatar_url?`<img src="${plan.profiles.avatar_url}">`:(plan.profiles.name||'?')[0].toUpperCase()}</div><span class="small fg2">by ${esc(plan.profiles.name)}</span></div>`:''}
       ${plan.description?`<p class="fg2 small mb-md" style="line-height:1.5">${esc(plan.description)}</p>`:''}
       <div class="feed-stat-pills mb-md" style="padding:0;justify-content:center">
-        <span class="feed-stat-pill"><span class="pill-val">${(plan.workouts||[]).length}</span> workouts</span>
+        <span class="feed-stat-pill"><span class="pill-val">${(plan.workouts||[]).length}</span> days</span>
         <span class="feed-stat-pill"><span class="pill-val">${adopters||0}</span> athletes using</span>
       </div>
       <div class="divider"></div>
@@ -4786,8 +5058,8 @@ async function openPlanDetail(planId, isOwn){
     <div class="modal-body">
       ${plan.description?`<p class="fg2 small mb-md" style="line-height:1.5">${esc(plan.description)}</p>`:''}
       ${plan.profiles&&!isOwn?`<div class="flex gap-sm mb-md" style="align-items:center"><div class="feed-avatar" style="width:24px;height:24px;font-size:.6rem">${plan.profiles.avatar_url?`<img src="${plan.profiles.avatar_url}">`:(plan.profiles.name||'?')[0].toUpperCase()}</div><span class="small fg2">by ${esc(plan.profiles.name)}</span></div>`:''}
-      <h3 class="mb-sm" style="font-size:.88rem">Workouts (${(plan.workouts||[]).length})</h3>
-      ${workoutList||'<p class="fg3 small">No workouts in this plan.</p>'}
+      <h3 class="mb-sm" style="font-size:.88rem">Schedule (${(plan.workouts||[]).length} days)</h3>
+      ${workoutList||'<p class="fg3 small">No days in this plan yet.</p>'}
     </div>
     <div class="modal-footer">
       ${isOwn?`<button class="btn btn-sm" onclick="closeModal();editPlan('${planId}')"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit</button><button class="btn btn-sm btn-danger" onclick="closeModal();deletePlan('${planId}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>`
@@ -5272,18 +5544,38 @@ async function openPublicProfile(userId){
   const{count:pubSavedPlans}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',userId);
   const{count:pubPlansCreated}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',userId).eq('is_public',true);
 
+  // Tile settings for public view
+  const pts=profile.tile_settings||{};
+  const pwm=pts.workout_metrics||{};
+  const pem=pts.engagement_metrics||{};
+  const prmIds=pts['1rm_tiles']||[];
+  function pubTile(section,key,val,label){
+    const cfg=section[key];
+    if(cfg&&cfg.visible===false)return'';
+    if(cfg&&cfg.public===false)return'';
+    return `<div class="stat-box"><div class="val">${val}</div><div class="lbl">${label}</div></div>`;
+  }
+  // Fetch public 1RM tiles
+  let pubRmHtml='';
+  if(prmIds.length){
+    const{data:pubRm}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',userId).eq('is_public',true).in('exercise_id',prmIds);
+    if(pubRm&&pubRm.length){
+      pubRmHtml=pubRm.map(r=>`<div class="stat-box"><div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}</div><div class="lbl">${esc(r.exercise_name)} 1RM</div></div>`).join('');
+    }
+  }
   html+=`
     <div class="stats-section-label">Workout Metrics</div>
     <div class="stats-strip">
-      <div class="stat-box"><div class="val">${pubWorkouts||0}</div><div class="lbl">Workouts</div></div>
-      <div class="stat-box"><div class="val">${pubFollowers||0}</div><div class="lbl">Followers</div></div>
-      <div class="stat-box"><div class="val">${pubFollowing||0}</div><div class="lbl">Following</div></div>
+      ${pubTile(pwm,'workouts',pubWorkouts||0,'Workouts')}
+      ${pubRmHtml}
     </div>
-    <div class="stats-section-label" style="margin-top:24px">Engagement Metrics</div>
+    <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
-      <div class="stat-box"><div class="val">${pubPlansCreated||0}</div><div class="lbl">Plans Created</div></div>
-      <div class="stat-box"><div class="val">${pubCompletedByFollowers||0}</div><div class="lbl">Completed by Followers</div></div>
-      <div class="stat-box"><div class="val">${pubSavedPlans||0}</div><div class="lbl">Saved Plans</div></div>
+      ${pubTile(pem,'followers',pubFollowers||0,'Followers')}
+      ${pubTile(pem,'following',pubFollowing||0,'Following')}
+      ${pubTile(pem,'plans_created',pubPlansCreated||0,'Plans Created')}
+      ${pubTile(pem,'completed_by',pubCompletedByFollowers||0,'Completed by Followers')}
+      ${pubTile(pem,'saved_plans',pubSavedPlans||0,'Saved Plans')}
     </div>
   `;
 
@@ -5341,7 +5633,7 @@ async function openPublicProfile(userId){
     html+=plans.map(p=>`<div class="plan-card">
       <div class="plan-name">${esc(p.name)}</div>
       ${p.description?`<div class="small fg2 mt-sm">${esc(p.description)}</div>`:''}
-      <div class="plan-meta">${(p.workouts||[]).length} workouts</div>
+      <div class="plan-meta">${(p.workouts||[]).length} days</div>
       <div class="plan-adopters">${counts[p.id]||0} athletes using this plan</div>
       ${adopted.has(p.id)?`<span class="tag tag-muscle mt-sm">Using this plan</span>`
         :`<button class="btn btn-sm btn-primary mt-sm" onclick="adoptPlan('${p.id}')">Use This Plan</button>`}
