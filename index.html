@@ -337,11 +337,13 @@ select.input{appearance:none;cursor:pointer;
 .set-type-badge .st-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:260px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s}
 .set-type-badge .st-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
 .set-type-badge:hover .st-tip{display:block;opacity:1}
-.ex-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:12px;color:var(--fg3);cursor:pointer;border-radius:50%;transition:color .15s;position:relative}
+.ex-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:12px;color:var(--fg3);cursor:pointer;border-radius:50%;transition:color .15s}
 .ex-info-btn:hover{color:var(--accent)}
-.ex-info-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:280px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s;text-align:left}
-.ex-info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
-.ex-info-btn:hover .ex-info-tip{display:block;opacity:1}
+.ex-info-tip{display:none}
+#ex-tooltip{position:fixed;z-index:99999;width:280px;padding:10px 14px;background:#fff;border:1px solid #eaedf0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);font-size:13px;font-weight:400;color:var(--fg2);line-height:1.5;text-align:left;pointer-events:none;opacity:0;transition:opacity .15s}
+#ex-tooltip.show{opacity:1}
+#ex-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff}
+#ex-tooltip.below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#fff}
 .ex-video-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;color:var(--accent);cursor:pointer;border-radius:50%;transition:color .15s;margin-left:4px}
 .ex-video-btn:hover{color:var(--accent2)}
 .video-modal-content{background:#000;border-radius:12px;overflow:hidden;max-width:640px;width:100%;position:relative}
@@ -1382,6 +1384,9 @@ select.input{appearance:none;cursor:pointer;
   <div class="modal" id="modal-content"></div>
 </div>
 
+<!-- EXERCISE INFO TOOLTIP (fixed position) -->
+<div id="ex-tooltip"></div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -2290,6 +2295,28 @@ async function nav(view){
 /* =============================================================
    TOAST
    ============================================================= */
+function showExTooltip(btn){
+  const tip=document.getElementById('ex-tooltip');
+  tip.textContent=btn.dataset.tip||'';
+  tip.style.display='block';
+  tip.classList.remove('below');
+  const rect=btn.getBoundingClientRect();
+  const tipH=tip.offsetHeight;
+  let top=rect.top-tipH-10;
+  let left=rect.left+rect.width/2-140;
+  if(top<4){top=rect.bottom+10;tip.classList.add('below')}
+  if(left<4)left=4;
+  if(left+280>window.innerWidth)left=window.innerWidth-284;
+  tip.style.top=top+'px';
+  tip.style.left=left+'px';
+  requestAnimationFrame(()=>tip.classList.add('show'));
+}
+function hideExTooltip(){
+  const tip=document.getElementById('ex-tooltip');
+  tip.classList.remove('show');
+  setTimeout(()=>{if(!tip.classList.contains('show'))tip.style.display='none'},150);
+}
+
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
@@ -3327,7 +3354,7 @@ async function renderActiveWorkout(){
     const targetSetsNum=ae.targetSets||0;
     return `<div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
         <span class="drag">&#x2630;</span>
-        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()">&#8505;<span class="ex-info-tip">${esc(ae.instructions||'No description available')}</span></span>${exVideoBtn(ae.video_url,ae.video_type,ae.exerciseName)}</span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()" onmouseenter="showExTooltip(this)" onmouseleave="hideExTooltip()" data-tip="${esc(ae.instructions||'No description available')}">&#8505;</span>${exVideoBtn(ae.video_url,ae.video_type,ae.exerciseName)}</span>
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
