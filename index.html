@@ -3341,6 +3341,10 @@ async function renderActiveWorkout(){
     `).join('')+`<button class="btn btn-sm btn-ghost btn-block mt-sm" onclick="addSet(${ei})">+ Add Set</button>`;
   }
 
+  function exInfoIcon(ex){
+    return `<span class="ex-info-btn" onclick="event.stopPropagation()" onmouseenter="showExTooltip(this)" onmouseleave="hideExTooltip()" data-tip="${esc(ex.instructions||'No description available')}">&#8505;</span>${exVideoBtn(ex.video_url,ex.video_type,ex.exerciseName)}`;
+  }
+
   function renderExCard(ae, ei, prev, isSuperset){
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
     const st=ae.setType||'standard';
@@ -3350,7 +3354,7 @@ async function renderActiveWorkout(){
     const targetSetsNum=ae.targetSets||0;
     return `<div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
         <span class="drag">&#x2630;</span>
-        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}<span class="ex-info-btn" onclick="event.stopPropagation()" onmouseenter="showExTooltip(this)" onmouseleave="hideExTooltip()" data-tip="${esc(ae.instructions||'No description available')}">&#8505;</span>${exVideoBtn(ae.video_url,ae.video_type,ae.exerciseName)}</span>
+        <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}${exInfoIcon(ae)}</span>
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
@@ -3396,7 +3400,7 @@ async function renderActiveWorkout(){
           return `<div style="border-top:1px solid var(--bg4)"></div>
             <div class="aw-exercise" style="border:none;margin:0">
               <div class="aw-ex-header">
-                <span class="ex-title">${esc(se.exerciseName||se.exerciseId)}</span>
+                <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${se.exerciseId}')">${esc(se.exerciseName||se.exerciseId)}${exInfoIcon(se)}</span>
                 <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:.65rem" onclick="activeWorkout.exercises[${ei}].supersetExercises.splice(${si},1);renderActiveWorkout()">&times;</button>
               </div>
               <div class="aw-ex-body">
