@@ -4109,8 +4109,23 @@ async function renderProfile(){
 
   console.log('Stats:',{totalWorkouts,streak,totalVolume,followersCount,followingCount,plansCreatedCount,othersDoneCount,savedPlansCount,postsCount});
 
+  // ---- Fetch 1RM tiles ----
+  let rmTilesHtml='';
+  try{
+    const{data:rmRows,error:rmErr}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',uid).order('display_order');
+    console.log('1RM tiles fetched:',rmRows,rmErr);
+    if(rmRows&&rmRows.length){
+      rmTilesHtml=rmRows.map(r=>`<div class="stat-box">
+        <div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'-'}<span style="font-size:.55rem;font-weight:500;color:var(--fg3);margin-left:2px">${r.weight_unit||'lbs'}</span></div>
+        <div class="lbl" style="overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(r.exercise_name)} 1RM</div>
+      </div>`).join('');
+    }
+  }catch(e){console.log('1RM tiles query error (table may not exist):',e.message)}
+
   // ---- Render tile sections ----
   const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
+  const editTileHtml=`<div class="add-tile-box" style="border-color:var(--accent)" onclick="openAddTileModal('workout')"><div class="add-icon" style="color:var(--accent)"><i data-lucide="pencil" style="width:16px;height:16px"></i></div><div class="add-lbl" style="color:var(--accent)">Edit Tiles</div></div>`;
+  const editEngTileHtml=`<div class="add-tile-box" style="border-color:var(--accent)" onclick="openAddTileModal('engagement')"><div class="add-icon" style="color:var(--accent)"><i data-lucide="pencil" style="width:16px;height:16px"></i></div><div class="add-lbl" style="color:var(--accent)">Edit Tiles</div></div>`;
   const tilesEl=document.getElementById('profile-tiles');
   if(tilesEl){
     tilesEl.innerHTML=`
@@ -4119,6 +4134,8 @@ async function renderProfile(){
         <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
         <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
         <div class="stat-box"><div class="val">${volFmt}</div><div class="lbl">Volume (${getUnit()})</div></div>
+        ${rmTilesHtml}
+        ${editTileHtml}
       </div>
       <div class="stats-section-label" style="margin-top:16px">Creator & Engagement Metrics</div>
       <div class="stats-strip">
@@ -4127,7 +4144,7 @@ async function renderProfile(){
         <div class="stat-box" style="cursor:pointer" onclick="openPlansCreatedModal('${uid}',true)"><div class="val">${plansCreatedCount}</div><div class="lbl">Plans Created</div></div>
         <div class="stat-box" style="cursor:pointer" onclick="openCompletedByModal('${uid}')"><div class="val">${othersDoneCount}</div><div class="lbl">Completed by Followers</div></div>
         <div class="stat-box" style="cursor:pointer" onclick="openSavedPlansModal('${uid}')"><div class="val">${savedPlansCount}</div><div class="lbl">Saved Plans</div></div>
-        <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
+        ${editEngTileHtml}
       </div>
     `;
   }
