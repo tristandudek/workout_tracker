@@ -368,6 +368,34 @@ select.input{appearance:none;cursor:pointer;
 .reel-thumb{aspect-ratio:9/16;background:#000;border-radius:var(--radius);overflow:hidden;position:relative;cursor:pointer}
 .reel-thumb video,.reel-thumb img{width:100%;height:100%;object-fit:cover}
 .reel-thumb .thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;background:rgba(0,0,0,.3)}
+/* Clip Editor */
+.clip-editor{position:fixed;inset:0;z-index:2000;background:#000;display:flex;flex-direction:column}
+.clip-editor-preview{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000}
+.clip-editor-preview video{width:100%;height:100%;object-fit:contain}
+.clip-overlay{position:absolute;cursor:move;user-select:none;z-index:5}
+.clip-overlay-text{font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap}
+.clip-overlay-emoji{font-size:2rem;pointer-events:none}
+.clip-overlay-delete{position:absolute;top:-8px;right:-8px;width:18px;height:18px;background:#ef4444;color:#fff;border:none;border-radius:50%;font-size:10px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1}
+.clip-overlay:hover .clip-overlay-delete,.clip-overlay.active .clip-overlay-delete{display:flex}
+.clip-plan-card{position:absolute;bottom:60px;left:16px;right:16px;background:rgba(56,189,248,.9);color:#fff;padding:8px 14px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;font-size:.78rem;font-weight:700;z-index:5}
+.clip-plan-card .clip-plan-remove{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;cursor:pointer}
+.clip-trim-bar{padding:8px 16px;background:#111}
+.clip-trim-track{position:relative;height:32px;background:#333;border-radius:4px;margin:4px 0}
+.clip-trim-fill{position:absolute;top:0;bottom:0;background:rgba(56,189,248,.3);border-radius:4px}
+.clip-trim-handle{position:absolute;top:-2px;bottom:-2px;width:14px;background:var(--accent);border-radius:3px;cursor:ew-resize;z-index:2;display:flex;align-items:center;justify-content:center}
+.clip-trim-handle::after{content:'';width:2px;height:12px;background:rgba(255,255,255,.6);border-radius:1px}
+.clip-trim-times{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.7rem;color:rgba(255,255,255,.6)}
+.clip-toolbar{display:flex;align-items:center;justify-content:space-around;padding:10px 8px;background:#111;border-top:1px solid #222}
+.clip-tool-btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:#aaa;font-size:.6rem;font-family:var(--font-body);cursor:pointer;padding:6px 12px;border-radius:8px;transition:all .15s}
+.clip-tool-btn.active,.clip-tool-btn:hover{color:var(--accent);background:rgba(56,189,248,.1)}
+.clip-text-panel,.clip-emoji-panel,.clip-plan-panel{padding:12px 16px;background:#111;border-top:1px solid #222}
+.clip-color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color .15s}
+.clip-color-swatch.active{border-color:#fff}
+.clip-size-btn{padding:3px 10px;border-radius:12px;font-size:.65rem;font-weight:700;border:1px solid #444;background:none;color:#ccc;cursor:pointer}
+.clip-size-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.reel-text-overlay{position:absolute;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.6);pointer-events:none;white-space:nowrap;z-index:3}
+.reel-emoji-overlay{position:absolute;pointer-events:none;z-index:3}
+
 .set-type-superset{background:rgba(56,189,248,.15);color:#0ea5e9}
 .set-type-drop{background:rgba(251,146,60,.15);color:#f97316}
 .set-type-pyramid-asc{background:rgba(34,197,94,.15);color:#16a34a}
@@ -7497,8 +7525,13 @@ async function renderReelsFeed(){
   container.innerHTML=reels.map(r=>{
     const p=r.profiles||{};
     const plan=r.workout_plans;
-    return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}">
-      <video src="${r.video_url}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
+    const textOvls=(r.text_overlays||[]).map(t=>`<div class="reel-text-overlay" style="left:${t.x}%;top:${t.y}%;font-size:${t.size||20}px;color:${t.color||'#fff'}">${esc(t.text)}</div>`).join('');
+    const emojiOvls=(r.emoji_overlays||[]).map(e=>`<div class="reel-emoji-overlay" style="left:${e.x}%;top:${e.y}%;font-size:2rem">${e.emoji}</div>`).join('');
+    const trimStart=r.trim_start||0;
+    const trimEnd=r.trim_end||0;
+    return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
+      <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
+      ${textOvls}${emojiOvls}
       <div class="reel-actions">
         <div class="reel-action"><div class="reel-avatar" onclick="openPublicProfile('${r.user_id}')">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div></div>
         <div class="reel-action"><button class="reel-action-btn ${likedSet.has(r.id)?'liked':''}" onclick="toggleReelLike('${r.id}',this)"><i data-lucide="heart" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.likes_count)}</span></div>
@@ -7526,7 +7559,16 @@ function setupReelObserver(){
       const video=entry.target.querySelector('video');
       const reelId=entry.target.dataset.reelId;
       if(entry.isIntersecting){
-        if(video){video.play().catch(()=>{})}
+        if(video){
+          const ts=parseFloat(entry.target.dataset.trimStart)||0;
+          if(ts&&video.currentTime<ts)video.currentTime=ts;
+          video.play().catch(()=>{});
+          // Enforce trim end
+          const te=parseFloat(entry.target.dataset.trimEnd)||0;
+          if(te>0){video._trimEnd=te;video._trimStart=ts;
+            if(!video._trimHandler){video._trimHandler=()=>{if(video.currentTime>=video._trimEnd)video.currentTime=video._trimStart||0};video.addEventListener('timeupdate',video._trimHandler)}
+          }
+        }
         // Count view after 2 seconds
         reelViewTimers[reelId]=setTimeout(()=>{
           sb.from('reels').update({views_count:undefined}).eq('id',reelId); // RPC would be better but this is simple
@@ -7596,72 +7638,277 @@ function shareReelDM(reelId){
   toast('Share via DM coming soon');
 }
 
+// ---- Clip Editor State ----
+let clipEditorFile=null;
+let clipEditorUrl=null;
+let clipTrimStart=0,clipTrimEnd=0,clipDuration=0;
+let clipTextOverlays=[];
+let clipEmojiOverlays=[];
+let selectedReelPlanId=null;
+let selectedReelPlanName=null;
+let clipActiveTool=null;
+let clipDragTarget=null,clipDragOff={x:0,y:0};
+
 function openCreateReel(){
-  openModal(`
-    <div class="modal-header"><h2>Create Reel</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <div class="photo-upload-area" onclick="document.getElementById('reel-video-input').click()" style="padding:30px">
-        <p class="fg3"><i data-lucide="video" style="width:24px;height:24px;vertical-align:middle"></i></p>
-        <p class="fg3 small mt-sm">Tap to upload video (max 100MB)</p>
-        <input type="file" id="reel-video-input" accept="video/mp4,video/mov,video/quicktime" style="display:none" onchange="previewReelVideo(event)">
-      </div>
-      <div id="reel-video-preview" class="mt-sm"></div>
-      <textarea class="input mt-sm mb-sm" id="reel-caption" placeholder="Add a caption..." style="min-height:50px"></textarea>
-      <div class="profile-field">
-        <label>Link a Workout Plan (optional)</label>
-        <button class="btn btn-sm btn-block" id="reel-plan-btn" onclick="selectReelPlan()">Select a Plan</button>
-        <div id="reel-plan-selected" class="mt-sm"></div>
+  // Step 1: file picker
+  const input=document.createElement('input');
+  input.type='file';input.accept='video/mp4,video/mov,video/quicktime';
+  input.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(file.size>100*1024*1024){toast('Max 100MB');return}
+    clipEditorFile=file;
+    clipEditorUrl=URL.createObjectURL(file);
+    clipTextOverlays=[];clipEmojiOverlays=[];
+    selectedReelPlanId=null;selectedReelPlanName=null;
+    clipTrimStart=0;clipTrimEnd=0;clipActiveTool=null;
+    openClipEditor();
+  };
+  input.click();
+}
+
+function openClipEditor(){
+  const el=document.createElement('div');
+  el.className='clip-editor';el.id='clip-editor';
+  el.innerHTML=`
+    <div class="clip-editor-preview" id="clip-preview-wrap">
+      <video id="clip-video" src="${clipEditorUrl}" loop playsinline autoplay muted></video>
+      <div id="clip-overlays"></div>
+      <div id="clip-plan-overlay"></div>
+    </div>
+    <div class="clip-trim-bar">
+      <div class="clip-trim-times"><span id="clip-trim-start-t">0:00</span><span id="clip-trim-end-t">0:00</span></div>
+      <div class="clip-trim-track" id="clip-trim-track">
+        <div class="clip-trim-fill" id="clip-trim-fill"></div>
+        <div class="clip-trim-handle" id="clip-trim-left" style="left:0"></div>
+        <div class="clip-trim-handle" id="clip-trim-right" style="right:0"></div>
       </div>
     </div>
+    <div id="clip-tool-panel"></div>
+    <div class="clip-toolbar">
+      <button class="clip-tool-btn" onclick="toggleClipTool('trim')">✂️<span>Trim</span></button>
+      <button class="clip-tool-btn" onclick="toggleClipTool('text')">T<span>Text</span></button>
+      <button class="clip-tool-btn" onclick="toggleClipTool('plan')">🔗<span>Plan</span></button>
+      <button class="clip-tool-btn" onclick="toggleClipTool('emoji')">😀<span>Emoji</span></button>
+      <button class="clip-tool-btn" style="color:var(--accent);font-weight:700" onclick="finishClipEditor()">✓<span>Done</span></button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  const video=document.getElementById('clip-video');
+  video.onloadedmetadata=()=>{
+    clipDuration=video.duration;
+    clipTrimEnd=clipDuration;
+    document.getElementById('clip-trim-end-t').textContent=fmtClipTime(clipDuration);
+    updateTrimUI();
+  };
+  video.ontimeupdate=()=>{
+    if(video.currentTime>=clipTrimEnd)video.currentTime=clipTrimStart;
+    if(video.currentTime<clipTrimStart)video.currentTime=clipTrimStart;
+  };
+  setupTrimDrag();
+  setupOverlayDrag();
+  renderClipOverlays();
+}
+
+function fmtClipTime(s){const m=Math.floor(s/60);const sec=Math.floor(s%60);return m+':'+(sec<10?'0':'')+sec}
+
+function updateTrimUI(){
+  const track=document.getElementById('clip-trim-track');
+  if(!track||!clipDuration)return;
+  const w=track.offsetWidth;
+  const ls=clipTrimStart/clipDuration*100;
+  const re=(1-clipTrimEnd/clipDuration)*100;
+  document.getElementById('clip-trim-left').style.left=ls+'%';
+  document.getElementById('clip-trim-right').style.right=re+'%';
+  document.getElementById('clip-trim-fill').style.left=ls+'%';
+  document.getElementById('clip-trim-fill').style.right=re+'%';
+  document.getElementById('clip-trim-start-t').textContent=fmtClipTime(clipTrimStart);
+  document.getElementById('clip-trim-end-t').textContent=fmtClipTime(clipTrimEnd);
+}
+
+function setupTrimDrag(){
+  let dragging=null;
+  const track=document.getElementById('clip-trim-track');
+  if(!track)return;
+  const onMove=(clientX)=>{
+    const rect=track.getBoundingClientRect();
+    const pct=Math.max(0,Math.min(1,(clientX-rect.left)/rect.width));
+    const t=pct*clipDuration;
+    if(dragging==='left'){clipTrimStart=Math.min(t,clipTrimEnd-0.5)}
+    else if(dragging==='right'){clipTrimEnd=Math.max(t,clipTrimStart+0.5)}
+    updateTrimUI();
+  };
+  document.getElementById('clip-trim-left').onmousedown=()=>dragging='left';
+  document.getElementById('clip-trim-right').onmousedown=()=>dragging='right';
+  document.getElementById('clip-trim-left').ontouchstart=()=>dragging='left';
+  document.getElementById('clip-trim-right').ontouchstart=()=>dragging='right';
+  document.addEventListener('mousemove',e=>{if(dragging)onMove(e.clientX)});
+  document.addEventListener('touchmove',e=>{if(dragging)onMove(e.touches[0].clientX)},{passive:true});
+  document.addEventListener('mouseup',()=>dragging=null);
+  document.addEventListener('touchend',()=>dragging=null);
+}
+
+function toggleClipTool(tool){
+  clipActiveTool=clipActiveTool===tool?null:tool;
+  document.querySelectorAll('.clip-tool-btn').forEach(b=>b.classList.remove('active'));
+  if(clipActiveTool)event.currentTarget?.classList.add('active');
+  const panel=document.getElementById('clip-tool-panel');
+  if(!clipActiveTool){panel.innerHTML='';return}
+  if(clipActiveTool==='text'){
+    panel.innerHTML=`<div class="clip-text-panel">
+      <input class="input" id="clip-text-input" placeholder="Type text..." style="background:#222;color:#fff;border-color:#444;margin-bottom:8px">
+      <div class="flex gap-sm mb-sm" style="align-items:center">
+        <span class="small" style="color:#999;margin-right:4px">Size:</span>
+        ${['S','M','L'].map(s=>`<button class="clip-size-btn ${s==='M'?'active':''}" onclick="document.querySelectorAll('.clip-size-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">${s}</button>`).join('')}
+      </div>
+      <div class="flex gap-sm mb-sm" style="align-items:center">
+        <span class="small" style="color:#999;margin-right:4px">Color:</span>
+        ${['#fff','#000','#facc15','#ef4444','#38bdf8'].map(c=>`<div class="clip-color-swatch ${c==='#fff'?'active':''}" style="background:${c}" onclick="document.querySelectorAll('.clip-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></div>`).join('')}
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="addClipText()">Add Text</button>
+    </div>`;
+  }else if(clipActiveTool==='emoji'){
+    panel.innerHTML=`<div class="clip-emoji-panel"><div class="flex gap-sm" style="flex-wrap:wrap;font-size:1.5rem">
+      ${['💪','🏋️','🔥','⚡','🎯','🏆','😤','💯'].map(e=>`<span style="cursor:pointer;padding:4px" onclick="addClipEmoji('${e}')">${e}</span>`).join('')}
+    </div></div>`;
+  }else if(clipActiveTool==='plan'){
+    panel.innerHTML=`<div class="clip-plan-panel"><p class="small" style="color:#999;margin-bottom:8px">${selectedReelPlanId?'Plan linked: '+esc(selectedReelPlanName||''):'Select a plan to link'}</p>
+      <button class="btn btn-sm btn-primary" onclick="selectClipPlan()">Select Plan</button>
+      ${selectedReelPlanId?`<button class="btn btn-sm" style="margin-left:6px;color:#ef4444" onclick="selectedReelPlanId=null;selectedReelPlanName=null;renderClipOverlays();toggleClipTool('plan')">Remove</button>`:''}
+    </div>`;
+  }else{panel.innerHTML=''}
+}
+
+function addClipText(){
+  const input=document.getElementById('clip-text-input');
+  const text=input?.value.trim();if(!text)return;
+  const sizeBtn=document.querySelector('.clip-size-btn.active');
+  const size=sizeBtn?.textContent==='S'?14:sizeBtn?.textContent==='L'?28:20;
+  const colorEl=document.querySelector('.clip-color-swatch.active');
+  const color=colorEl?colorEl.style.background:'#fff';
+  clipTextOverlays.push({text,x:30,y:40,size,color});
+  input.value='';
+  renderClipOverlays();
+}
+
+function addClipEmoji(emoji){
+  clipEmojiOverlays.push({emoji,x:50,y:50});
+  renderClipOverlays();
+}
+
+async function selectClipPlan(){
+  const{data:plans}=await sb.from('workout_plans').select('id,name,price,visibility').eq('user_id',currentUser.id).order('name');
+  if(!plans||!plans.length){toast('Create a plan first');return}
+  const panel=document.getElementById('clip-tool-panel');
+  panel.innerHTML=`<div class="clip-plan-panel" style="max-height:200px;overflow-y:auto">
+    ${plans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px;background:#222;border-color:#333" onclick="selectedReelPlanId='${p.id}';selectedReelPlanName='${esc(p.name)}';renderClipOverlays();toggleClipTool('plan')">
+      <div class="wo-info"><div class="wo-name" style="color:#fff">${esc(p.name)}</div><div class="wo-meta">${p.visibility==='public_paid'?'$'+(+p.price).toFixed(2):'FREE'}</div></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderClipOverlays(){
+  const container=document.getElementById('clip-overlays');
+  if(!container)return;
+  container.innerHTML=clipTextOverlays.map((t,i)=>`<div class="clip-overlay" style="left:${t.x}%;top:${t.y}%;position:absolute" data-type="text" data-idx="${i}" ontouchstart="startOverlayDrag(event,this)" onmousedown="startOverlayDrag(event,this)">
+    <span class="clip-overlay-text" style="font-size:${t.size}px;color:${t.color}">${esc(t.text)}</span>
+    <button class="clip-overlay-delete" onclick="clipTextOverlays.splice(${i},1);renderClipOverlays()">×</button>
+  </div>`).join('')+clipEmojiOverlays.map((e,i)=>`<div class="clip-overlay" style="left:${e.x}%;top:${e.y}%;position:absolute" data-type="emoji" data-idx="${i}" ontouchstart="startOverlayDrag(event,this)" onmousedown="startOverlayDrag(event,this)">
+    <span class="clip-overlay-emoji">${e.emoji}</span>
+    <button class="clip-overlay-delete" onclick="clipEmojiOverlays.splice(${i},1);renderClipOverlays()">×</button>
+  </div>`).join('');
+  // Plan card
+  const planEl=document.getElementById('clip-plan-overlay');
+  if(planEl){
+    planEl.innerHTML=selectedReelPlanId?`<div class="clip-plan-card">
+      <span>📋 ${esc(selectedReelPlanName||'Plan')} — View Plan →</span>
+      <button class="clip-plan-remove" onclick="selectedReelPlanId=null;selectedReelPlanName=null;renderClipOverlays()">×</button>
+    </div>`:'';
+  }
+}
+
+function startOverlayDrag(e,el){
+  e.preventDefault();
+  clipDragTarget=el;
+  const rect=el.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const clientY=e.touches?e.touches[0].clientY:e.clientY;
+  clipDragOff={x:clientX-rect.left,y:clientY-rect.top};
+}
+
+function setupOverlayDrag(){
+  const moveHandler=(clientX,clientY)=>{
+    if(!clipDragTarget)return;
+    const wrap=document.getElementById('clip-preview-wrap');
+    if(!wrap)return;
+    const rect=wrap.getBoundingClientRect();
+    const x=((clientX-clipDragOff.x-rect.left)/rect.width)*100;
+    const y=((clientY-clipDragOff.y-rect.top)/rect.height)*100;
+    clipDragTarget.style.left=Math.max(0,Math.min(90,x))+'%';
+    clipDragTarget.style.top=Math.max(0,Math.min(90,y))+'%';
+  };
+  document.addEventListener('mousemove',e=>{if(clipDragTarget)moveHandler(e.clientX,e.clientY)});
+  document.addEventListener('touchmove',e=>{if(clipDragTarget)moveHandler(e.touches[0].clientX,e.touches[0].clientY)},{passive:false});
+  const endHandler=()=>{
+    if(!clipDragTarget)return;
+    const wrap=document.getElementById('clip-preview-wrap');
+    if(wrap&&clipDragTarget){
+      const rect=wrap.getBoundingClientRect();
+      const elRect=clipDragTarget.getBoundingClientRect();
+      const xPct=((elRect.left-rect.left)/rect.width)*100;
+      const yPct=((elRect.top-rect.top)/rect.height)*100;
+      const type=clipDragTarget.dataset.type;
+      const idx=parseInt(clipDragTarget.dataset.idx);
+      if(type==='text'&&clipTextOverlays[idx]){clipTextOverlays[idx].x=xPct;clipTextOverlays[idx].y=yPct}
+      if(type==='emoji'&&clipEmojiOverlays[idx]){clipEmojiOverlays[idx].x=xPct;clipEmojiOverlays[idx].y=yPct}
+    }
+    clipDragTarget=null;
+  };
+  document.addEventListener('mouseup',endHandler);
+  document.addEventListener('touchend',endHandler);
+}
+
+function finishClipEditor(){
+  const editor=document.getElementById('clip-editor');
+  if(editor)editor.remove();
+  // Open post details modal
+  openModal(`
+    <div class="modal-header"><h2>Post Clip</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <video src="${clipEditorUrl}" style="width:100%;max-height:200px;border-radius:var(--radius);object-fit:cover" muted autoplay loop></video>
+      <div class="small fg2 mt-sm mb-sm">${fmtClipTime(clipTrimStart)} → ${fmtClipTime(clipTrimEnd)} · ${clipTextOverlays.length} text · ${clipEmojiOverlays.length} emoji${selectedReelPlanName?' · Plan: '+esc(selectedReelPlanName):''}</div>
+      <textarea class="input mb-sm" id="reel-caption" placeholder="Add a caption..." style="min-height:50px"></textarea>
+    </div>
     <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch">
-      <button class="btn btn-primary btn-block" onclick="submitReel()">Post Reel</button>
+      <button class="btn btn-primary btn-block" onclick="submitReel()">Post Clip</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Discard</button>
     </div>
   `);
 }
 
-let selectedReelPlanId=null;
-
-function previewReelVideo(event){
-  const file=event.target.files[0];if(!file)return;
-  if(file.size>100*1024*1024){toast('Max 100MB');event.target.value='';return}
-  document.getElementById('reel-video-preview').innerHTML=`<video src="${URL.createObjectURL(file)}" controls style="width:100%;max-height:200px;border-radius:var(--radius)"></video><div class="small fg2 mt-sm">${file.name} (${(file.size/1024/1024).toFixed(1)}MB)</div>`;
-}
-
-async function selectReelPlan(){
-  const{data:plans}=await sb.from('workout_plans').select('id,name,price,visibility').eq('user_id',currentUser.id).order('name');
-  if(!plans||!plans.length){toast('Create a plan first');return}
-  openModal(`
-    <div class="modal-header"><h2>Select Plan</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      ${plans.map(p=>`<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="selectedReelPlanId='${p.id}';closeModal();openCreateReel();setTimeout(()=>{document.getElementById('reel-plan-selected').innerHTML='<div class=\\'flex between\\' style=\\'padding:6px;background:var(--bg2);border-radius:var(--radius)\\'><span class=\\'small\\'>${esc(p.name)}</span><button class=\\'set-del\\' onclick=\\'selectedReelPlanId=null;this.parentElement.remove()\\'>&times;</button></div>'},100)">
-        <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${p.visibility==='public_paid'?'$'+(+p.price).toFixed(2):'Free'}</div></div>
-      </div>`).join('')}
-    </div>
-  `);
-}
-
 async function submitReel(){
-  const videoInput=document.getElementById('reel-video-input');
-  if(!videoInput||!videoInput.files[0]){toast('Select a video');return}
-  const file=videoInput.files[0];
-  toast('Uploading reel...');
-  const filePath=`${currentUser.id}/${Date.now()}_reel.${file.name.split('.').pop()}`;
-  const{data:upData,error:upErr}=await sb.storage.from('reels').upload(filePath,file,{upsert:true,contentType:file.type});
+  if(!clipEditorFile){toast('No video selected');return}
+  toast('Uploading clip...');
+  const file=clipEditorFile;
+  const filePath=`${currentUser.id}/${Date.now()}_clip.${file.name.split('.').pop()}`;
+  const{error:upErr}=await sb.storage.from('reels').upload(filePath,file,{upsert:true,contentType:file.type});
   if(upErr){toast('Upload failed');console.error(upErr);return}
   const{data:urlData}=sb.storage.from('reels').getPublicUrl(filePath);
   const videoUrl=urlData?.publicUrl;
   if(!videoUrl){toast('Failed to get URL');return}
-
   const caption=document.getElementById('reel-caption')?.value.trim()||null;
   const{error}=await sb.from('reels').insert({
     user_id:currentUser.id,video_url:videoUrl,caption,
-    linked_plan_id:selectedReelPlanId||null,is_public:true
+    linked_plan_id:selectedReelPlanId||null,is_public:true,
+    trim_start:clipTrimStart||0,trim_end:clipTrimEnd||0,
+    text_overlays:clipTextOverlays.length?clipTextOverlays:null,
+    emoji_overlays:clipEmojiOverlays.length?clipEmojiOverlays:null
   });
-  if(error){toast('Error posting reel');console.error(error);return}
-  selectedReelPlanId=null;
-  closeModal();toast('Reel posted!');
-  switchFeedTab('reels');
+  if(error){toast('Error posting clip');console.error(error);return}
+  clipEditorFile=null;clipEditorUrl=null;
+  selectedReelPlanId=null;selectedReelPlanName=null;
+  clipTextOverlays=[];clipEmojiOverlays=[];
+  closeModal();toast('Clip posted!');
+  nav('clips');
 }
 
 /* =============================================================
