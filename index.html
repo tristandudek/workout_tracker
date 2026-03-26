@@ -2445,6 +2445,12 @@ function fuzzySearchExercises(exs,q){
 }
 
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+function countTotalSets(exercises){
+  let total=0;
+  (exercises||[]).forEach(ex=>{if(ex.sets)total+=ex.sets.filter(s=>s.completed).length||ex.sets.length});
+  return total;
+}
+
 function renderExerciseSummary(exercises){
   if(!exercises||!exercises.length)return'';
   const MAX_SHOW=5;
@@ -4456,11 +4462,12 @@ async function renderProfilePostsGrid(){
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
       <div class="feed-stat-pills">
-        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
-        <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-        <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+        <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
+        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+        <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
+        ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
       </div>
-      ${renderExerciseSummary(wl?.exercises)}
+
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
@@ -5100,11 +5107,12 @@ async function renderProfileActivityFeed(){
           </div>
           <div class="feed-summary"><strong>${esc(wl?.workout_name||'Workout')}</strong></div>
           <div class="feed-stat-pills">
-            <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
-            <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-            <span class="feed-stat-pill"><span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+            <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
+            <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+            <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
+            ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
           </div>
-          ${renderExerciseSummary(wl?.exercises)}
+    
           ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
           ${renderFeedPhotos(photos)}
           <div class="feed-actions">
@@ -5717,11 +5725,11 @@ async function renderFeed(){
       </div>
       <div class="feed-summary"><strong>${esc(p.workout_name||'Workout')}</strong></div>
       <div class="feed-stat-pills">
-        <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(p.workout_duration||0)}</span></span>
-        <span class="feed-stat-pill"><span class="pill-val">${p.workout_exercise_count}</span> exercises</span>
-        ${p.workout_volume?`<span class="feed-stat-pill"><span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
+        <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(p.workout_duration||0)}</span></span>
+        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${p.workout_exercise_count}</span> exercises</span>
+        <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(p.workout_exercises)}</span> sets</span>
+        ${p.workout_volume?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
       </div>
-      ${renderExerciseSummary(p.workout_exercises)}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
@@ -6817,7 +6825,6 @@ async function renderCommunityFeed(communityId, members){
         ${p.user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
-      ${wl?renderExerciseSummary(wl.exercises):''}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
