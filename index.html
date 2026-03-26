@@ -1180,8 +1180,9 @@ select.input{appearance:none;cursor:pointer;
   <!-- Sub-Tabs -->
   <div class="profile-tabs" id="profile-tabs">
     <button class="profile-tab active" onclick="switchProfileTab(0)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="grid-2x2" style="width:16px;height:16px"></i></button>
-    <button class="profile-tab" onclick="switchProfileTab(1)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="map" style="width:16px;height:16px"></i></button>
-    <div class="profile-tab-indicator" id="profile-tab-indicator" style="left:0;width:50%"></div>
+    <button class="profile-tab" onclick="switchProfileTab(1)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="film" style="width:16px;height:16px"></i></button>
+    <button class="profile-tab" onclick="switchProfileTab(2)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="map" style="width:16px;height:16px"></i></button>
+    <div class="profile-tab-indicator" id="profile-tab-indicator" style="left:0;width:33.33%"></div>
   </div>
 
   <div class="profile-tab-panels">
@@ -1190,7 +1191,11 @@ select.input{appearance:none;cursor:pointer;
       <div class="profile-tab-panel" id="profile-panel-posts">
         <div id="profile-posts-grid" class="profile-posts-grid"></div>
       </div>
-      <!-- Tab 1: Plans -->
+      <!-- Tab 1: Clips -->
+      <div class="profile-tab-panel" id="profile-panel-clips">
+        <div id="profile-clips-grid"></div>
+      </div>
+      <!-- Tab 2: Plans -->
       <div class="profile-tab-panel" id="profile-panel-plans">
         <div class="profile-section">
           <div class="flex between mb-sm">
@@ -4037,7 +4042,8 @@ function switchProfileTab(idx){
     indicator.style.width=w+'%';
   }
   // Lazy-load plans and activity when first visited
-  if(idx===1&&!document.querySelector('#profile-plans-list .plan-card, #profile-plans-list .wo-card'))renderProfilePlans(currentUser.id,true);
+  if(idx===1)renderProfileClipsGrid();
+  if(idx===2&&!document.querySelector('#profile-plans-list .plan-card, #profile-plans-list .wo-card'))renderProfilePlans(currentUser.id,true);
 }
 
 // Touch swipe for profile tabs
@@ -4053,7 +4059,7 @@ function switchProfileTab(idx){
     const dx=e.changedTouches[0].clientX-startX;
     const dy=e.changedTouches[0].clientY-startY;
     if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx))return;
-    if(dx<0&&profileTabIndex<1)switchProfileTab(profileTabIndex+1);
+    if(dx<0&&profileTabIndex<2)switchProfileTab(profileTabIndex+1);
     else if(dx>0&&profileTabIndex>0)switchProfileTab(profileTabIndex-1);
   },{passive:true});
 })();
@@ -4270,6 +4276,33 @@ async function openProfilePost(postId){
       </div>
     </div>
   `);
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function renderProfileClipsGrid(){
+  const container=document.getElementById('profile-clips-grid');
+  if(!container)return;
+  const isOwn=true;
+  container.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
+  const{data:clips,error}=await sb.from('reels').select('id,video_url,thumbnail_url,caption,likes_count,comments_count,views_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+  console.log('Profile clips:',clips?.length,error);
+  let html=isOwn?`<div style="margin-bottom:12px"><button class="btn btn-sm btn-primary" onclick="openCreateReel()"><i data-lucide="plus" style="width:14px;height:14px"></i> Upload Clip</button></div>`:'';
+  if(!clips||!clips.length){
+    container.innerHTML=html+'<p class="fg3 small" style="text-align:center;padding:30px">No clips yet.</p>';
+    if(typeof lucide!=='undefined')lucide.createIcons();
+    return;
+  }
+  html+=`<div class="profile-posts-grid">${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000">
+    ${c.thumbnail_url?`<img src="${c.thumbnail_url}" loading="lazy">`:`<video src="${c.video_url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`}
+    <div class="ppt-overlay" style="opacity:1;background:linear-gradient(transparent 50%,rgba(0,0,0,.6))">
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"><i data-lucide="play" style="width:24px;height:24px"></i></div>
+      <div style="position:absolute;bottom:6px;left:8px;font-size:.6rem;display:flex;gap:6px">
+        <span>&#10084; ${c.likes_count||0}</span>
+        <span>&#9654; ${c.views_count||0}</span>
+      </div>
+    </div>
+  </div>`).join('')}</div>`;
+  container.innerHTML=html;
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
 
