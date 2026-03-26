@@ -4046,11 +4046,11 @@ async function renderProfile(){
     </div>
     <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
-      ${emTile('followers',followersCount||0,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\')"')}
-      ${emTile('following',followingCount||0,'Following',' style="cursor:pointer" onclick="openFollowList(\'following\')"')}
-      ${emTile('plans_created',plansCreatedCount||0,'Plans Created')}
-      ${emTile('completed_by',othersDoneCount||0,'Completed by Followers')}
-      ${emTile('saved_plans',savedPlansCount||0,'Saved Plans')}
+      ${emTile('followers',followersCount||0,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\',\''+currentUser.id+'\')"')}
+      ${emTile('following',followingCount||0,'Following',' style="cursor:pointer" onclick="openFollowList(\'following\',\''+currentUser.id+'\')"')}
+      ${emTile('plans_created',plansCreatedCount||0,'Plans Created',' style="cursor:pointer" onclick="openPlansCreatedModal(\''+currentUser.id+'\',true)"')}
+      ${emTile('completed_by',othersDoneCount||0,'Completed by Followers',' style="cursor:pointer" onclick="openCompletedByModal(\''+currentUser.id+'\')"')}
+      ${emTile('saved_plans',savedPlansCount||0,'Saved Plans',' style="cursor:pointer" onclick="openSavedPlansModal(\''+currentUser.id+'\')"')}
       <div class="add-tile-box" onclick="openAddTileModal('engagement')"><div class="add-icon">+</div><div class="add-lbl">Add Tile</div></div>
     </div>
   `;
@@ -5576,11 +5576,11 @@ async function openPublicProfile(userId){
   const pwm=pts.workout_metrics||{};
   const pem=pts.engagement_metrics||{};
   const prmIds=pts['1rm_tiles']||[];
-  function pubTile(section,key,val,label){
+  function pubTile(section,key,val,label,extra=''){
     const cfg=section[key];
     if(cfg&&cfg.visible===false)return'';
     if(cfg&&cfg.public===false)return'';
-    return `<div class="stat-box"><div class="val">${val}</div><div class="lbl">${label}</div></div>`;
+    return `<div class="stat-box"${extra}><div class="val">${val}</div><div class="lbl">${label}</div></div>`;
   }
   // Fetch public 1RM tiles
   let pubRmHtml='';
@@ -5598,11 +5598,11 @@ async function openPublicProfile(userId){
     </div>
     <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
-      ${pubTile(pem,'followers',pubFollowers||0,'Followers')}
-      ${pubTile(pem,'following',pubFollowing||0,'Following')}
-      ${pubTile(pem,'plans_created',pubPlansCreated||0,'Plans Created')}
-      ${pubTile(pem,'completed_by',pubCompletedByFollowers||0,'Completed by Followers')}
-      ${pubTile(pem,'saved_plans',pubSavedPlans||0,'Saved Plans')}
+      ${pubTile(pem,'followers',pubFollowers||0,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\',\''+userId+'\')"')}
+      ${pubTile(pem,'following',pubFollowing||0,'Following',' style="cursor:pointer" onclick="openFollowList(\'following\',\''+userId+'\')"')}
+      ${pubTile(pem,'plans_created',pubPlansCreated||0,'Plans Created',' style="cursor:pointer" onclick="openPlansCreatedModal(\''+userId+'\',false)"')}
+      ${pubTile(pem,'completed_by',pubCompletedByFollowers||0,'Completed by Followers',' style="cursor:pointer" onclick="openCompletedByModal(\''+userId+'\')"')}
+      ${pubTile(pem,'saved_plans',pubSavedPlans||0,'Saved Plans',' style="cursor:pointer" onclick="openSavedPlansModal(\''+userId+'\')"')}
     </div>
   `;
 
@@ -7051,39 +7051,123 @@ async function toggleFollow(userId, btn){
   }
 }
 
-async function openFollowList(type){
+async function openFollowList(type, userId){
+  const uid=userId||currentUser.id;
   let userIds=[];
   if(type==='followers'){
-    const res=await sb.from('follows').select('follower_id').eq('following_id',currentUser.id);
-    console.log('[FollowList] followers query:',res.data,res.error);
+    const res=await sb.from('follows').select('follower_id').eq('following_id',uid);
     userIds=(res.data||[]).map(f=>f.follower_id);
   }else{
-    const res=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
-    console.log('[FollowList] following query:',res.data,res.error);
+    const res=await sb.from('follows').select('following_id').eq('follower_id',uid);
     userIds=(res.data||[]).map(f=>f.following_id);
   }
-  // Fetch profiles for those user ids
   let data=[];
   if(userIds.length){
-    const{data:profiles,error}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',userIds);
-    console.log('[FollowList] profiles:',profiles,error);
+    const{data:profiles}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',userIds);
     data=profiles||[];
   }
-  // Check which ones I follow
   const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id);
   const followingSet=new Set((myFollows||[]).map(f=>f.following_id));
+  const emptyMsg=type==='followers'?'No followers yet.':'Not following anyone yet.';
 
   openModal(`
     <div class="modal-header"><h2>${type==='followers'?'Followers':'Following'}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
       ${data.length?data.map(u=>`<div class="member-row">
         <div class="feed-avatar" onclick="closeModal();openPublicProfile('${u.id}')" style="cursor:pointer">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
-        <div class="member-info" style="cursor:pointer" onclick="closeModal();openPublicProfile('${u.id}')">
+        <div class="member-info" style="cursor:pointer;flex:1" onclick="closeModal();openPublicProfile('${u.id}')">
           <div class="member-name">${esc(u.name)}</div>
           <div class="member-user">@${esc(u.username)}</div>
         </div>
         ${u.id!==currentUser.id?`<button class="btn btn-sm ${followingSet.has(u.id)?'btn-danger':'btn-primary'}" data-following="${followingSet.has(u.id)}" onclick="toggleFollow('${u.id}',this)">${followingSet.has(u.id)?'Unfollow':'Follow'}</button>`:''}
-      </div>`).join(''):'<p class="fg3 small">No one here yet.</p>'}
+      </div>`).join(''):`<p class="fg3 small">${emptyMsg}</p>`}
+    </div>
+  `);
+}
+
+async function openPlansCreatedModal(userId, isOwn){
+  const{data:plans}=await sb.from('workout_plans').select('*').eq('user_id',userId).eq('is_public',true).order('created_at',{ascending:false});
+  const{data:profile}=await sb.from('profiles').select('name').eq('id',userId).single();
+  const title=isOwn?'My Plans':(esc(profile?.name||'User')+"'s Plans");
+  // Get adoption counts
+  const planIds=(plans||[]).map(p=>p.id);
+  let adoptCounts={};
+  if(planIds.length){
+    const{data:adoptions}=await sb.from('plan_adoptions').select('plan_id').in('plan_id',planIds);
+    (adoptions||[]).forEach(a=>{adoptCounts[a.plan_id]=(adoptCounts[a.plan_id]||0)+1});
+  }
+  openModal(`
+    <div class="modal-header"><h2>${title}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      ${(plans||[]).length?(plans||[]).map(p=>{
+        const days=(p.workouts||[]).length;
+        const priceBadge=p.price>0?`<span class="tag" style="background:var(--accent);color:#fff;font-size:.6rem;padding:2px 6px">$${p.price}</span>`:'<span class="tag" style="font-size:.6rem;padding:2px 6px">FREE</span>';
+        return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();openPlanDetail('${p.id}',${isOwn})">
+          <div class="wo-info" style="flex:1">
+            <div class="wo-name">${esc(p.name)}</div>
+            <div class="wo-meta">${days} days &middot; ${adoptCounts[p.id]||0} athletes using</div>
+          </div>
+          ${priceBadge}
+        </div>`;
+      }).join(''):'<p class="fg3 small">No plans created yet.</p>'}
+    </div>
+  `);
+}
+
+async function openCompletedByModal(userId){
+  const{data:logs}=await sb.from('workout_logs').select('id,user_id,workout_name,start_time').eq('source_plan_owner_id',userId).neq('user_id',userId).order('start_time',{ascending:false}).limit(50);
+  let profiles=[];
+  if(logs&&logs.length){
+    const uids=[...new Set(logs.map(l=>l.user_id))];
+    const{data:p}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',uids);
+    profiles=p||[];
+  }
+  const pm={};profiles.forEach(p=>pm[p.id]=p);
+  openModal(`
+    <div class="modal-header"><h2>Workout Completions</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      <p class="fg3 small mb-sm">Recent activity from people doing your workouts</p>
+      ${(logs||[]).length?(logs||[]).map(l=>{
+        const u=pm[l.user_id]||{};
+        return `<div class="member-row">
+          <div class="feed-avatar" onclick="closeModal();openPublicProfile('${l.user_id}')" style="cursor:pointer">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+          <div class="member-info" style="flex:1">
+            <div class="member-name">${esc(u.name||'User')} <span class="fg3 small" style="font-weight:400">completed</span> <strong>${esc(l.workout_name||'Workout')}</strong></div>
+            <div class="member-user">${timeAgo(l.start_time)}</div>
+          </div>
+        </div>`;
+      }).join(''):'<p class="fg3 small">No one has completed your workouts yet.</p>'}
+    </div>
+  `);
+}
+
+async function openSavedPlansModal(userId){
+  const{data:savedRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*)').eq('user_id',userId);
+  const plans=(savedRows||[]).map(s=>s.workout_plans).filter(Boolean);
+  // Get creators
+  const creatorIds=[...new Set(plans.map(p=>p.user_id).filter(Boolean))];
+  let creators={};
+  if(creatorIds.length){
+    const{data:cp}=await sb.from('profiles').select('id,name,avatar_url').in('id',creatorIds);
+    (cp||[]).forEach(c=>creators[c.id]=c);
+  }
+  openModal(`
+    <div class="modal-header"><h2>Saved Plans</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+      ${plans.length?plans.map(p=>{
+        const c=creators[p.user_id]||{};
+        const priceBadge=p.price>0?`<span class="tag" style="background:var(--accent);color:#fff;font-size:.6rem;padding:2px 6px">$${p.price}</span>`:'<span class="tag" style="font-size:.6rem;padding:2px 6px">FREE</span>';
+        return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();openPlanDetail('${p.id}',false)">
+          <div style="flex:1">
+            <div class="wo-name">${esc(p.name)}</div>
+            <div class="wo-meta flex gap-sm" style="align-items:center;margin-top:2px">
+              ${c.avatar_url?`<div class="feed-avatar" style="width:16px;height:16px;font-size:.5rem"><img src="${c.avatar_url}"></div>`:''}
+              <span>${c.name?'by '+esc(c.name):''} &middot; ${(p.workouts||[]).length} days</span>
+            </div>
+          </div>
+          ${priceBadge}
+        </div>`;
+      }).join(''):'<p class="fg3 small">No saved plans yet.</p>'}
     </div>
   `);
 }
