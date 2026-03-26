@@ -2800,23 +2800,47 @@ function switchGymTab(idx){
   if(idx===1)renderGymPlans();
 }
 
+let gymFolderId=null;
 async function renderGymWorkouts(){
   const container=document.getElementById('gym-workouts-content');
   if(!container)return;
-  // Reuse existing workouts rendering into this container
   const wos=await getWorkouts();
   const{data:folders}=await sb.from('workout_folders').select('*').eq('user_id',currentUser.id).order('name');
-  let html=`<div class="flex between mb-md mt-md"><h2>My Workouts</h2><button class="btn btn-sm btn-primary" onclick="nav('create')">+ Create</button></div>`;
-  if(folders&&folders.length){
-    html+=`<div class="folders-row mb-sm">${(folders||[]).map(f=>`<div class="folder-chip" onclick="nav('workouts')">${esc(f.name)}</div>`).join('')}</div>`;
-  }
-  if(!wos||!wos.length){
-    html+='<p class="fg3 small" style="text-align:center;padding:20px">No saved workouts yet. Create your first one!</p>';
+
+  let html='';
+  if(gymFolderId){
+    // Inside a folder
+    const folder=(folders||[]).find(f=>f.id===gymFolderId);
+    html+=`<div class="flex between mb-md mt-md">
+      <h2><span style="cursor:pointer;color:var(--fg3)" onclick="gymFolderId=null;renderGymWorkouts()"><i data-lucide="arrow-left" style="width:16px;height:16px;vertical-align:middle"></i></span> ${esc(folder?folder.name:'Folder')}</h2>
+      <button class="btn btn-sm btn-primary" onclick="nav('create')">+ Create</button>
+    </div>`;
+    const folderWos=wos.filter(w=>w.folder_id===gymFolderId);
+    if(!folderWos.length){html+='<p class="fg3 small">No workouts in this folder.</p>'}
+    else{html+=renderWoCards(folderWos)}
   }else{
-    html+=wos.map(w=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="nav('workouts')">
-      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
-      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
-    </div>`).join('');
+    // Root view
+    html+=`<div class="flex between mb-md mt-md"><h2>My Workouts</h2><button class="btn btn-sm btn-primary" onclick="nav('create')">+ Create</button></div>`;
+    // Folders
+    let fHtml=`<div class="folder-tile folder-new" onclick="openCreateFolder()"><i data-lucide="plus" style="width:16px;height:16px"></i> New Folder</div>`;
+    if(folders&&folders.length){
+      const woCounts={};wos.forEach(w=>{if(w.folder_id)woCounts[w.folder_id]=(woCounts[w.folder_id]||0)+1});
+      fHtml+=(folders||[]).map(f=>`<div class="folder-tile" onclick="gymFolderId='${f.id}';renderGymWorkouts()">
+        <span class="folder-icon" style="color:${f.color||'var(--accent)'}"><i data-lucide="folder" style="width:20px;height:20px"></i></span>
+        <div><div class="folder-name">${esc(f.name)}</div><div class="folder-count">${woCounts[f.id]||0} workouts</div></div>
+      </div>`).join('');
+    }
+    html+=`<div class="folders-row mb-sm">${fHtml}</div>`;
+    // Uncategorized workouts
+    const uncategorized=wos.filter(w=>!w.folder_id);
+    if(!wos.length){
+      html+='<p class="fg3 small" style="text-align:center;padding:20px">No saved workouts yet. Create your first one!</p>';
+    }else{
+      if(uncategorized.length){
+        if(folders&&folders.length)html+=`<h3 class="fg2 mb-sm" style="font-size:.82rem">Uncategorized</h3>`;
+        html+=renderWoCards(uncategorized);
+      }
+    }
   }
   container.innerHTML=html;
   if(typeof lucide!=='undefined')lucide.createIcons();
