@@ -1169,6 +1169,9 @@ select.input{appearance:none;cursor:pointer;
     <div id="profile-action-btns" style="margin-top:8px"></div>
   </div>
 
+  <!-- Tile Sections -->
+  <div id="profile-tiles" style="margin-top:16px"></div>
+
   <!-- Body Metrics Graph -->
   <div class="profile-section" id="profile-body-metrics" style="margin-top:12px">
     <div class="flex between mb-sm">
@@ -4121,6 +4124,29 @@ async function renderProfile(){
     <div class="profile-inline-stat" onclick="openFollowList('followers','${uid}')" style="cursor:pointer"><div class="pis-val">${followersCount}</div><div class="pis-lbl">Followers</div></div>
     <div class="profile-inline-stat" onclick="openFollowList('following','${uid}')" style="cursor:pointer"><div class="pis-val">${followingCount}</div><div class="pis-lbl">Following</div></div>
   </div>`;
+
+  // ---- Render full tile sections ----
+  const tilesEl=document.getElementById('profile-tiles');
+  if(tilesEl){
+    tilesEl.innerHTML=`
+      <div class="stats-section-label">Workout Metrics</div>
+      <div class="stats-strip">
+        <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
+        <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
+        <div class="stat-box"><div class="val">${volFmt}</div><div class="lbl">Volume (${getUnit()})</div></div>
+      </div>
+      <div class="stats-section-label" style="margin-top:16px">Creator & Engagement Metrics</div>
+      <div class="stats-strip">
+        <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers','${uid}')"><div class="val">${followersCount}</div><div class="lbl">Followers</div></div>
+        <div class="stat-box" style="cursor:pointer" onclick="openFollowList('following','${uid}')"><div class="val">${followingCount}</div><div class="lbl">Following</div></div>
+        <div class="stat-box" style="cursor:pointer" onclick="openPlansCreatedModal('${uid}',true)"><div class="val">${plansCreatedCount}</div><div class="lbl">Plans Created</div></div>
+        <div class="stat-box" style="cursor:pointer" onclick="openCompletedByModal('${uid}')"><div class="val">${othersDoneCount}</div><div class="lbl">Completed by Followers</div></div>
+        <div class="stat-box" style="cursor:pointer" onclick="openSavedPlansModal('${uid}')"><div class="val">${savedPlansCount}</div><div class="lbl">Saved Plans</div></div>
+      </div>
+      <button class="btn btn-block mt-sm" style="border:1.5px solid var(--accent);color:var(--accent);background:transparent;font-size:.78rem" onclick="openAddTileModal('workout')"><i data-lucide="sliders" style="width:14px;height:14px"></i> Edit Tiles</button>
+    `;
+  }
+  console.log('Tiles rendered');
 
   // ---- Body metrics chart ----
   try{await renderMetricsChart()}catch(e){console.error('Chart error:',e)}
