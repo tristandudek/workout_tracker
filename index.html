@@ -1040,6 +1040,27 @@ select.input{appearance:none;cursor:pointer;
   <div class="reels-feed" id="reels-feed-container"></div>
 </div>
 
+<!-- ============================================================
+     GYM VIEW (Workouts + Plans sub-tabs)
+     ============================================================ -->
+<div class="view" id="view-gym" data-view="gym">
+  <div class="profile-tabs" id="gym-tabs" style="margin-top:12px">
+    <button class="profile-tab active" onclick="switchGymTab(0)">My Workouts</button>
+    <button class="profile-tab" onclick="switchGymTab(1)">Workout Plans</button>
+    <div class="profile-tab-indicator" id="gym-tab-indicator" style="left:0;width:50%"></div>
+  </div>
+  <div class="profile-tab-panels">
+    <div class="profile-tab-slider" id="gym-tab-slider">
+      <div class="profile-tab-panel" id="gym-panel-workouts">
+        <div id="gym-workouts-content"></div>
+      </div>
+      <div class="profile-tab-panel" id="gym-panel-plans">
+        <div id="gym-plans-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="view" id="view-public-profile" data-view="public-profile">
   <button class="btn btn-sm btn-ghost mb-md" onclick="history.back()||nav('feed')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back</button>
   <div id="pub-profile-content"></div>
@@ -1462,6 +1483,7 @@ select.input{appearance:none;cursor:pointer;
 <nav class="nav" id="main-nav">
   <button class="nav-btn active" data-nav="feed" onclick="nav('feed')"><span class="nav-icon"><i data-lucide="dna" style="width:22px;height:22px"></i></span>The Lab</button>
   <button class="nav-btn" data-nav="clips" onclick="nav('clips')"><span class="nav-icon"><i data-lucide="film" style="width:22px;height:22px"></i></span>Clips</button>
+  <button class="nav-btn" data-nav="gym" onclick="nav('gym')"><span class="nav-icon"><i data-lucide="dumbbell" style="width:22px;height:22px"></i></span>Workouts</button>
   <button class="nav-btn" data-nav="messages" onclick="nav('messages')"><span class="nav-icon" style="position:relative"><i data-lucide="message-circle" style="width:22px;height:22px"></i><span class="notif-badge hidden" id="msg-count" style="position:absolute;top:-4px;right:-6px;font-size:.55rem">0</span></span>Messages</button>
   <button class="nav-btn" data-nav="profile" onclick="nav('profile')"><span class="nav-icon"><i data-lucide="user" style="width:22px;height:22px" id="nav-profile-icon"></i></span>Profile</button>
 </nav>
@@ -2353,6 +2375,7 @@ async function nav(view){
   if(view==='plans-library')await renderPlansLibrary();
   if(view==='discover')await renderDiscoverAthletes();
   if(view==='clips')await renderReelsFeed();
+  if(view==='gym')await renderGymPage();
   window.scrollTo(0,0);
   if(typeof lucide!=='undefined')lucide.createIcons();
 }
@@ -2753,6 +2776,74 @@ async function deleteCustomExercise(id){
    MY WORKOUTS
    ============================================================= */
 let currentFolderId=null;
+
+let gymTabIndex=0;
+async function renderGymPage(){
+  switchGymTab(0);
+  await renderGymWorkouts();
+}
+
+function switchGymTab(idx){
+  gymTabIndex=idx;
+  const slider=document.getElementById('gym-tab-slider');
+  if(slider)slider.style.transform=`translateX(-${idx*100}%)`;
+  const tabs=document.querySelectorAll('#gym-tabs .profile-tab');
+  tabs.forEach((t,i)=>t.classList.toggle('active',i===idx));
+  const indicator=document.getElementById('gym-tab-indicator');
+  if(indicator&&tabs.length){const w=100/tabs.length;indicator.style.left=w*idx+'%';indicator.style.width=w+'%'}
+  if(idx===0)renderGymWorkouts();
+  if(idx===1)renderGymPlans();
+}
+
+async function renderGymWorkouts(){
+  const container=document.getElementById('gym-workouts-content');
+  if(!container)return;
+  // Reuse existing workouts rendering into this container
+  const wos=await getWorkouts();
+  const{data:folders}=await sb.from('workout_folders').select('*').eq('user_id',currentUser.id).order('name');
+  let html=`<div class="flex between mb-md mt-md"><h2>My Workouts</h2><button class="btn btn-sm btn-primary" onclick="nav('create')">+ Create</button></div>`;
+  if(folders&&folders.length){
+    html+=`<div class="folders-row mb-sm">${(folders||[]).map(f=>`<div class="folder-chip" onclick="nav('workouts')">${esc(f.name)}</div>`).join('')}</div>`;
+  }
+  if(!wos||!wos.length){
+    html+='<p class="fg3 small" style="text-align:center;padding:20px">No saved workouts yet. Create your first one!</p>';
+  }else{
+    html+=wos.map(w=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="nav('workouts')">
+      <div class="wo-info"><div class="wo-name">${esc(w.name)}</div><div class="wo-meta">${w.exercises.length} exercises</div></div>
+      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+    </div>`).join('');
+  }
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function renderGymPlans(){
+  const container=document.getElementById('gym-plans-content');
+  if(!container)return;
+  container.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
+  // My plans
+  const{data:myPlans}=await sb.from('workout_plans').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  // Saved plans
+  const{data:savedRows}=await sb.from('saved_plans').select('plan_id,workout_plans(*)').eq('user_id',currentUser.id);
+  const savedPlans=(savedRows||[]).map(s=>s.workout_plans).filter(Boolean);
+  let html=`<div class="flex between mb-md mt-md"><h2>Workout Plans</h2><button class="btn btn-sm btn-primary" onclick="openCreatePlan()">+ Create Plan</button></div>`;
+  html+=`<h3 class="fg2 mb-sm" style="font-size:.82rem">My Creations</h3>`;
+  if(myPlans&&myPlans.length){
+    html+=myPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',true)">
+      <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
+      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+    </div>`).join('');
+  }else{html+='<p class="fg3 small mb-md">No plans created yet.</p>'}
+  html+=`<h3 class="fg2 mb-sm mt-md" style="font-size:.82rem">Saved Plans</h3>`;
+  if(savedPlans.length){
+    html+=savedPlans.map(p=>`<div class="wo-card" style="margin-bottom:6px;cursor:pointer" onclick="openPlanDetail('${p.id}',false)">
+      <div class="wo-info"><div class="wo-name">${esc(p.name)}</div><div class="wo-meta">${(p.workouts||[]).length} days</div></div>
+      <i data-lucide="chevron-right" style="width:16px;height:16px;color:var(--fg3)"></i>
+    </div>`).join('');
+  }else{html+='<p class="fg3 small">No saved plans yet. <span class="accent" style="cursor:pointer" onclick="nav(\'plans-library\')">Browse plans</span></p>'}
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
 
 async function renderWorkouts(){
   const wos=await getWorkouts();
