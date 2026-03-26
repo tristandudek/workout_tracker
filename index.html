@@ -1096,6 +1096,17 @@ select.input{appearance:none;cursor:pointer;
   <div class="profile-section">
     <p class="small fg2 mb-md">Control what other athletes can see on your profile.</p>
 
+    <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0;border-bottom:2px solid var(--bg4)">
+      <div class="flex between" style="align-items:center">
+        <div class="flex gap-sm" style="align-items:center"><i data-lucide="globe" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label" style="font-weight:700">Profile Visibility</span></div>
+        <div class="flex gap-sm" style="align-items:center">
+          <label class="toggle-switch"><input type="checkbox" id="ps-profile" onchange="updatePrivacyBadge(this,'ps-profile-badge')"><span class="toggle-slider"></span></label>
+          <span id="ps-profile-badge" class="tag" style="font-size:.6rem;padding:2px 8px">Private</span>
+        </div>
+      </div>
+      <div class="small fg3" id="ps-profile-desc" style="padding-left:24px">Visitors only see your photo, bio and stats</div>
+    </div>
+
     <div class="privacy-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:12px 0">
       <div class="flex between" style="align-items:center">
         <div class="flex gap-sm" style="align-items:center"><i data-lucide="dumbbell" style="width:16px;height:16px;color:var(--fg3)"></i><span class="privacy-label">Workout History</span></div>
@@ -4139,6 +4150,7 @@ async function saveMyInfoPage(){
 }
 
 const privacyDescs={
+  profile:{on:'Anyone can view your full profile',off:'Visitors only see your photo, bio and stats'},
   workouts:{on:'Completed workouts appear on your profile and feed',off:'Workout history is only visible to you'},
   weight:{on:'Your weight history is visible on your profile',off:'Weight data is only visible to you'},
   bodyfat:{on:'Your body fat history is visible on your profile',off:'Body fat data is only visible to you'},
@@ -4161,7 +4173,10 @@ function updatePrivacyBadge(checkbox,badgeId){
 async function renderPrivacy(){
   if(!currentProfile)currentProfile=await fetchProfile();
   if(!currentProfile)return;
+  const isProfilePublic=currentProfile.is_profile_public!==false;
+  console.log('Privacy settings page loaded, is_profile_public:',isProfilePublic);
   const checks=[
+    ['ps-profile','ps-profile-badge',isProfilePublic],
     ['ps-workouts','ps-workouts-badge',!!currentProfile.is_workouts_public],
     ['ps-weight','ps-weight-badge',!!currentProfile.is_weight_public],
     ['ps-bodyfat','ps-bodyfat-badge',!!currentProfile.is_body_fat_public],
@@ -4169,6 +4184,7 @@ async function renderPrivacy(){
   ];
   checks.forEach(([id,badge,val])=>{
     const el=document.getElementById(id);
+    if(!el)return;
     el.checked=val;
     updatePrivacyBadge(el,badge);
   });
@@ -4176,11 +4192,13 @@ async function renderPrivacy(){
 }
 
 async function savePrivacyPage(){
+  const profileEl=document.getElementById('ps-profile');
   const updates={
-    is_workouts_public:document.getElementById('ps-workouts').checked,
-    is_weight_public:document.getElementById('ps-weight').checked,
-    is_body_fat_public:document.getElementById('ps-bodyfat').checked,
-    is_photos_public:document.getElementById('ps-photos').checked
+    is_profile_public:profileEl?profileEl.checked:true,
+    is_workouts_public:document.getElementById('ps-workouts')?.checked||false,
+    is_weight_public:document.getElementById('ps-weight')?.checked||false,
+    is_body_fat_public:document.getElementById('ps-bodyfat')?.checked||false,
+    is_photos_public:document.getElementById('ps-photos')?.checked||false
   };
   const{error}=await sb.from('profiles').update(updates).eq('id',currentUser.id);
   if(error){toast('Error saving');console.error(error);return}
