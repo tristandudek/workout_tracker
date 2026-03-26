@@ -516,7 +516,7 @@ select.input{appearance:none;cursor:pointer;
    ============================================================ */
 #profile-badge{
   position:fixed;top:0;right:0;left:0;z-index:100;height:56px;
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  display:flex;align-items:center;justify-content:space-between;
   padding:0 14px;background:var(--bg);border-bottom:1px solid var(--bg4);
 }
 @media(min-width:768px){#profile-badge{left:240px}}
@@ -524,12 +524,10 @@ select.input{appearance:none;cursor:pointer;
 .header-logo{font-family:var(--font-display);font-weight:900;font-size:1.15rem;color:var(--fg);letter-spacing:.02em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
 .header-logo .accent{color:var(--accent)}
 @media(min-width:768px){.header-logo{display:none}}
-.header-center{display:flex;align-items:center;justify-content:center}
-.header-right{display:flex;align-items:center;gap:10px;justify-content:flex-end}
-.start-wo-header{display:flex;align-items:center;gap:5px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-family:var(--font-display);font-weight:700;font-size:.72rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.header-right{display:flex;align-items:center;gap:10px}
+.start-wo-header{display:flex;align-items:center;gap:4px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 12px;font-family:var(--font-display);font-weight:700;font-size:.72rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .start-wo-header:hover{opacity:.85}
-.start-wo-header .start-wo-text{display:inline}
-@media(max-width:767px){.start-wo-header .start-wo-text{display:none}.start-wo-header{padding:6px 8px;border-radius:50%}}
+@media(max-width:767px){.start-wo-header{font-size:.65rem;padding:5px 10px;gap:3px}}
 .profile-menu-wrap{position:relative}
 .profile-menu-btn{
   width:36px;height:36px;border-radius:50%;background:var(--bg2);border:2px solid var(--bg4);
@@ -883,7 +881,6 @@ select.input{appearance:none;cursor:pointer;
 <!-- DESKTOP SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-logo">forg<span class="accent">d</span></div>
-  <button class="btn btn-primary btn-block sidebar-cta" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:16px;height:16px"></i> Start Workout</button>
   <button class="sidebar-link active" data-nav="feed" onclick="nav('feed')"><span class="sidebar-icon"><i data-lucide="radio" style="width:18px;height:18px"></i></span>The Lab</button>
   <button class="sidebar-link" data-nav="workouts" onclick="nav('workouts')"><span class="sidebar-icon"><i data-lucide="dumbbell" style="width:18px;height:18px"></i></span>My Workouts</button>
   <button class="sidebar-link" data-nav="plans-library" onclick="nav('plans-library')"><span class="sidebar-icon"><i data-lucide="calendar" style="width:18px;height:18px"></i></span>Workout Plans</button>
@@ -901,10 +898,8 @@ select.input{appearance:none;cursor:pointer;
   <div class="header-left">
     <div class="header-logo" onclick="nav('feed')">forg<span class="accent">d</span></div>
   </div>
-  <div class="header-center">
-    <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:14px;height:14px"></i><span class="start-wo-text">Start Workout</span></button>
-  </div>
   <div class="header-right">
+  <button class="start-wo-header" onclick="startWorkoutFlow()"><i data-lucide="play" style="width:13px;height:13px"></i> Start Workout</button>
   <button class="notif-bell" onclick="nav('messages')" style="position:relative">
     <i data-lucide="message-square" style="width:18px;height:18px"></i>
     <span class="notif-badge hidden" id="msg-count" style="position:absolute;top:-2px;right:-4px">0</span>
