@@ -5962,9 +5962,15 @@ async function openChat(conversationId, otherUserId){
   }
 
   // Mark unread messages as read for this conversation only
-  console.log('Marked messages as read for conversation:',conversationId);
-  const{error:readErr}=await sb.from('messages').update({is_read:true}).eq('conversation_id',conversationId).neq('sender_id',currentUser.id).eq('is_read',false);
-  if(readErr)console.log('Mark read error:',readErr);
+  const{data:unreadMsgs}=await sb.from('messages').select('id').eq('conversation_id',conversationId).neq('sender_id',currentUser.id).eq('is_read',false);
+  console.log('Unread messages to mark:',unreadMsgs?.length,'for conversation:',conversationId);
+  if(unreadMsgs&&unreadMsgs.length){
+    for(const msg of unreadMsgs){
+      const{error:readErr}=await sb.from('messages').update({is_read:true}).eq('id',msg.id);
+      if(readErr)console.log('Mark read error for msg',msg.id,':',readErr);
+    }
+    console.log('Marked',unreadMsgs.length,'messages as read');
+  }
 
   // Load messages
   const{data:msgs}=await sb.from('messages').select('*').eq('conversation_id',conversationId).order('created_at');
