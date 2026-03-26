@@ -5767,6 +5767,18 @@ async function setFeedCommunityFilter(communityId){
 async function followUser(userId){
   const{error}=await sb.from('follows').insert({follower_id:currentUser.id,following_id:userId});
   if(error){toast(error.message.includes('duplicate')?'Already following':'Error following');return}
+  // Create follow notification client-side (backup if DB trigger doesn't fire)
+  console.log('Creating follow notification for:',userId);
+  const followerName=currentProfile?.name||'Someone';
+  const{data:notifData,error:notifErr}=await sb.from('notifications').insert({
+    user_id:userId,
+    type:'follow',
+    message:followerName+' started following you',
+    related_id:currentUser.id,
+    is_read:false
+  }).select().single();
+  console.log('Notification created:',notifData,'error:',notifErr);
+  if(notifErr)console.log('Notification error:',notifErr);
   toast('Following!');
   return true;
 }
@@ -5909,8 +5921,10 @@ async function openChat(conversationId, otherUserId){
     document.getElementById('chat-request-banner').innerHTML='';
   }
 
-  // Mark messages as read
-  await sb.from('messages').update({is_read:true}).eq('conversation_id',conversationId).neq('sender_id',currentUser.id);
+  // Mark unread messages as read for this conversation only
+  console.log('Marked messages as read for conversation:',conversationId);
+  const{error:readErr}=await sb.from('messages').update({is_read:true}).eq('conversation_id',conversationId).neq('sender_id',currentUser.id).eq('is_read',false);
+  if(readErr)console.log('Mark read error:',readErr);
 
   // Load messages
   const{data:msgs}=await sb.from('messages').select('*').eq('conversation_id',conversationId).order('created_at');
