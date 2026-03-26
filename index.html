@@ -2651,7 +2651,8 @@ async function saveWorkoutTemplate(){
     const freshWos=await getWorkouts();
     if(freshWos.length){
       const newest=freshWos[0]; // sorted by created_at desc
-      planWorkouts.push({workout_template_id:newest.id,week:1,day:planWorkouts.length+1});
+      const _lc=planWorkouts.length?planWorkouts[planWorkouts.length-1].cycle||1:1;
+      planWorkouts.push({workout_template_id:newest.id,cycle:_lc});
     }
     await nav('plan-edit');
     renderPlanWorkouts();
@@ -4249,28 +4250,44 @@ let planDragIdx=null;
 async function renderPlanWorkouts(){
   const wos=await getWorkouts();
   const container=document.getElementById('plan-workouts-list');
-  // Auto-assign cycle/day labels based on position
-  planWorkouts.forEach((pw,i)=>{pw.week=1;pw.day=i+1});
+
+  // Auto-calculate day numbers within each cycle
+  recalcPlanDays();
 
   container.innerHTML=planWorkouts.map((pw,i)=>{
-    const label=`C1D${i+1}`;
+    const cycle=pw.cycle||1;
+    const day=pw.day||1;
+    const cycleInput=`<input type="number" class="input" style="width:44px;padding:2px 4px;height:26px;font-size:.75rem;text-align:center;color:var(--accent);font-weight:700" value="${cycle}" min="1" onchange="planWorkouts[${i}].cycle=+this.value;renderPlanWorkouts()">`;
+    const dayLabel=`<span style="font-size:.75rem;color:var(--fg3)">Day ${day}</span>`;
+
     if(pw.type==='rest'){
       return `<div class="plan-workout-item" style="background:var(--bg2);opacity:.8" draggable="true" ondragstart="planDragIdx=${i}" ondragover="event.preventDefault()" ondrop="planDrop(${i})">
-        <span style="cursor:grab;color:var(--fg3);margin-right:4px"><i data-lucide="grip-vertical" style="width:14px;height:14px"></i></span>
-        <span class="pw-label">${label}</span>
+        <span style="cursor:grab;color:var(--fg3);flex-shrink:0"><i data-lucide="grip-vertical" style="width:14px;height:14px"></i></span>
+        <span class="flex gap-sm" style="flex-shrink:0;align-items:center"><span class="small fg3">Cycle</span>${cycleInput}${dayLabel}</span>
         <span class="pw-name" style="display:flex;align-items:center;gap:6px;color:var(--fg3)"><i data-lucide="moon" style="width:14px;height:14px"></i> Rest Day</span>
         <button class="set-del" style="margin-left:auto" onclick="planWorkouts.splice(${i},1);renderPlanWorkouts()">&times;</button>
       </div>`;
     }
     const wo=wos.find(w=>w.id===pw.workout_template_id);
     return `<div class="plan-workout-item" draggable="true" ondragstart="planDragIdx=${i}" ondragover="event.preventDefault()" ondrop="planDrop(${i})">
-      <span style="cursor:grab;color:var(--fg3);margin-right:4px"><i data-lucide="grip-vertical" style="width:14px;height:14px"></i></span>
-      <span class="pw-label">${label}</span>
+      <span style="cursor:grab;color:var(--fg3);flex-shrink:0"><i data-lucide="grip-vertical" style="width:14px;height:14px"></i></span>
+      <span class="flex gap-sm" style="flex-shrink:0;align-items:center"><span class="small fg3">Cycle</span>${cycleInput}${dayLabel}</span>
       <span class="pw-name">${wo?esc(wo.name):'Select...'}</span>
       <button class="set-del" style="margin-left:auto" onclick="planWorkouts.splice(${i},1);renderPlanWorkouts()">&times;</button>
     </div>`;
   }).join('');
   if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+function recalcPlanDays(){
+  // For each cycle, assign day numbers sequentially based on order in the array
+  const cycleDayCounters={};
+  planWorkouts.forEach(pw=>{
+    const c=pw.cycle||1;
+    if(!cycleDayCounters[c])cycleDayCounters[c]=0;
+    cycleDayCounters[c]++;
+    pw.day=cycleDayCounters[c];
+  });
 }
 
 function planDrop(toIdx){
@@ -4282,7 +4299,8 @@ function planDrop(toIdx){
 }
 
 function addRestDayToPlan(){
-  planWorkouts.push({type:'rest',note:'Active recovery'});
+  const lastCycle=planWorkouts.length?planWorkouts[planWorkouts.length-1].cycle||1:1;
+  planWorkouts.push({type:'rest',note:'Active recovery',cycle:lastCycle});
   renderPlanWorkouts();
 }
 
@@ -4290,7 +4308,7 @@ let _returnToPlanAfterCreate=false;
 
 async function addWorkoutToPlan(){
   const wos=await getWorkouts();
-  const woList=wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();planWorkouts.push({workout_template_id:'${w.id}',week:1,day:${planWorkouts.length+1}});renderPlanWorkouts()">
+  const woList=wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();const _lc2=planWorkouts.length?planWorkouts[planWorkouts.length-1].cycle||1:1;planWorkouts.push({workout_template_id:'${w.id}',cycle:_lc2});renderPlanWorkouts()">
     <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises</div></div>
   </div>`).join('');
 
