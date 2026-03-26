@@ -835,6 +835,7 @@ select.input{appearance:none;cursor:pointer;
     <div class="profile-menu-dropdown" id="profile-menu-dropdown">
       <div class="profile-menu-name" id="badge-name"></div>
       <button class="profile-menu-item" onclick="closeProfileMenu();nav('profile')"><i data-lucide="user" style="width:16px;height:16px"></i> My Profile</button>
+      <button class="profile-menu-item" onclick="closeProfileMenu();nav('my-activity')"><i data-lucide="activity" style="width:16px;height:16px"></i> My Activity</button>
       <button class="profile-menu-item" onclick="closeProfileMenu();nav('my-info')"><i data-lucide="settings" style="width:16px;height:16px"></i> My Information</button>
       <button class="profile-menu-item" onclick="closeProfileMenu();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
       <div class="divider" style="margin:6px 0"></div>
@@ -1151,6 +1152,15 @@ select.input{appearance:none;cursor:pointer;
   <div id="msg-empty" class="text-center mt-lg hidden">
     <p class="fg3">No messages yet. Start a conversation from someone's profile.</p>
   </div>
+</div>
+
+<!-- ============================================================
+     MY ACTIVITY VIEW (private, likes/comments/reposts)
+     ============================================================ -->
+<div class="view" id="view-my-activity" data-view="my-activity">
+  <button class="btn btn-sm btn-ghost mb-md mt-md" onclick="nav('profile')"><i data-lucide="arrow-left" style="width:14px;height:14px"></i> Back to Profile</button>
+  <h2 class="mb-md">My Activity</h2>
+  <div id="my-activity-feed"></div>
 </div>
 
 <!-- ============================================================
@@ -2072,6 +2082,7 @@ async function nav(view){
   if(view==='privacy')await renderPrivacy();
   if(view==='communities')await renderCommunities();
   if(view==='messages')await renderMessages();
+  if(view==='my-activity')await renderMyActivity();
   if(view==='plans-library')await renderPlansLibrary();
   window.scrollTo(0,0);
   if(typeof lucide!=='undefined')lucide.createIcons();
@@ -3920,6 +3931,44 @@ async function renderProfilePlans(userId, isOwn){
   </div>`).join('')}</div>`;
 }
 
+async function renderMyActivity(){
+  const container=document.getElementById('my-activity-feed');
+  const activities=[];
+
+  // Likes
+  const{data:likes}=await sb.from('post_likes').select('*,workout_posts(id,caption,user_id,created_at,profiles:user_id(name,username))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  if(likes){
+    likes.forEach(l=>{
+      if(!l.workout_posts)return;
+      const author=l.workout_posts.profiles;
+      activities.push({
+        date:new Date(l.created_at),
+        html:`<div class="card"><div class="small"><span class="accent">You</span> liked <strong>${esc(author?.name||'someone')}</strong>'s workout</div><div class="small fg3 mt-sm">${timeAgo(l.created_at)}</div></div>`
+      });
+    });
+  }
+
+  // Comments
+  const{data:comments}=await sb.from('post_comments').select('*,workout_posts(id,user_id,profiles:user_id(name,username))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  if(comments){
+    comments.forEach(c=>{
+      if(!c.workout_posts)return;
+      const author=c.workout_posts.profiles;
+      activities.push({
+        date:new Date(c.created_at),
+        html:`<div class="card"><div class="small"><span class="accent">You</span> commented on <strong>${esc(author?.name||'someone')}</strong>'s post</div><div class="small fg2 mt-sm" style="font-style:italic">"${esc(c.content.length>100?c.content.slice(0,100)+'...':c.content)}"</div><div class="small fg3 mt-sm">${timeAgo(c.created_at)}</div></div>`
+      });
+    });
+  }
+
+  activities.sort((a,b)=>b.date-a.date);
+  if(!activities.length){
+    container.innerHTML='<p class="fg3 small">No activity yet — like or comment on posts to see your activity here.</p>';
+    return;
+  }
+  container.innerHTML=activities.slice(0,30).map(a=>a.html).join('');
+}
+
 async function renderMyInfo(){
   if(!currentProfile)currentProfile=await fetchProfile();
   if(!currentProfile)return;
@@ -4059,37 +4108,7 @@ async function renderProfileActivityFeed(){
     });
   }
 
-  // Fetch likes (posts I liked)
-  console.log('[ProfileFeed] fetching likes...');
-  const{data:likes,error:likeErr}=await sb.from('post_likes').select('*,workout_posts(id,caption,user_id,created_at,profiles:user_id(name))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(5);
-  console.log('[ProfileFeed] likes:',likes?.length,'error:',likeErr);
-  if(likes){
-    likes.forEach(l=>{
-      if(!l.workout_posts)return;
-      const postAuthor=l.workout_posts.profiles?.name||'Someone';
-      activities.push({
-        date:new Date(l.created_at),
-        type:'like',
-        html:`<div class="card"><div class="small fg2">&#10084; Liked ${esc(postAuthor)}'s workout &middot; ${new Date(l.created_at).toLocaleDateString()}</div></div>`
-      });
-    });
-  }
-
-  // Fetch comments
-  console.log('[ProfileFeed] fetching comments...');
-  const{data:comments,error:commentErr}=await sb.from('post_comments').select('*,workout_posts(id,user_id,profiles:user_id(name))').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(5);
-  console.log('[ProfileFeed] comments:',comments?.length,'error:',commentErr);
-  if(comments){
-    comments.forEach(c=>{
-      if(!c.workout_posts)return;
-      const postAuthor=c.workout_posts.profiles?.name||'Someone';
-      activities.push({
-        date:new Date(c.created_at),
-        type:'comment',
-        html:`<div class="card"><div class="small fg2">&#128172; Commented on ${esc(postAuthor)}'s workout &middot; ${new Date(c.created_at).toLocaleDateString()}</div><div class="small" style="margin-top:4px">"${esc(c.content.length>80?c.content.slice(0,80)+'...':c.content)}"</div></div>`
-      });
-    });
-  }
+  // Likes and comments removed from public profile feed — moved to My Activity page
 
   // Sort by date descending
   activities.sort((a,b)=>b.date-a.date);
