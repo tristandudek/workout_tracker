@@ -607,6 +607,16 @@ select.input{appearance:none;cursor:pointer;
    PROFILE VIEW
    ============================================================ */
 .profile-header{text-align:center;padding:20px 0}
+.profile-inline-stats{display:flex;align-items:center;gap:0}
+.profile-inline-stat{text-align:center;flex:1;cursor:pointer}
+.profile-inline-stat .pis-val{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--fg);line-height:1.2}
+.profile-inline-stat .pis-lbl{font-family:var(--font-body);font-size:10px;color:var(--fg3);font-weight:500}
+.profile-inline-stat+.profile-inline-stat{border-left:1px solid var(--bg4)}
+.profile-posts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.profile-post-thumb{aspect-ratio:1;background:var(--bg3);overflow:hidden;cursor:pointer;position:relative}
+.profile-post-thumb img,.profile-post-thumb video{width:100%;height:100%;object-fit:cover}
+.profile-post-thumb .ppt-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(0,0,0,.3);opacity:0;transition:opacity .15s;color:#fff;font-size:.75rem;font-weight:600}
+.profile-post-thumb:hover .ppt-overlay{opacity:1}
 .profile-tabs{display:flex;border-bottom:2px solid var(--bg4);margin-bottom:16px;position:relative}
 .profile-tab{flex:1;text-align:center;padding:10px 0;font-family:var(--font-display);font-size:.78rem;font-weight:600;color:var(--fg3);cursor:pointer;border:none;background:none;transition:color .15s;text-transform:uppercase;letter-spacing:.04em}
 .profile-tab.active{color:var(--accent);font-weight:700}
@@ -1126,50 +1136,45 @@ select.input{appearance:none;cursor:pointer;
      PROFILE VIEW (pure view page)
      ============================================================ -->
 <div class="view" id="view-profile" data-view="profile">
-  <div style="display:flex;justify-content:flex-end;padding:12px 0 0">
-    <div class="profile-settings-wrap" style="position:relative">
-      <button class="notif-bell" onclick="toggleProfileSettings()" style="color:var(--fg3)"><i data-lucide="settings" style="width:20px;height:20px"></i></button>
-      <div class="profile-settings-dropdown" id="profile-settings-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--bg);border:1px solid var(--bg4);z-index:700;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);overflow:hidden">
-        <button class="profile-menu-item" onclick="closeProfileSettings();nav('my-info')"><i data-lucide="user" style="width:16px;height:16px"></i> My Information</button>
-        <button class="profile-menu-item" onclick="closeProfileSettings();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
-        <div class="divider" style="margin:4px 0"></div>
-        <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
-      </div>
-    </div>
-  </div>
-  <div class="profile-header">
-    <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()">
+  <!-- Profile Header: avatar left, stats right -->
+  <div style="display:flex;align-items:center;gap:16px;padding:16px 0 8px">
+    <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" style="flex-shrink:0">
       <div class="profile-avatar" id="profile-avatar"></div>
       <div class="avatar-overlay">Change</div>
       <input type="file" id="avatar-input" accept="image/*" onchange="uploadAvatar(event)">
     </div>
-    <h2 id="profile-display-name"></h2>
-    <p class="fg2 small" id="profile-username-display"></p>
-    <p class="fg3" id="profile-member-number" style="font-size:.7rem;margin-top:4px"></p>
-    <p class="fg2 small mt-sm" id="profile-bio-display" style="max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5"></p>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <h2 id="profile-display-name" style="font-size:1.1rem;margin:0"></h2>
+        <div class="profile-settings-wrap" style="position:relative;margin-left:auto">
+          <button class="notif-bell" onclick="toggleProfileSettings()" style="color:var(--fg3)"><i data-lucide="settings" style="width:18px;height:18px"></i></button>
+          <div class="profile-settings-dropdown" id="profile-settings-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--bg);border:1px solid var(--bg4);z-index:700;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);overflow:hidden">
+            <button class="profile-menu-item" onclick="closeProfileSettings();nav('my-info')"><i data-lucide="user" style="width:16px;height:16px"></i> My Information</button>
+            <button class="profile-menu-item" onclick="closeProfileSettings();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
+            <div class="divider" style="margin:4px 0"></div>
+            <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
+          </div>
+        </div>
+      </div>
+      <p class="fg2" id="profile-username-display" style="font-size:.78rem;margin:0"></p>
+      <p class="fg3" id="profile-member-number" style="font-size:.65rem;margin:2px 0 0"></p>
+      <!-- Inline stats row -->
+      <div id="profile-stats" style="margin-top:8px"></div>
+    </div>
   </div>
+  <p class="fg2 small" id="profile-bio-display" style="line-height:1.5;margin:0 0 12px;padding:0 4px"></p>
 
   <div class="profile-tabs" id="profile-tabs">
-    <button class="profile-tab active" onclick="switchProfileTab(0)">Overview</button>
-    <button class="profile-tab" onclick="switchProfileTab(1)">Plans</button>
-    <button class="profile-tab" onclick="switchProfileTab(2)">Activity</button>
-    <div class="profile-tab-indicator" id="profile-tab-indicator" style="left:0;width:33.33%"></div>
+    <button class="profile-tab active" onclick="switchProfileTab(0)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="grid-2x2" style="width:16px;height:16px"></i></button>
+    <button class="profile-tab" onclick="switchProfileTab(1)" style="display:flex;align-items:center;justify-content:center;gap:4px"><i data-lucide="map" style="width:16px;height:16px"></i></button>
+    <div class="profile-tab-indicator" id="profile-tab-indicator" style="left:0;width:50%"></div>
   </div>
 
   <div class="profile-tab-panels">
     <div class="profile-tab-slider" id="profile-tab-slider">
-      <!-- Tab 0: Overview -->
-      <div class="profile-tab-panel" id="profile-panel-overview">
-        <div id="profile-stats"></div>
-        <div class="profile-section">
-          <div class="flex between mb-sm">
-            <h3>Body Metrics</h3>
-            <button class="btn btn-sm btn-primary" onclick="openLogMetrics()">Log Stats</button>
-          </div>
-          <div style="position:relative;height:220px">
-            <canvas id="metrics-canvas"></canvas>
-          </div>
-        </div>
+      <!-- Tab 0: Posts Grid -->
+      <div class="profile-tab-panel" id="profile-panel-posts">
+        <div id="profile-posts-grid" class="profile-posts-grid"></div>
       </div>
       <!-- Tab 1: Plans -->
       <div class="profile-tab-panel" id="profile-panel-plans">
@@ -1179,13 +1184,6 @@ select.input{appearance:none;cursor:pointer;
             <button class="btn btn-sm btn-primary" id="profile-create-plan-btn" onclick="openCreatePlan()">+ Create Plan</button>
           </div>
           <div id="profile-plans-list"></div>
-        </div>
-      </div>
-      <!-- Tab 2: Activity -->
-      <div class="profile-tab-panel" id="profile-panel-activity">
-        <div class="profile-section">
-          <h3 class="mb-sm">Activity</h3>
-          <div id="profile-activity-feed"></div>
         </div>
       </div>
     </div>
@@ -4009,7 +4007,6 @@ function switchProfileTab(idx){
   }
   // Lazy-load plans and activity when first visited
   if(idx===1&&!document.querySelector('#profile-plans-list .plan-card, #profile-plans-list .wo-card'))renderProfilePlans(currentUser.id,true);
-  if(idx===2&&!document.getElementById('profile-activity-feed')?.children.length)renderProfileActivityFeed();
 }
 
 // Touch swipe for profile tabs
@@ -4025,7 +4022,7 @@ function switchProfileTab(idx){
     const dx=e.changedTouches[0].clientX-startX;
     const dy=e.changedTouches[0].clientY-startY;
     if(Math.abs(dx)<50||Math.abs(dy)>Math.abs(dx))return;
-    if(dx<0&&profileTabIndex<2)switchProfileTab(profileTabIndex+1);
+    if(dx<0&&profileTabIndex<1)switchProfileTab(profileTabIndex+1);
     else if(dx>0&&profileTabIndex>0)switchProfileTab(profileTabIndex-1);
   },{passive:true});
 })();
@@ -4048,101 +4045,62 @@ async function renderProfile(){
   document.getElementById('profile-member-number').textContent=p.member_number?'Member #'+p.member_number:'';
   document.getElementById('profile-bio-display').textContent=p.bio||'';
 
-  // Stats row
+  // Stats
   const logs=await getLogs();
   const totalWorkouts=logs.length;
-  let totalVolume=0;
-  logs.forEach(l=>l.exercises.forEach(ex=>ex.sets.forEach(s=>{if(s.completed)totalVolume+=s.weight*s.reps})));
-  let streak=0;
-  if(logs.length){
-    const dates=[...new Set(logs.map(l=>new Date(l.startTime).toDateString()))].sort((a,b)=>new Date(b)-new Date(a));
-    let d=new Date();d.setHours(0,0,0,0);
-    for(const ds of dates){
-      const dd=new Date(ds);dd.setHours(0,0,0,0);
-      const diff=Math.round((d-dd)/(86400000));
-      if(diff<=1){streak++;d=dd}else break;
-    }
-  }
-
-  // Follow counts
   const{count:followersCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('following_id',currentUser.id);
   const{count:followingCount}=await sb.from('follows').select('*',{count:'exact',head:true}).eq('follower_id',currentUser.id);
-  const{count:othersDoneCount}=await sb.from('workout_logs').select('*',{count:'exact',head:true}).eq('source_plan_owner_id',currentUser.id).neq('user_id',currentUser.id);
-  const{count:savedPlansCount}=await sb.from('saved_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
-  const{count:plansCreatedCount}=await sb.from('workout_plans').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
 
-  // Tile settings
-  const ts=p.tile_settings||{};
-  const wm=ts.workout_metrics||{};
-  const em=ts.engagement_metrics||{};
-  const rmIds=ts['1rm_tiles']||[];
+  // Count posts
+  const{count:postsCount}=await sb.from('workout_posts').select('*',{count:'exact',head:true}).eq('user_id',currentUser.id);
 
-  // 1RM tiles
-  let rmTilesHtml='';
-  if(rmIds.length){
-    const{data:rmRows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',currentUser.id).in('exercise_id',rmIds).order('display_order');
-    if(rmRows&&rmRows.length){
-      rmTilesHtml=rmRows.map(r=>{
-        const isPublic=r.is_public!==false;
-        return `<div class="stat-box">
-          <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('1rm','${r.exercise_id}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
-          <div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}</div>
-          <div class="lbl">${esc(r.exercise_name)} 1RM</div>
-        </div>`;
-      }).join('');
-    }
-  }
+  document.getElementById('profile-stats').innerHTML=`<div class="profile-inline-stats">
+    <div class="profile-inline-stat"><div class="pis-val">${postsCount||0}</div><div class="pis-lbl">Posts</div></div>
+    <div class="profile-inline-stat"><div class="pis-val">${totalWorkouts}</div><div class="pis-lbl">Workouts</div></div>
+    <div class="profile-inline-stat" onclick="openFollowList('followers','${currentUser.id}')" style="cursor:pointer"><div class="pis-val">${followersCount||0}</div><div class="pis-lbl">Followers</div></div>
+    <div class="profile-inline-stat" onclick="openFollowList('following','${currentUser.id}')" style="cursor:pointer"><div class="pis-val">${followingCount||0}</div><div class="pis-lbl">Following</div></div>
+  </div>`;
 
-  // Helper for tile with eye toggle
-  function wmTile(key,val,label,extra=''){
-    if(wm[key]&&wm[key].visible===false)return'';
-    const isPublic=!(wm[key]&&wm[key].public===false);
-    return `<div class="stat-box"${extra}>
-      <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('wm','${key}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
-      <div class="val">${val}</div><div class="lbl">${label}</div>
-    </div>`;
-  }
-  function emTile(key,val,label,extra=''){
-    if(em[key]&&em[key].visible===false)return'';
-    const isPublic=!(em[key]&&em[key].public===false);
-    return `<div class="stat-box"${extra}>
-      <button class="tile-eye ${isPublic?'':'private'}" onclick="event.stopPropagation();toggleTilePublic('em','${key}',this)" title="${isPublic?'Public':'Private'}">${isPublic?'👁':'🚫'}</button>
-      <div class="val">${val}</div><div class="lbl">${label}</div>
-    </div>`;
-  }
-
-  const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
-
-  document.getElementById('profile-stats').innerHTML=`
-    <div class="stats-section-label">Workout Metrics</div>
-    <div class="stats-strip">
-      ${wmTile('workouts',totalWorkouts,'Workouts')}
-      ${wmTile('streak',streak,'Day Streak')}
-      ${wmTile('volume',volFmt,'Volume ('+getUnit()+')')}
-      ${rmTilesHtml}
-      <div class="add-tile-box" onclick="openAddTileModal('workout')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
-    </div>
-    <div class="stats-section-label" style="margin-top:24px">Creator & Engagement Metrics</div>
-    <div class="stats-strip">
-      ${emTile('followers',followersCount||0,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\',\''+currentUser.id+'\')"')}
-      ${emTile('following',followingCount||0,'Following',' style="cursor:pointer" onclick="openFollowList(\'following\',\''+currentUser.id+'\')"')}
-      ${emTile('plans_created',plansCreatedCount||0,'Plans Created',' style="cursor:pointer" onclick="openPlansCreatedModal(\''+currentUser.id+'\',true)"')}
-      ${emTile('completed_by',othersDoneCount||0,'Completed by Followers',' style="cursor:pointer" onclick="openCompletedByModal(\''+currentUser.id+'\')"')}
-      ${emTile('saved_plans',savedPlansCount||0,'Saved Plans',' style="cursor:pointer" onclick="openSavedPlansModal(\''+currentUser.id+'\')"')}
-      <div class="add-tile-box" onclick="openAddTileModal('engagement')"><div class="add-icon">✎</div><div class="add-lbl">Edit Tiles</div></div>
-    </div>
-  `;
-
-  // Reset to Overview tab
+  // Reset to Posts tab
   switchProfileTab(0);
 
-  // Body metrics chart (Chart.js dual axis)
-  await renderMetricsChart();
-
-  // Pre-load plans and activity for snappy tab switching
+  // Load posts grid and plans
+  renderProfilePostsGrid();
   renderProfilePlans(currentUser.id, true);
-  renderProfileActivityFeed();
 }
+
+async function renderProfilePostsGrid(){
+  const grid=document.getElementById('profile-posts-grid');
+  if(!grid)return;
+  grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1;text-align:center;padding:20px">Loading...</p>';
+  // Fetch workout posts
+  const{data:posts}=await sb.from('workout_posts').select('id,photo_urls,caption,likes_count,comments_count,created_at,workout_logs(workout_name)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
+  // Fetch clips
+  const{data:clips}=await sb.from('reels').select('id,video_url,thumbnail_url,likes_count,comments_count,created_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  // Merge and sort
+  const items=[];
+  (posts||[]).forEach(p=>{
+    const photo=(p.photo_urls&&p.photo_urls.length)?p.photo_urls[0]:null;
+    items.push({type:'post',id:p.id,thumb:photo,name:p.workout_logs?.workout_name||p.caption||'Post',likes:p.likes_count||0,comments:p.comments_count||0,date:p.created_at});
+  });
+  (clips||[]).forEach(c=>{
+    items.push({type:'clip',id:c.id,thumb:c.thumbnail_url,videoUrl:c.video_url,likes:c.likes_count||0,comments:c.comments_count||0,date:c.created_at});
+  });
+  items.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!items.length){grid.innerHTML='<p class="fg3 small" style="grid-column:1/-1;text-align:center;padding:40px">No posts yet. Complete a workout and share it!</p>';return}
+  grid.innerHTML=items.map(item=>{
+    if(item.type==='clip'){
+      return `<div class="profile-post-thumb" onclick="nav('clips')">
+        ${item.thumb?`<img src="${item.thumb}" loading="lazy">`:`<video src="${item.videoUrl}" muted preload="metadata"></video>`}
+        <div class="ppt-overlay"><i data-lucide="film" style="width:14px;height:14px"></i></div>
+      </div>`;
+    }
+    return `<div class="profile-post-thumb">
+      ${item.thumb?`<img src="${item.thumb}" loading="lazy">`:`<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--bg2);padding:8px"><span class="fg3" style="font-size:.65rem;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(item.name)}</span></div>`}
+      <div class="ppt-overlay">❤ ${item.likes} 💬 ${item.comments}</div>
+    </div>`;
+  }).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
 
 // ---- Tile Management ----
 async function getTileSettings(){
