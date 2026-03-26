@@ -4428,10 +4428,13 @@ let editingPlanId=null;
 
 function openCreatePlan(){
   planWorkouts=[];editingPlanId=null;
-  document.getElementById('plan-edit-title').textContent='Create Plan';
-  document.getElementById('plan-name').value='';
-  document.getElementById('plan-desc').value='';
-  document.getElementById('plan-public').checked=true;
+  const t=document.getElementById('plan-edit-title');if(t)t.textContent='Create Plan';
+  const n=document.getElementById('plan-name');if(n)n.value='';
+  const d=document.getElementById('plan-desc');if(d)d.value='';
+  // Reset visibility to public_free
+  const vr=document.querySelector('input[name="plan-vis"][value="public_free"]');
+  if(vr){vr.checked=true;vr.dispatchEvent(new Event('change'))}
+  const ps=document.getElementById('plan-price-section');if(ps)ps.style.display='none';
   renderPlanWorkouts();
   nav('plan-edit');
 }
@@ -4441,10 +4444,23 @@ async function editPlan(id){
   if(!plan)return;
   editingPlanId=id;
   planWorkouts=(plan.workouts||[]).map(w=>({...w}));
-  document.getElementById('plan-edit-title').textContent='Edit Plan';
-  document.getElementById('plan-name').value=plan.name;
-  document.getElementById('plan-desc').value=plan.description||'';
-  document.getElementById('plan-public').checked=!!plan.is_public;
+  const titleEl=document.getElementById('plan-edit-title');
+  if(titleEl)titleEl.textContent='Edit Plan';
+  const nameEl=document.getElementById('plan-name');
+  if(nameEl)nameEl.value=plan.name;
+  const descEl=document.getElementById('plan-desc');
+  if(descEl)descEl.value=plan.description||'';
+  // Set visibility radio
+  const vis=plan.visibility||'public_free';
+  const visRadio=document.querySelector(`input[name="plan-vis"][value="${vis}"]`);
+  if(visRadio){visRadio.checked=true;visRadio.dispatchEvent(new Event('change'))}
+  // Set price if paid
+  if(vis==='public_paid'){
+    const priceEl=document.getElementById('plan-price');
+    if(priceEl)priceEl.value=plan.price||9.99;
+    const priceSection=document.getElementById('plan-price-section');
+    if(priceSection)priceSection.style.display='block';
+  }
   renderPlanWorkouts();
   nav('plan-edit');
 }
