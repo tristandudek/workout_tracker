@@ -321,9 +321,6 @@ select.input{appearance:none;cursor:pointer;
 }
 #global-rest-timer.active{display:flex}
 #global-rest-timer.reached{background:var(--success);animation:restReached .4s ease}
-#global-rest-timer .rest-progress{width:60px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
-#global-rest-timer .rest-progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .5s linear}
-#global-rest-timer .rest-progress-bar.full{background:#fff}
 @keyframes restReached{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @media(min-width:768px){#global-rest-timer{margin-left:120px}}
 .aw-ex-header{
@@ -1393,7 +1390,6 @@ select.input{appearance:none;cursor:pointer;
 <!-- GLOBAL REST TIMER (floating pill) -->
 <div id="global-rest-timer">
   <span id="rest-timer-text">Rest 0:00</span>
-  <div class="rest-progress"><div class="rest-progress-bar" id="rest-progress-bar" style="width:0%"></div></div>
 </div>
 
 <!-- NAV BAR (mobile only) -->
@@ -3521,32 +3517,21 @@ function startGlobalRestTimer(targetSeconds){
   globalRestReached=false;
   const el=document.getElementById('global-rest-timer');
   const txt=document.getElementById('rest-timer-text');
-  const bar=document.getElementById('rest-progress-bar');
-  if(!el||!txt||!bar){console.error('Rest timer elements not found in DOM');return}
-  console.log('Starting rest timer, target:',globalRestTarget);
+  if(!el||!txt){console.error('Rest timer elements not found in DOM');return}
   el.classList.add('active');
   el.classList.remove('reached');
-  bar.classList.remove('full');
-  bar.style.width='0%';
   txt.textContent=globalRestTarget?`Rest 0:00 / ${fmtRestTime(globalRestTarget)}`:'Rest 0:00';
 
   globalRestInterval=setInterval(()=>{
     globalRestElapsed++;
-    if(globalRestElapsed%5===0)console.log('Rest timer:',globalRestElapsed);
     const txt=document.getElementById('rest-timer-text');
-    const bar=document.getElementById('rest-progress-bar');
     const el=document.getElementById('global-rest-timer');
     if(!txt){stopGlobalRestTimer();return}
     const elapsed=fmtRestTime(globalRestElapsed);
     txt.textContent=globalRestTarget?`Rest ${elapsed} / ${fmtRestTime(globalRestTarget)}`:`Rest ${elapsed}`;
-    if(globalRestTarget){
-      const pct=Math.min(100,Math.round((globalRestElapsed/globalRestTarget)*100));
-      bar.style.width=pct+'%';
-      if(globalRestElapsed>=globalRestTarget&&!globalRestReached){
-        globalRestReached=true;
-        bar.classList.add('full');
-        el.classList.add('reached');
-      }
+    if(globalRestTarget&&globalRestElapsed>=globalRestTarget&&!globalRestReached){
+      globalRestReached=true;
+      el.classList.add('reached');
     }
   },1000);
 }
