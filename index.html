@@ -4510,6 +4510,7 @@ async function renderProfileClipsGrid(){
   container.innerHTML=`<div class="profile-posts-grid" style="gap:1px">${uploadTile}${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000" data-clip-id="${c.id}" data-video-url="${c.video_url}">
     ${c.thumbnail_url?`<img src="${c.thumbnail_url}" loading="lazy">`:`<img class="clip-auto-thumb" data-src="${c.video_url}" style="width:100%;height:100%;object-fit:cover" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>">`}
     <div style="position:absolute;inset:0;background:linear-gradient(transparent 60%,rgba(0,0,0,.6));pointer-events:none"></div>
+    <button onclick="event.stopPropagation();if(confirm('Delete this clip?'))deleteClip('${c.id}','${c.video_url}','${c.thumbnail_url||''}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:11px;cursor:pointer;z-index:2">&#8943;</button>
     <div style="position:absolute;bottom:6px;left:6px;color:#fff;font-size:.65rem"><i data-lucide="play" style="width:12px;height:12px;vertical-align:middle"></i></div>
     <div style="position:absolute;bottom:6px;right:6px;color:rgba(255,255,255,.8);font-size:.6rem;font-family:var(--font-mono)">👁 ${fmtViews(c.views_count||0)}</div>
   </div>`).join('')}</div>`;
@@ -8130,9 +8131,18 @@ async function renderReelsFeed(){
     const planOvl=r.linked_plan_id?`<div class="reel-plan-pill-fixed" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(po?.name||plan?.name||'Plan')} →</div>`:'';
     const trimStart=r.trim_start||0;
     const trimEnd=r.trim_end||0;
+    const isOwnClip=r.user_id===currentUser.id;
     return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-user-id="${r.user_id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
       <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
       ${textOvls}${emojiOvls}${planOvl}
+      ${isOwnClip?`<div style="position:absolute;top:12px;right:12px;z-index:10">
+        <div class="post-menu-wrap" style="position:relative">
+          <button class="post-menu-btn" style="background:rgba(0,0,0,.5);color:#fff;width:28px;height:28px;border-radius:50%;border:none;font-size:16px;cursor:pointer" onclick="event.stopPropagation();togglePostMenu('clip-${r.id}')">&#8943;</button>
+          <div class="post-menu" id="post-menu-clip-${r.id}" style="right:0;left:auto">
+            <button class="post-menu-item" style="color:#ef4444" onclick="deleteClip('${r.id}','${r.video_url}','${r.thumbnail_url||''}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Clip</button>
+          </div>
+        </div>
+      </div>`:''}`+`
       <div class="reel-actions">
         <div class="reel-action"><div class="reel-avatar" onclick="openPublicProfile('${r.user_id}')">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div></div>
         <div class="reel-action"><button class="reel-action-btn ${likedSet.has(r.id)?'liked':''}" onclick="toggleReelLike('${r.id}',this)"><i data-lucide="heart" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.likes_count)}</span></div>
@@ -8242,6 +8252,32 @@ async function deleteReelComment(commentId,reelId){
   await sb.from('reel_comments').delete().eq('id',commentId);
   await openReelComments(reelId);
   document.getElementById('reel-comments-sheet-'+reelId).style.display='block';
+}
+
+async function deleteClip(reelId, videoUrl, thumbnailUrl){
+  if(!confirm('Delete this clip? This cannot be undone.'))return;
+  // Delete video from storage
+  try{
+    const vPath=new URL(videoUrl).pathname.split('/storage/v1/object/public/reels/')[1];
+    if(vPath)await sb.storage.from('reels').remove([vPath]);
+  }catch(e){console.error('Video delete error:',e)}
+  // Delete thumbnail from storage
+  if(thumbnailUrl){
+    try{
+      const tPath=new URL(thumbnailUrl).pathname.split('/storage/v1/object/public/reels/')[1];
+      if(tPath)await sb.storage.from('reels').remove([tPath]);
+    }catch(e){console.error('Thumb delete error:',e)}
+  }
+  // Delete reel record
+  const{error}=await sb.from('reels').delete().eq('id',reelId);
+  if(error){toast('Error deleting clip');console.error(error);return}
+  // Remove from DOM
+  const el=document.getElementById('reel-'+reelId);
+  if(el)el.remove();
+  // Remove from profile grid if present
+  const gridEl=document.querySelector(`[data-clip-id="${reelId}"]`);
+  if(gridEl)gridEl.remove();
+  toast('Clip deleted');
 }
 
 function shareReelDM(reelId){
