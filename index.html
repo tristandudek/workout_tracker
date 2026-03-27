@@ -2462,7 +2462,16 @@ function fuzzySearchExercises(exs,q){
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
 function countTotalSets(exercises){
   let total=0;
-  (exercises||[]).forEach(ex=>{if(ex.sets)total+=ex.sets.filter(s=>s.completed).length||ex.sets.length});
+  (exercises||[]).forEach(ex=>{
+    if(!ex.sets)return;
+    const setCount=ex.sets.filter(s=>s.completed).length||ex.sets.length;
+    if(ex.setType==='superset'&&ex.supersetExercises){
+      const exerciseCount=ex.supersetExercises.length+1;
+      total+=setCount*exerciseCount;
+    }else{
+      total+=setCount;
+    }
+  });
   return total;
 }
 
@@ -4108,9 +4117,12 @@ async function openExerciseHistory(exId){
 async function finishWorkout(){
   if(!activeWorkout)return;
   activeWorkout.endTime=new Date().toISOString();
-  const totalSets=activeWorkout.exercises.reduce((a,e)=>a+e.sets.filter(s=>s.completed).length,0);
+  const totalSets=countTotalSets(activeWorkout.exercises);
   let totalVol=0;
-  activeWorkout.exercises.forEach(e=>e.sets.forEach(s=>{if(s.completed)totalVol+=s.weight*s.reps}));
+  activeWorkout.exercises.forEach(e=>{
+    e.sets.forEach(s=>{if(s.completed)totalVol+=(s.weight||0)*(s.reps||0)});
+    if(e.supersetExercises)e.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)totalVol+=(s.weight||0)*(s.reps||0)})});
+  });
   const dur=Math.round((new Date(activeWorkout.endTime)-new Date(activeWorkout.startTime))/60000);
 
   const logs=await getLogs();
