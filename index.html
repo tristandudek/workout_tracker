@@ -8066,11 +8066,13 @@ async function openOrCreateConversation(otherUserId){
   if(existing){
     await openChat(existing.id,otherUserId);return;
   }
-  // Check mutual follow
-  const{data:f1}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',otherUserId).maybeSingle();
-  const{data:f2}=await sb.from('follows').select('id').eq('follower_id',otherUserId).eq('following_id',currentUser.id).maybeSingle();
-  const mutual=!!f1&&!!f2;
-  const status=mutual?'accepted':'pending';
+  // Check follow relationship
+  const{data:senderFollowsRecipient}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',otherUserId).maybeSingle();
+  const{data:recipientFollowsSender}=await sb.from('follows').select('id').eq('follower_id',otherUserId).eq('following_id',currentUser.id).maybeSingle();
+  console.log('Recipient follows sender:',!!recipientFollowsSender,'Sender follows recipient:',!!senderFollowsRecipient);
+  // Accept if recipient follows sender (they chose to follow) or mutual
+  const status=(recipientFollowsSender)?'accepted':'pending';
+  console.log('Setting request status:',status);
 
   const{data:newConvo,error}=await sb.from('conversations').insert({participant_1:currentUser.id,participant_2:otherUserId,request_status:status}).select().single();
   if(error){toast('Error creating conversation');console.error(error);return}
@@ -8322,9 +8324,8 @@ async function sendClipDM(reelId, recipientId, recipientName){
   const{data:existing}=await sb.from('conversations').select('id').or(`and(participant_1.eq.${currentUser.id},participant_2.eq.${recipientId}),and(participant_1.eq.${recipientId},participant_2.eq.${currentUser.id})`).maybeSingle();
   let convoId;
   if(existing){convoId=existing.id}else{
-    const{data:f1}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',recipientId).maybeSingle();
-    const{data:f2}=await sb.from('follows').select('id').eq('follower_id',recipientId).eq('following_id',currentUser.id).maybeSingle();
-    const status=(f1&&f2)?'accepted':'pending';
+    const{data:recipFollows}=await sb.from('follows').select('id').eq('follower_id',recipientId).eq('following_id',currentUser.id).maybeSingle();
+    const status=recipFollows?'accepted':'pending';
     const{data:newConvo}=await sb.from('conversations').insert({participant_1:currentUser.id,participant_2:recipientId,request_status:status}).select().single();
     if(!newConvo){toast('Error creating conversation');return}
     convoId=newConvo.id;
