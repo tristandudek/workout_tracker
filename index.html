@@ -2161,6 +2161,10 @@ async function getWorkouts(){
     id:r.id,name:r.name,description:r.description,exercises:r.exercises,
     workout_types:r.workout_types,createdAt:r.created_at,source_plan_id:r.source_plan_id,folder_id:r.folder_id
   }));
+  // Debug: show what's stored in templates
+  if(_workoutCache.length&&_workoutCache[0].exercises?.length){
+    console.log('Template exercise data:',JSON.stringify(_workoutCache[0].exercises[0]));
+  }
   // Auto-repair broken exercise IDs after re-seed
   repairWorkoutExerciseIds(_workoutCache);
   return _workoutCache;
@@ -3217,16 +3221,19 @@ async function renderCreateExercises(){
   con.innerHTML=createExercises.map((ce,i)=>{
     const ex=findExercise(exs,ce.exerciseId,ce.exerciseName);
     if(ex&&ex.id!==ce.exerciseId){ce.exerciseId=ex.id;ce.exerciseName=ex.name}
+    const isBroken=!ex;
+    const displayName=ex?ex.name:(ce.exerciseName||'Unknown Exercise');
     const st=ce.setType||'standard';
     const stBadge=stBadgeHtml(st);
-    return `<div class="card" draggable="true" data-idx="${i}"
+    return `<div class="card" draggable="true" data-idx="${i}" ${isBroken?'style="border-color:#ef4444;border-style:dashed"':''}
       ondragstart="ceDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="ceDrop(event,${i})">
       <div class="flex gap-md between">
         <div class="flex gap-sm" style="flex:1;min-width:0">
           <span class="fg3" style="cursor:grab">&#x2630;</span>
           <div style="min-width:0">
             <div class="flex gap-sm" style="align-items:center">
-              <span style="font-family:var(--font-display);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ex?esc(ex.name):'Unknown'}</span>
+              ${isBroken?`<span style="color:#ef4444;font-size:.82rem">⚠️ ${esc(displayName)}</span><button class="btn btn-sm" style="padding:2px 8px;font-size:.6rem;margin-left:4px;color:var(--accent);border-color:var(--accent)" onclick="event.stopPropagation();fixBrokenExercise(${i})">Fix</button>`
+              :`<span style="font-family:var(--font-display);font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(displayName)}</span>`}
               ${stBadge}
             </div>
             <div class="flex gap-sm mt-sm" style="flex-wrap:wrap">
@@ -3401,9 +3408,25 @@ async function _doUpdatePickerResults(){
   console.log('Results updated, input still focused:',document.activeElement===input);
 }
 
+let fixExerciseIdx=null;
+function fixBrokenExercise(idx){
+  fixExerciseIdx=idx;
+  openExercisePicker('fix');
+}
+
 async function pickExercise(id){
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===id);if(!ex)return;
+  if(pickerTarget==='fix'&&fixExerciseIdx!==null){
+    // Replace broken exercise in template editor
+    const ce=createExercises[fixExerciseIdx];
+    ce.exerciseId=id;
+    ce.exerciseName=ex.name;
+    fixExerciseIdx=null;
+    closeModal();renderCreateExercises();
+    toast('Exercise updated!');
+    return;
+  }
   if(pickerTarget==='superset'&&supersetTargetIdx!==null){
     if(!createExercises[supersetTargetIdx].supersetExercises)createExercises[supersetTargetIdx].supersetExercises=[];
     createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,exerciseName:ex.name,targetReps:'8-12'});
