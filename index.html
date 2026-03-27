@@ -7991,10 +7991,16 @@ async function openChat(conversationId, otherUserId){
   // Load messages
   const{data:msgs}=await sb.from('messages').select('*').eq('conversation_id',conversationId).order('created_at');
   const container=document.getElementById('chat-messages');
-  container.innerHTML=(msgs||[]).map(m=>`<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
-    ${esc(m.content)}
-    <div class="chat-time">${timeAgo(m.created_at)}</div>
-  </div>`).join('');
+  container.innerHTML=(msgs||[]).map(m=>{
+    const clipCard=m.reel_id?`<div style="background:var(--bg3);border-radius:var(--radius);padding:8px;margin-top:4px;cursor:pointer" onclick="nav('clips')">
+      <div class="flex gap-sm" style="align-items:center"><i data-lucide="film" style="width:14px;height:14px;color:var(--accent)"></i><span class="small" style="font-weight:600">Shared a clip</span></div>
+      <div style="margin-top:4px"><button class="btn btn-sm btn-primary" style="font-size:.65rem" onclick="event.stopPropagation();nav('clips')">Watch Clip →</button></div>
+    </div>`:'';
+    return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
+      ${esc(m.content)}${clipCard}
+      <div class="chat-time">${timeAgo(m.created_at)}</div>
+    </div>`;
+  }).join('');
   container.scrollTop=container.scrollHeight;
 
   // Hide input if declined
@@ -8124,7 +8130,7 @@ async function renderReelsFeed(){
     const planOvl=r.linked_plan_id?`<div class="reel-plan-pill-fixed" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(po?.name||plan?.name||'Plan')} →</div>`:'';
     const trimStart=r.trim_start||0;
     const trimEnd=r.trim_end||0;
-    return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
+    return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-user-id="${r.user_id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
       <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
       ${textOvls}${emojiOvls}${planOvl}
       <div class="reel-actions">
@@ -8164,13 +8170,19 @@ function setupReelObserver(){
             if(!video._trimHandler){video._trimHandler=()=>{if(video.currentTime>=video._trimEnd)video.currentTime=video._trimStart||0};video.addEventListener('timeupdate',video._trimHandler)}
           }
         }
-        // Count view after 2 seconds
-        reelViewTimers[reelId]=setTimeout(()=>{
-          sb.from('reels').update({views_count:undefined}).eq('id',reelId); // RPC would be better but this is simple
-          // Increment via raw SQL is complex from client, so just do a select+update
-          sb.from('reels').select('views_count').eq('id',reelId).single().then(({data})=>{
-            if(data)sb.from('reels').update({views_count:(data.views_count||0)+1}).eq('id',reelId);
-          });
+        // Count unique view after 2 seconds
+        reelViewTimers[reelId]=setTimeout(async()=>{
+          // Don't count own views
+          const card=document.getElementById('reel-'+reelId);
+          const creatorId=card?.dataset?.userId;
+          if(creatorId===currentUser.id)return;
+          const{error:vErr}=await sb.from('reel_views').insert({reel_id:reelId,user_id:currentUser.id}).single();
+          if(!vErr){
+            // New unique view — increment count
+            const{data:r}=await sb.from('reels').select('views_count').eq('id',reelId).single();
+            if(r)await sb.from('reels').update({views_count:(r.views_count||0)+1}).eq('id',reelId);
+            console.log('View recorded for reel:',reelId);
+          }// else duplicate — already viewed, do nothing
         },2000);
       }else{
         if(video)video.pause();
@@ -8233,7 +8245,63 @@ async function deleteReelComment(commentId,reelId){
 }
 
 function shareReelDM(reelId){
-  toast('Share via DM coming soon');
+  openModal(`
+    <div class="modal-header"><h2>Share Clip</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="search-wrap" style="margin-bottom:8px">
+        <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span>
+        <input class="input" id="share-clip-search" placeholder="Send to..." oninput="searchShareClipRecipient('${reelId}')" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">
+      </div>
+      <div id="share-clip-results" style="max-height:300px;overflow-y:auto"></div>
+    </div>
+  `);
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  setTimeout(()=>{const el=document.getElementById('share-clip-search');if(el)el.focus()},100);
+}
+
+let shareClipSearchTimeout=null;
+function searchShareClipRecipient(reelId){
+  const q=document.getElementById('share-clip-search')?.value.trim()||'';
+  const container=document.getElementById('share-clip-results');
+  if(shareClipSearchTimeout)clearTimeout(shareClipSearchTimeout);
+  if(!q){container.innerHTML='';return}
+  shareClipSearchTimeout=setTimeout(async()=>{
+    const{data}=await sb.from('profiles').select('id,name,username,avatar_url').or(`name.ilike.%${q}%,username.ilike.%${q}%`).neq('id',currentUser.id).limit(10);
+    if(!data||!data.length){container.innerHTML='<p class="fg3 small" style="padding:12px">No users found.</p>';return}
+    container.innerHTML=(data||[]).map(u=>`<div class="member-row" style="cursor:pointer" onclick="sendClipDM('${reelId}','${u.id}','${esc(u.name)}')">
+      <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+      <div class="member-info" style="flex:1">
+        <div class="member-name">${esc(u.name)}</div>
+        <div class="member-user">@${esc(u.username)}</div>
+      </div>
+      <i data-lucide="send" style="width:14px;height:14px;color:var(--accent)"></i>
+    </div>`).join('');
+    if(typeof lucide!=='undefined')lucide.createIcons();
+  },250);
+}
+
+async function sendClipDM(reelId, recipientId, recipientName){
+  closeModal();
+  // Open or create conversation
+  const{data:existing}=await sb.from('conversations').select('id').or(`and(participant_1.eq.${currentUser.id},participant_2.eq.${recipientId}),and(participant_1.eq.${recipientId},participant_2.eq.${currentUser.id})`).maybeSingle();
+  let convoId;
+  if(existing){convoId=existing.id}else{
+    const{data:f1}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',recipientId).maybeSingle();
+    const{data:f2}=await sb.from('follows').select('id').eq('follower_id',recipientId).eq('following_id',currentUser.id).maybeSingle();
+    const status=(f1&&f2)?'accepted':'pending';
+    const{data:newConvo}=await sb.from('conversations').insert({participant_1:currentUser.id,participant_2:recipientId,request_status:status}).select().single();
+    if(!newConvo){toast('Error creating conversation');return}
+    convoId=newConvo.id;
+  }
+  // Send clip message
+  const senderName=currentProfile?.name||'Someone';
+  const{error}=await sb.from('messages').insert({
+    conversation_id:convoId,sender_id:currentUser.id,
+    content:senderName+' shared a clip with you',
+    reel_id:reelId
+  });
+  if(error){toast('Error sending');console.error(error);return}
+  toast('Clip sent to '+recipientName+'!');
 }
 
 // ---- Clip Editor State ----
