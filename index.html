@@ -3816,6 +3816,7 @@ async function renderActiveWorkout(){
         <div class="aw-exercise" style="border:none;margin:0">${renderExCard(ae,ei,prev,true)}</div>
         ${ssExs.map((se,si)=>{
           if(!se.sets)se.sets=[{weight:0,reps:0,completed:false}];
+          console.log('Rendering superset exercise',si,'sets:',se.sets.length);
           const sePrev=findPreviousSets(se.exerciseId,logs);
           return `<div style="border-top:1px solid var(--bg4)"></div>
             <div class="aw-exercise" style="border:none;margin:0">
@@ -3923,9 +3924,14 @@ function addSupersetSet(ei,si){
   if(!se){console.error('Superset exercise not found at',ei,si);return}
   if(!se.sets)se.sets=[];
   se.sets.push({weight:'',reps:'',completed:false});
-  console.log('Set added, total sets for this exercise:',se.sets.length);
+  console.log('Set added, total sets for this exercise:',se.sets.length,'full data:',JSON.stringify(se.sets.map(s=>({w:s.weight,r:s.reps,c:s.completed}))));
   saveActiveWO(activeWorkout);
-  renderActiveWorkout();
+  renderActiveWorkout().then(()=>{
+    // Count actual table rows rendered for this superset exercise
+    const tables=document.querySelectorAll('.aw-exercise .set-table tbody');
+    console.log('Total set tables in DOM:',tables.length);
+    tables.forEach((t,idx)=>console.log('Table',idx,'rows:',t.querySelectorAll('tr').length));
+  });
 }
 
 function addToActiveSuperset(ei){
