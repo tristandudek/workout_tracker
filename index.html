@@ -378,9 +378,9 @@ select.input{appearance:none;cursor:pointer;
 .clip-overlay-emoji{font-size:2rem;pointer-events:none}
 .clip-overlay-delete{position:absolute;top:-8px;right:-8px;width:18px;height:18px;background:#ef4444;color:#fff;border:none;border-radius:50%;font-size:10px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1}
 .clip-overlay:hover .clip-overlay-delete,.clip-overlay.active .clip-overlay-delete{display:flex}
-.clip-plan-card{position:absolute;background:rgba(56,189,248,.9);color:#fff;padding:6px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;z-index:5;cursor:move;white-space:nowrap}
+.clip-plan-card{position:absolute;bottom:16px;right:16px;background:rgba(56,189,248,.9);color:#fff;padding:6px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;z-index:5;white-space:nowrap}
 .clip-plan-card .clip-plan-remove{background:none;border:none;color:rgba(255,255,255,.7);font-size:14px;cursor:pointer;margin-left:4px}
-.reel-plan-overlay{position:absolute;z-index:3;pointer-events:auto;cursor:pointer}
+.reel-plan-pill-fixed{position:absolute;bottom:16px;right:16px;z-index:3;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap;cursor:pointer}
 .clip-trim-bar{padding:8px 16px;background:#111}
 .clip-trim-track{position:relative;height:32px;background:#333;border-radius:4px;margin:4px 0}
 .clip-trim-fill{position:absolute;top:0;bottom:0;background:rgba(56,189,248,.3);border-radius:4px}
@@ -7930,7 +7930,7 @@ async function renderReelsFeed(){
     const textOvls=(r.text_overlays||[]).map(t=>`<div class="reel-text-overlay" style="left:${t.x}%;top:${t.y}%;font-size:${t.size||20}px;color:${t.color||'#fff'}">${esc(t.text)}</div>`).join('');
     const emojiOvls=(r.emoji_overlays||[]).map(e=>`<div class="reel-emoji-overlay" style="left:${e.x}%;top:${e.y}%;font-size:2rem">${e.emoji}</div>`).join('');
     const po=r.plan_overlay;
-    const planOvl=po&&r.linked_plan_id?`<div class="reel-plan-overlay" style="left:${po.x||50}%;top:${po.y||80}%;transform:translateX(-50%)" onclick="openPlanDetail('${r.linked_plan_id}',false)"><div style="background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap">📋 ${esc(po.name||plan?.name||'Plan')} →</div></div>`:'';
+    const planOvl=r.linked_plan_id?`<div class="reel-plan-pill-fixed" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(po?.name||plan?.name||'Plan')} →</div>`:'';
     const trimStart=r.trim_start||0;
     const trimEnd=r.trim_end||0;
     return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
@@ -8049,7 +8049,6 @@ let clipTrimStart=0,clipTrimEnd=0,clipDuration=0;
 let clipTextOverlays=[];
 let clipEmojiOverlays=[];
 let selectedReelPlanId=null;
-let clipPlanPos={x:50,y:80};
 let selectedReelPlanName=null;
 let clipActiveTool=null;
 let clipDragTarget=null,clipDragOff={x:0,y:0};
@@ -8224,7 +8223,7 @@ function renderClipOverlays(){
   // Plan pill (draggable)
   const planEl=document.getElementById('clip-plan-overlay');
   if(planEl){
-    planEl.innerHTML=selectedReelPlanId?`<div class="clip-plan-card" style="left:${clipPlanPos.x}%;top:${clipPlanPos.y}%" data-type="plan" data-idx="0" ontouchstart="startOverlayDrag(event,this)" onmousedown="startOverlayDrag(event,this)">
+    planEl.innerHTML=selectedReelPlanId?`<div class="clip-plan-card">
       <span>📋 ${esc(selectedReelPlanName||'Plan')} →</span>
       <button class="clip-plan-remove" onclick="event.stopPropagation();selectedReelPlanId=null;selectedReelPlanName=null;renderClipOverlays()">×</button>
     </div>`:'';
@@ -8265,7 +8264,6 @@ function setupOverlayDrag(){
       const idx=parseInt(clipDragTarget.dataset.idx);
       if(type==='text'&&clipTextOverlays[idx]){clipTextOverlays[idx].x=xPct;clipTextOverlays[idx].y=yPct}
       if(type==='emoji'&&clipEmojiOverlays[idx]){clipEmojiOverlays[idx].x=xPct;clipEmojiOverlays[idx].y=yPct}
-      if(type==='plan'){clipPlanPos.x=xPct;clipPlanPos.y=yPct}
     }
     clipDragTarget=null;
   };
@@ -8274,7 +8272,7 @@ function setupOverlayDrag(){
 }
 
 function finishClipEditor(){
-  console.log('Saving overlays:',{text:clipTextOverlays,emoji:clipEmojiOverlays,plan:{id:selectedReelPlanId,name:selectedReelPlanName,pos:clipPlanPos}});
+  console.log('Saving overlays:',{text:clipTextOverlays,emoji:clipEmojiOverlays,plan:{id:selectedReelPlanId,name:selectedReelPlanName}});
   const editor=document.getElementById('clip-editor');
   if(editor)editor.remove();
   const planInfo=selectedReelPlanId?`<div style="display:inline-flex;align-items:center;gap:4px;background:var(--accent);color:#fff;padding:4px 10px;border-radius:20px;font-size:.72rem;font-weight:700;margin-top:4px">📋 ${esc(selectedReelPlanName)} →</div>`:'';
@@ -8312,7 +8310,7 @@ async function submitReel(){
   if(!videoUrl){toast('Failed to get URL');return}
   const caption=document.getElementById('reel-caption')?.value.trim()||null;
   // Build plan overlay data
-  const planOverlay=selectedReelPlanId?{id:selectedReelPlanId,name:selectedReelPlanName,x:clipPlanPos.x,y:clipPlanPos.y}:null;
+  const planOverlay=selectedReelPlanId?{id:selectedReelPlanId,name:selectedReelPlanName}:null;
   console.log('Saving reel:',{caption,plan:planOverlay,textOverlays:clipTextOverlays,emojiOverlays:clipEmojiOverlays,trim:[clipTrimStart,clipTrimEnd]});
   const{data:reelData,error}=await sb.from('reels').insert({
     user_id:currentUser.id,video_url:videoUrl,caption,
@@ -8327,7 +8325,6 @@ async function submitReel(){
   clipEditorFile=null;clipEditorUrl=null;
   selectedReelPlanId=null;selectedReelPlanName=null;
   clipTextOverlays=[];clipEmojiOverlays=[];
-  clipPlanPos={x:50,y:80};
   closeModal();toast('Clip posted!');
   nav('clips');
 }
