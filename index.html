@@ -3811,15 +3811,18 @@ function awDrop(e,i){
 
 function updateSet(ei,si,field,val){
   activeWorkout.exercises[ei].sets[si][field]=val;
-  // Auto-populate weight downward to empty sets below
-  if(field==='weight'&&val){
-    const sets=activeWorkout.exercises[ei].sets;
-    for(let i=si+1;i<sets.length;i++){
-      if(!sets[i].weight&&sets[i].weight!==0)sets[i].weight=val;
-      else if(sets[i].weight===''||sets[i].weight===0)sets[i].weight=val;
-      else break; // stop at first non-empty set
+  if(field==='weight'){
+    // Mark this set as manually entered
+    activeWorkout.exercises[ei].sets[si]._manual=true;
+    // Cascade weight down to auto-filled or empty sets
+    if(val){
+      const sets=activeWorkout.exercises[ei].sets;
+      for(let i=si+1;i<sets.length;i++){
+        if(sets[i]._manual)break; // stop at manually entered set
+        sets[i].weight=val;
+      }
+      renderActiveWorkout();
     }
-    renderActiveWorkout();
   }
   saveActiveWO(activeWorkout);
 }
@@ -3837,13 +3840,16 @@ function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length
 
 function updateSupersetSet(ei,si,ssi,field,val){
   activeWorkout.exercises[ei].supersetExercises[si].sets[ssi][field]=val;
-  if(field==='weight'&&val){
-    const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
-    for(let i=ssi+1;i<sets.length;i++){
-      if(!sets[i].weight||sets[i].weight===''||sets[i].weight===0)sets[i].weight=val;
-      else break;
+  if(field==='weight'){
+    activeWorkout.exercises[ei].supersetExercises[si].sets[ssi]._manual=true;
+    if(val){
+      const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
+      for(let i=ssi+1;i<sets.length;i++){
+        if(sets[i]._manual)break;
+        sets[i].weight=val;
+      }
+      renderActiveWorkout();
     }
-    renderActiveWorkout();
   }
   saveActiveWO(activeWorkout);
 }
