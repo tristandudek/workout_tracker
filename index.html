@@ -315,13 +315,12 @@ select.input{appearance:none;cursor:pointer;
 #global-rest-timer{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;
   display:none;align-items:center;gap:10px;
-  padding:12px 24px;background:#0a0a0a;border:none;
+  padding:12px 24px;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.2);
   border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);
   font-family:var(--font-body);font-size:1rem;font-weight:600;color:#fff;
+  transition:color .3s,background .3s,border-color .3s;
 }
 #global-rest-timer.active{display:flex}
-#global-rest-timer.reached{background:var(--success);animation:restReached .4s ease}
-@keyframes restReached{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @media(min-width:768px){#global-rest-timer{margin-left:120px}}
 .aw-ex-header{
   display:flex;align-items:center;gap:10px;padding:12px 14px;
@@ -3954,8 +3953,14 @@ function startGlobalRestTimer(targetSeconds){
   const txt=document.getElementById('rest-timer-text');
   if(!el||!txt){console.error('Rest timer elements not found in DOM');return}
   el.classList.add('active');
-  el.classList.remove('reached');
   txt.textContent=globalRestTarget?`Rest 0:00 / ${fmtRestTime(globalRestTarget)}`:'Rest 0:00';
+
+  // Set initial color
+  if(globalRestTarget>0){
+    el.style.color='#22c55e';el.style.background='rgba(34,197,94,0.15)';el.style.border='1.5px solid #22c55e';
+  }else{
+    el.style.color='#fff';el.style.background='rgba(0,0,0,0.7)';el.style.border='1.5px solid rgba(255,255,255,0.2)';
+  }
 
   globalRestInterval=setInterval(()=>{
     globalRestElapsed++;
@@ -3964,17 +3969,25 @@ function startGlobalRestTimer(targetSeconds){
     if(!txt){stopGlobalRestTimer();return}
     const elapsed=fmtRestTime(globalRestElapsed);
     txt.textContent=globalRestTarget?`Rest ${elapsed} / ${fmtRestTime(globalRestTarget)}`:`Rest ${elapsed}`;
-    if(globalRestTarget&&globalRestElapsed>=globalRestTarget&&!globalRestReached){
-      globalRestReached=true;
-      el.classList.add('reached');
+
+    // Color: green while resting, red when exceeded, white if no target
+    if(globalRestTarget&&globalRestTarget>0){
+      if(globalRestElapsed<globalRestTarget){
+        el.style.color='#22c55e';el.style.background='rgba(34,197,94,0.15)';el.style.border='1.5px solid #22c55e';
+      }else{
+        el.style.color='#ef4444';el.style.background='rgba(239,68,68,0.15)';el.style.border='1.5px solid #ef4444';
+      }
+    }else{
+      el.style.color='#fff';el.style.background='rgba(0,0,0,0.7)';el.style.border='1.5px solid rgba(255,255,255,0.2)';
     }
+    console.log('Timer tick - elapsed:',globalRestElapsed,'target:',globalRestTarget,'color:',globalRestElapsed<globalRestTarget?'GREEN':'RED');
   },1000);
 }
 
 function stopGlobalRestTimer(){
   if(globalRestInterval){clearInterval(globalRestInterval);globalRestInterval=null}
   const el=document.getElementById('global-rest-timer');
-  if(el){el.classList.remove('active','reached')}
+  if(el){el.classList.remove('active');el.style.color='';el.style.background='';el.style.border=''}
 }
 
 // Stop timer when user clicks into a set input field
