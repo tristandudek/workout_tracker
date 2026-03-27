@@ -8245,14 +8245,13 @@ async function renderReelsFeed(){
       <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
       ${textOvls}${emojiOvls}
       ${r.linked_plan_id?`<div style="position:absolute;top:16px;left:16px;z-index:100;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(planName)} →</div>`:''}
-      <div style="position:absolute;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <div style="background:rgba(0,0,0,.5);color:#fff;padding:4px 10px;border-radius:999px;font-size:.68rem;font-family:var(--font-mono)">👁 ${fmtCount(r.views_count)}</div>
-        ${isOwnClip?`<div class="post-menu-wrap" style="position:relative">
-          <button class="post-menu-btn" style="background:rgba(0,0,0,.5);color:#fff;width:28px;height:28px;border-radius:50%;border:none;font-size:16px;cursor:pointer" onclick="event.stopPropagation();togglePostMenu('clip-${r.id}')">&#8943;</button>
-          <div class="post-menu" id="post-menu-clip-${r.id}" style="right:0;left:auto">
-            <button class="post-menu-item" style="color:#ef4444" onclick="deleteClip('${r.id}','${r.video_url}','${r.thumbnail_url||''}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Clip</button>
-          </div>
-        </div>`:''}</div>
+      ${isOwnClip?`<div class="post-menu-wrap" style="position:absolute;top:16px;right:16px;z-index:100">
+        <button style="width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px" onclick="event.stopPropagation();togglePostMenu('clip-${r.id}')">&#8943;</button>
+        <div class="post-menu" id="post-menu-clip-${r.id}" style="right:0;left:auto">
+          <button class="post-menu-item" style="color:#ef4444" onclick="deleteClip('${r.id}','${r.video_url}','${r.thumbnail_url||''}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Clip</button>
+        </div>
+      </div>`:''}
+      <div style="position:absolute;top:${isOwnClip?'60':'16'}px;right:16px;z-index:100;background:rgba(0,0,0,.5);color:#fff;padding:4px 10px;border-radius:999px;font-size:.68rem;font-family:var(--font-mono)">👁 ${fmtCount(r.views_count)}</div>
       <div class="reel-actions">
         <div class="reel-action"><div class="reel-avatar" onclick="openPublicProfile('${r.user_id}')">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div></div>
         <div class="reel-action"><button class="reel-action-btn ${likedSet.has(r.id)?'liked':''}" onclick="toggleReelLike('${r.id}',this)"><i data-lucide="heart" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.likes_count)}</span></div>
