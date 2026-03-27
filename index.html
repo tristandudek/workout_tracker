@@ -7335,15 +7335,40 @@ async function searchInviteUsers(communityId){
 }
 
 async function sendInvite(communityId, userId, userName, btn){
-  const{error}=await sb.from('community_invites').insert({community_id:communityId,invited_user_id:userId,invited_by:currentUser.id});
+  console.log('Sending invite to user:',userId);
+  // Get community name
+  const{data:comm}=await sb.from('communities').select('name').eq('id',communityId).single();
+  const commName=comm?.name||'a community';
+  console.log('Community:',communityId,commName);
+
+  const{data:invite,error}=await sb.from('community_invites').insert({community_id:communityId,invited_user_id:userId,invited_by:currentUser.id}).select().single();
   if(error){toast(error.message.includes('duplicate')?'Already invited':'Error sending invite');return}
   btn.outerHTML='<span class="tag tag-muscle">Invited</span>';
+
+  // Create notification for invited user
+  console.log('Creating notification for:',userId);
+  const inviterName=currentProfile?.name||'Someone';
+  const{data:notifData,error:notifErr}=await sb.from('notifications').insert({
+    user_id:userId,
+    type:'community_invite',
+    message:inviterName+' invited you to join '+commName,
+    related_id:invite?.id||communityId,
+    is_read:false
+  }).select().single();
+  console.log('Invite notification result:',notifData,notifErr);
+
   toast('Invite sent to '+userName+'!');
 }
 
 async function handleCommunityInviteNotif(inviteId){
-  const{data:rawInvite}=await sb.from('community_invites').select('*,communities(name,description)').eq('id',inviteId).single();
-  if(!rawInvite){toast('Invite not found');return}
+  // Try finding by invite ID first, then by community_id for the current user
+  let{data:rawInvite}=await sb.from('community_invites').select('*,communities(name,description)').eq('id',inviteId).single();
+  if(!rawInvite){
+    // Fallback: inviteId might be a community_id
+    const{data:fallback}=await sb.from('community_invites').select('*,communities(name,description)').eq('community_id',inviteId).eq('invited_user_id',currentUser.id).eq('status','pending').maybeSingle();
+    rawInvite=fallback;
+  }
+  if(!rawInvite){toast('Invite not found or already handled');return}
   const{data:inviterProfile}=rawInvite.invited_by?await sb.from('profiles').select('name').eq('id',rawInvite.invited_by).single():{data:null};
   const invite={...rawInvite,profiles:inviterProfile};
   const commName=invite.communities?.name||'a community';
@@ -7366,9 +7391,12 @@ async function handleCommunityInviteNotif(inviteId){
 
 async function acceptInvite(inviteId, communityId){
   await sb.from('community_invites').update({status:'accepted'}).eq('id',inviteId);
-  await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'member'});
-  closeModal();toast('Joined!');
+  const{error}=await sb.from('community_members').insert({community_id:communityId,user_id:currentUser.id,role:'member',joined_at:new Date().toISOString()});
+  if(error&&!error.message.includes('duplicate'))console.error('Join error:',error);
+  const{data:comm}=await sb.from('communities').select('name').eq('id',communityId).single();
+  closeModal();toast('You joined '+(comm?.name||'the community')+'!');
   if(currentView==='communities')await renderCommunities();
+  if(currentView==='feed')await renderFeedCommunityFilters();
 }
 
 async function declineInvite(inviteId){
