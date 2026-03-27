@@ -5780,6 +5780,9 @@ async function toggleLike(postId, btn){
     await sb.from('post_likes').insert({user_id:currentUser.id,post_id:postId});
     btn.classList.add('liked');
     btn.innerHTML=`&#10084; <span class="count">${parseInt(btn.querySelector('.count').textContent)+1}</span>`;
+    // Notify post owner
+    const{data:post}=await sb.from('workout_posts').select('user_id').eq('id',postId).single();
+    if(post)createNotif(post.user_id,'like',(currentProfile?.name||'Someone')+' liked your workout post',postId);
   }
 }
 
@@ -5824,6 +5827,10 @@ async function addComment(postId){
   await sb.from('post_comments').insert({user_id:currentUser.id,post_id:postId,content});
   input.value='';
   await loadComments(postId);
+  // Notify post owner
+  const{data:post}=await sb.from('workout_posts').select('user_id').eq('id',postId).single();
+  const preview=content.length>30?content.slice(0,30)+'...':content;
+  if(post)createNotif(post.user_id,'comment',(currentProfile?.name||'Someone')+' commented: "'+preview+'"',postId);
 }
 
 async function deleteComment(commentId, postId){
@@ -6215,6 +6222,14 @@ document.addEventListener('click',e=>{
    ============================================================= */
 let notifOpen=false;
 
+async function createNotif(userId,type,message,relatedId){
+  if(userId===currentUser.id)return;// Don't notify self
+  const notifData={user_id:userId,type,message,related_id:relatedId||null,is_read:false};
+  console.log('Creating notification:',notifData);
+  const{data,error}=await sb.from('notifications').insert(notifData).select().single();
+  console.log('Notification insert result:',data,error);
+}
+
 function toggleNotifications(){
   notifOpen=!notifOpen;
   document.getElementById('notif-dropdown').classList.toggle('open',notifOpen);
@@ -6227,10 +6242,39 @@ async function loadNotifications(){
   const{data}=await sb.from('notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
   const list=document.getElementById('notif-list');
   if(!data||!data.length){list.innerHTML='<p class="fg3 small" style="padding:14px">No notifications yet.</p>';return}
-  list.innerHTML=data.map(n=>`<div class="notif-item ${n.is_read?'':'unread'}" onclick="handleNotifClick('${n.id}','${n.type}','${n.related_id||''}')">
-    <div class="notif-msg">${esc(n.message)}</div>
-    <div class="notif-time">${timeAgo(n.created_at)}</div>
-  </div>`).join('');
+  // Fetch avatars for follow notifications
+  const followIds=data.filter(n=>n.type==='follow'&&n.related_id).map(n=>n.related_id);
+  let profileMap={};
+  if(followIds.length){
+    const{data:profs}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',followIds);
+    (profs||[]).forEach(p=>profileMap[p.id]=p);
+  }
+  // Check which ones I follow back
+  let followingSet=new Set();
+  if(followIds.length){
+    const{data:myFollows}=await sb.from('follows').select('following_id').eq('follower_id',currentUser.id).in('following_id',followIds);
+    followingSet=new Set((myFollows||[]).map(f=>f.following_id));
+  }
+  list.innerHTML=data.map(n=>{
+    const isFollow=n.type==='follow'&&n.related_id;
+    const fp=isFollow?profileMap[n.related_id]:null;
+    const avatarHtml=fp?`<div class="feed-avatar" style="width:32px;height:32px;font-size:.7rem;flex-shrink:0">${fp.avatar_url?`<img src="${fp.avatar_url}">`:(fp.name||'?')[0].toUpperCase()}</div>`:'';
+    const followBackHtml=isFollow&&!followingSet.has(n.related_id)?`<button class="btn btn-sm btn-primary" style="padding:2px 8px;font-size:.62rem;margin-top:4px" onclick="event.stopPropagation();followFromNotif('${n.related_id}',this)">Follow Back</button>`
+      :isFollow&&followingSet.has(n.related_id)?'<span class="fg3" style="font-size:.6rem">Following each other</span>':'';
+    return `<div class="notif-item ${n.is_read?'':'unread'}" style="display:flex;gap:8px;align-items:flex-start;padding:10px 14px;cursor:pointer;${n.is_read?'':'background:rgba(56,189,248,.04)'}" onclick="handleNotifClick('${n.id}','${n.type}','${n.related_id||''}')">
+      ${avatarHtml}
+      <div style="flex:1;min-width:0">
+        <div class="notif-msg" style="font-size:.8rem;line-height:1.4">${esc(n.message)}</div>
+        <div class="notif-time" style="font-size:.65rem;color:var(--fg4);margin-top:2px">${timeAgo(n.created_at)}</div>
+        ${followBackHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function followFromNotif(userId,btn){
+  await followUser(userId);
+  btn.outerHTML='<span class="fg3" style="font-size:.6rem">Following each other</span>';
 }
 
 async function updateNotifBadge(){
@@ -6253,7 +6297,23 @@ async function handleNotifClick(notifId, type, relatedId){
   if(type==='community_invite'&&relatedId){
     await handleCommunityInviteNotif(relatedId);
   }else if(type==='follow'&&relatedId){
-    await openPublicProfile(relatedId);
+    // Open follow-back modal
+    const{data:fp}=await sb.from('profiles').select('id,name,username,avatar_url').eq('id',relatedId).single();
+    if(fp){
+      const{data:fCheck}=await sb.from('follows').select('id').eq('follower_id',currentUser.id).eq('following_id',relatedId).maybeSingle();
+      const alreadyFollowing=!!fCheck;
+      openModal(`<div class="modal-header"><h2>New Follower</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+        <div class="modal-body text-center">
+          <div class="feed-avatar" style="width:64px;height:64px;font-size:1.5rem;margin:0 auto 10px">${fp.avatar_url?`<img src="${fp.avatar_url}">`:(fp.name||'?')[0].toUpperCase()}</div>
+          <h3>${esc(fp.name)}</h3>
+          <p class="fg2 small">@${esc(fp.username)}</p>
+          <p class="fg2 small mt-sm">${esc(fp.name)} started following you</p>
+          <div class="flex gap-sm mt-md" style="justify-content:center">
+            ${alreadyFollowing?'<span class="fg3 small">You are following each other</span>':`<button class="btn btn-primary" onclick="followUser('${fp.id}');this.outerHTML='<span class=\\'fg3 small\\'>Following each other</span>'">Follow Back</button>`}
+            <button class="btn" onclick="closeModal();openPublicProfile('${fp.id}')">View Profile</button>
+          </div>
+        </div>`);
+    }else{await openPublicProfile(relatedId)}
   }else if((type==='like'||type==='comment')&&relatedId){
     await nav('feed');
   }else if(type==='plan_adopted'&&relatedId){
@@ -6957,6 +7017,11 @@ async function toggleCpLike(postId, btn){
     await sb.from('community_post_likes').insert({user_id:currentUser.id,post_id:postId});
     btn.classList.add('liked');
     btn.innerHTML=`&#10084; <span class="count">${parseInt(btn.querySelector('.count').textContent)+1}</span>`;
+    const{data:cp}=await sb.from('community_posts').select('user_id,community_id').eq('id',postId).single();
+    if(cp){
+      const{data:comm}=await sb.from('communities').select('name').eq('id',cp.community_id).single();
+      createNotif(cp.user_id,'like',(currentProfile?.name||'Someone')+' liked your post in '+(comm?.name||'a community'),postId);
+    }
   }
 }
 
@@ -7001,6 +7066,9 @@ async function addCpComment(postId){
   await sb.from('community_post_comments').insert({user_id:currentUser.id,post_id:postId,content});
   input.value='';
   await loadCpComments(postId);
+  const{data:cp}=await sb.from('community_posts').select('user_id').eq('id',postId).single();
+  const preview=content.length>30?content.slice(0,30)+'...':content;
+  if(cp)createNotif(cp.user_id,'comment',(currentProfile?.name||'Someone')+' commented: "'+preview+'"',postId);
 }
 
 async function deleteCpComment(commentId, postId){
@@ -8010,6 +8078,9 @@ async function toggleReelLike(reelId,btn){
   }else{
     await sb.from('reel_likes').insert({reel_id:reelId,user_id:currentUser.id});
     btn.classList.add('liked');
+    // Notify clip owner
+    const{data:reel}=await sb.from('reels').select('user_id').eq('id',reelId).single();
+    if(reel)createNotif(reel.user_id,'like',(currentProfile?.name||'Someone')+' liked your clip',reelId);
   }
 }
 
