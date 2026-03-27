@@ -4437,6 +4437,7 @@ async function renderProfilePostsGrid(){
   if(!container){console.error('profile-posts-grid not found');return}
   container.innerHTML='<p class="fg3 small" style="text-align:center;padding:20px">Loading...</p>';
 
+  // Fetch posted workouts
   let posts=[];
   try{
     const{data:p,error:pe}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);
@@ -4444,7 +4445,16 @@ async function renderProfilePostsGrid(){
     console.log('Profile posts query:',posts.length,pe);
   }catch(e){console.error('Posts fetch error:',e)}
 
-  if(!posts.length){
+  // Fetch ALL workout logs to find unposted ones
+  let unpostedLogs=[];
+  try{
+    const postedLogIds=new Set(posts.filter(p=>p.workout_log_id).map(p=>p.workout_log_id));
+    const{data:allLogs}=await sb.from('workout_logs').select('id,workout_name,start_time,end_time,exercises').eq('user_id',currentUser.id).order('start_time',{ascending:false}).limit(50);
+    unpostedLogs=(allLogs||[]).filter(l=>!postedLogIds.has(l.id));
+    console.log('Unposted workout logs:',unpostedLogs.length);
+  }catch(e){console.error('Logs fetch error:',e)}
+
+  if(!posts.length&&!unpostedLogs.length){
     container.innerHTML='<p class="fg3 small" style="text-align:center;padding:40px">No posts yet — complete a workout to share your first post</p>';
     return;
   }
@@ -4483,7 +4493,49 @@ async function renderProfilePostsGrid(){
       <div id="comments-${p.id}" style="display:none"></div>
     </div>`;
   }).join('');
+
+  // Render unposted workout logs as private cards
+  if(unpostedLogs.length){
+    container.innerHTML+=unpostedLogs.map(l=>{
+      const dur=l.end_time&&l.start_time?Math.round((new Date(l.end_time)-new Date(l.start_time))/60000):0;
+      let vol=0;
+      if(l.exercises)(l.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
+      const volStr=vol>=1000?(vol/1000).toFixed(1)+'k':vol.toLocaleString();
+      return `<div class="feed-card" style="background:var(--bg2);border-style:dashed">
+        <div class="feed-header">
+          <div class="feed-avatar">${prof.avatar_url?`<img src="${prof.avatar_url}">`:(prof.name||'?')[0].toUpperCase()}</div>
+          <div style="flex:1">
+            <div class="feed-user">${esc(prof.name||'')}</div>
+            <div class="feed-time">${timeAgo(l.start_time)}</div>
+          </div>
+          <span class="price-badge private" style="font-size:.6rem">🔒 Private</span>
+        </div>
+        <div class="feed-summary"><strong>${esc(l.workout_name||'Workout')}</strong></div>
+        <div class="feed-stat-pills">
+          <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
+          <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${l.exercises?.length||0}</span> exercises</span>
+          ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${volStr}</span> ${getUnit()}</span>`:''}
+        </div>
+        <div style="padding:0 14px 10px">
+          <button class="btn btn-sm btn-primary" onclick="shareExistingLog('${l.id}')"><i data-lucide="share" style="width:12px;height:12px"></i> Share Now</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
   if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function shareExistingLog(logId){
+  // Open share modal for an existing unposted workout log
+  const{data:log}=await sb.from('workout_logs').select('*').eq('id',logId).single();
+  if(!log){toast('Workout not found');return}
+  // Temporarily set activeWorkout._logId so submitPostV2 can use it
+  if(!activeWorkout)activeWorkout={};
+  activeWorkout._logId=logId;
+  const dur=log.end_time&&log.start_time?Math.round((new Date(log.end_time)-new Date(log.start_time))/60000):0;
+  let vol=0;let sets=0;
+  if(log.exercises)log.exercises.forEach(ex=>{if(ex.sets){sets+=ex.sets.length;ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})}});
+  showShareWorkoutModalV2(dur,sets,vol);
 }
 
 async function renderProfileClipsGrid(){
@@ -6529,7 +6581,7 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
     </div>
     <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn btn-primary btn-block" onclick="submitPostV2()">Post & Finish</button>
-      <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
+      <button class="btn btn-ghost btn-block" onclick="console.log('Workout saved without posting, workout_log_id:',activeWorkout?._logId);closeModal();finishCleanup()">Skip, just save</button>
     </div>
   `);
 }
