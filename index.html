@@ -3651,20 +3651,17 @@ async function renderActiveWorkout(){
   const allExs=await getExercises();
   const con=document.getElementById('aw-exercises');
 
-  // Resolve missing superset exercise names and sync set counts
+  // Resolve missing superset exercise names (independent set counts)
   activeWorkout.exercises.forEach(ae=>{
     if(ae.setType==='superset'&&ae.supersetExercises){
-      const mainSetCount=ae.sets.length;
       ae.supersetExercises.forEach(se=>{
         // Resolve name if missing or looks like a UUID
         if(!se.exerciseName||se.exerciseName.length>30&&se.exerciseName.includes('-')){
           const found=allExs.find(e=>e.id===se.exerciseId);
           if(found)se.exerciseName=found.name;
         }
-        // Ensure sets array exists and matches main exercise count
-        if(!se.sets)se.sets=[];
-        while(se.sets.length<mainSetCount)se.sets.push({weight:0,reps:0,completed:false});
-        while(se.sets.length>mainSetCount)se.sets.pop();
+        // Ensure sets array exists but do NOT force match main exercise count
+        if(!se.sets||!se.sets.length)se.sets=[{weight:'',reps:'',completed:false}];
       });
     }
   });
