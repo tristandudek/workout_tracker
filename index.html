@@ -348,8 +348,12 @@ select.input{appearance:none;cursor:pointer;
 .video-modal-close{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;z-index:2}
 
 /* Reels */
-.reels-feed{height:calc(100vh - 160px);overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
-.reel-card{height:calc(100vh - 160px);scroll-snap-align:start;position:relative;background:#000;border-radius:var(--radius2);overflow:hidden;margin-bottom:4px}
+.reels-feed{height:calc(100vh - 56px - 64px - env(safe-area-inset-bottom,0px));overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
+.reel-card{height:calc(100vh - 56px - 64px - env(safe-area-inset-bottom,0px));scroll-snap-align:start;position:relative;background:#000;border-radius:var(--radius2);overflow:hidden;margin-bottom:4px}
+@media(min-width:768px){
+  .reels-feed{height:calc(100vh - 56px - 16px)}
+  .reel-card{height:calc(100vh - 56px - 16px)}
+}
 .reel-card video{width:100%;height:100%;object-fit:cover;cursor:pointer}
 .reel-actions{position:absolute;right:12px;bottom:100px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:2}
 .reel-action{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
