@@ -3857,7 +3857,12 @@ function toggleSupersetSet(ei,si,ssi){
 }
 
 function addSupersetSet(ei,si){
-  activeWorkout.exercises[ei].supersetExercises[si].sets.push({weight:0,reps:0,completed:false});
+  console.log('addSupersetSet called, ei:',ei,'si:',si);
+  const se=activeWorkout.exercises[ei]?.supersetExercises?.[si];
+  if(!se){console.error('Superset exercise not found at',ei,si);return}
+  if(!se.sets)se.sets=[];
+  se.sets.push({weight:'',reps:'',completed:false});
+  console.log('Set added, total sets for this exercise:',se.sets.length);
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
@@ -3982,12 +3987,6 @@ function removeSet(ei,si){
   const ae=activeWorkout.exercises[ei];
   if(ae.sets.length<=1)return;
   ae.sets.splice(si,1);
-  // Sync superset set counts
-  if(ae.setType==='superset'&&ae.supersetExercises){
-    ae.supersetExercises.forEach(se=>{
-      if(se.sets&&se.sets.length>ae.sets.length)se.sets.splice(ae.sets.length);
-    });
-  }
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
@@ -4003,13 +4002,7 @@ function removeSupersetSet(ei,si,ssi){
 function addSet(ei){
   const ae=activeWorkout.exercises[ei];
   ae.sets.push({weight:'',reps:'',completed:false});
-  // Sync superset exercise set counts
-  if(ae.setType==='superset'&&ae.supersetExercises){
-    ae.supersetExercises.forEach(se=>{
-      if(!se.sets)se.sets=[];
-      while(se.sets.length<ae.sets.length)se.sets.push({weight:'',reps:'',completed:false});
-    });
-  }
+  // Each superset exercise manages its own sets independently
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
 }
