@@ -1017,13 +1017,16 @@ select.input{appearance:none;cursor:pointer;
     </div>
     <div class="feed-search-results" id="feed-search-results"></div>
   </div>
-  <div class="feed-tabs" id="feed-tabs-bar" style="display:flex;border-bottom:2px solid var(--bg4);margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+  <div class="feed-tabs" id="feed-tabs-bar" style="display:flex;border-bottom:2px solid var(--bg4);margin-bottom:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;align-items:center">
     <button class="feed-tab active" id="feed-tab-following" onclick="switchFeedTab('following')">Your Feed</button>
     <button class="feed-tab" id="feed-tab-suggested" onclick="switchFeedTab('suggested')">Suggested</button>
   </div>
-  <div class="filter-bar" id="feed-community-filters"></div>
-  <div id="feed-list"></div>
-  <div id="feed-empty" class="text-center mt-lg hidden"></div>
+  <div id="feed-main-content" style="margin-top:16px">
+    <div class="filter-bar" id="feed-community-filters"></div>
+    <div id="feed-list"></div>
+    <div id="feed-empty" class="text-center mt-lg hidden"></div>
+  </div>
+  <div id="feed-community-inline" style="display:none;margin-top:12px"></div>
 </div>
 
 <!-- ============================================================
@@ -7598,20 +7601,104 @@ async function renderFeedCommunityFilters(){
   const{data:memberships}=await sb.from('community_members').select('community_id,communities(id,name)').eq('user_id',currentUser.id);
   const container=document.getElementById('feed-community-filters');
   if(container)container.innerHTML='';
-  // Add community tabs to the feed tab bar
   const tabBar=document.getElementById('feed-tabs-bar');
   if(!tabBar)return;
-  // Remove old community tabs
-  tabBar.querySelectorAll('.feed-tab-comm').forEach(t=>t.remove());
-  if(!memberships||!memberships.length)return;
-  memberships.forEach(m=>{
-    if(!m.communities)return;
-    const btn=document.createElement('button');
-    btn.className='feed-tab feed-tab-comm'+(feedCommunityFilter===m.community_id?' active':'');
-    btn.textContent=m.communities.name;
-    btn.onclick=()=>openCommunityDetail(m.community_id);
-    tabBar.appendChild(btn);
-  });
+  // Remove old community tabs and + button
+  tabBar.querySelectorAll('.feed-tab-comm,.feed-tab-new').forEach(t=>t.remove());
+  if(memberships&&memberships.length){
+    memberships.forEach(m=>{
+      if(!m.communities)return;
+      const btn=document.createElement('button');
+      btn.className='feed-tab feed-tab-comm';
+      btn.dataset.commId=m.community_id;
+      if(feedCommunityFilter===m.community_id)btn.classList.add('active');
+      btn.textContent=m.communities.name;
+      btn.onclick=()=>showCommunityInline(m.community_id);
+      tabBar.appendChild(btn);
+    });
+  }
+  // + New button
+  const newBtn=document.createElement('button');
+  newBtn.className='feed-tab-new';
+  newBtn.style.cssText='background:none;border:none;color:var(--accent);font-size:.75rem;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap;flex-shrink:0';
+  newBtn.textContent='+ New';
+  newBtn.onclick=()=>openCreateCommunity();
+  tabBar.appendChild(newBtn);
+}
+
+async function showCommunityInline(communityId){
+  feedCommunityFilter=communityId;
+  feedActiveTab='community';
+  // Update tab active states
+  document.querySelectorAll('.feed-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.feed-tab-comm').forEach(t=>t.classList.toggle('active',t.dataset.commId===communityId));
+  // Hide feed, show community inline
+  const mainContent=document.getElementById('feed-main-content');
+  const commInline=document.getElementById('feed-community-inline');
+  if(mainContent)mainContent.style.display='none';
+  if(commInline)commInline.style.display='block';
+
+  // Fetch community data
+  const{data:comm}=await sb.from('communities').select('*').eq('id',communityId).single();
+  if(!comm){if(commInline)commInline.innerHTML='<p class="fg3 small">Community not found.</p>';return}
+  const members=await fetchCommunityMembers(communityId);
+  const{data:myRecord}=await sb.from('community_members').select('role').eq('community_id',communityId).eq('user_id',currentUser.id).maybeSingle();
+  const isAdmin=myRecord?.role==='admin'||comm.created_by===currentUser.id;
+
+  commInline.innerHTML=`
+    <div class="flex between" style="align-items:center;margin-bottom:8px">
+      <div>
+        <span style="font-family:var(--font-display);font-weight:700;font-size:.9rem">${esc(comm.name)}</span>
+        <span class="fg3 small" style="margin-left:6px">${(members||[]).length} members</span>
+      </div>
+      <div class="flex gap-sm">
+        ${isAdmin?`<button class="notif-bell" onclick="openInviteMembers('${communityId}')" title="Invite"><i data-lucide="user-plus" style="width:16px;height:16px"></i></button>
+        <button class="notif-bell" onclick="openEditCommunity('${communityId}')" title="Edit"><i data-lucide="pencil" style="width:16px;height:16px"></i></button>`:''}
+      </div>
+    </div>
+    <div class="filter-bar mb-sm" id="comm-inline-tabs">
+      <div class="chip active" onclick="switchCommInlineTab('feed','${communityId}',this)">Feed</div>
+      <div class="chip" onclick="switchCommInlineTab('members','${communityId}',this)">Members</div>
+      <div class="chip" onclick="switchCommInlineTab('challenges','${communityId}',this)">Challenges</div>
+    </div>
+    <div id="comm-inline-content"></div>
+  `;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  // Render feed by default
+  await renderCommunityFeedInline(communityId, members);
+}
+
+async function switchCommInlineTab(tab, communityId, el){
+  document.querySelectorAll('#comm-inline-tabs .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='feed'){
+    const members=await fetchCommunityMembers(communityId);
+    await renderCommunityFeedInline(communityId, members);
+  }else if(tab==='members'){
+    const members=await fetchCommunityMembers(communityId);
+    const{data:myRecord}=await sb.from('community_members').select('role').eq('community_id',communityId).eq('user_id',currentUser.id).maybeSingle();
+    const isAdmin=myRecord?.role==='admin';
+    const container=document.getElementById('comm-inline-content');
+    renderCommunityMembers(members||[], isAdmin, communityId);
+    // Move members HTML to inline content
+    const membersTab=document.getElementById('community-members-tab');
+    if(membersTab&&container)container.innerHTML=membersTab.innerHTML;
+  }else if(tab==='challenges'){
+    const container=document.getElementById('comm-inline-content');
+    if(container)container.innerHTML='<div id="community-challenges-tab"></div>';
+    renderChallengesTab(communityId);
+  }
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function renderCommunityFeedInline(communityId, members){
+  const container=document.getElementById('comm-inline-content');
+  if(!container)return;
+  // Temporarily set the community-feed-tab to our inline container
+  const oldTab=document.getElementById('community-feed-tab');
+  container.id='community-feed-tab';
+  await renderCommunityFeed(communityId, members||[]);
+  container.id='comm-inline-content';
 }
 
 async function setFeedCommunityFilter(communityId){
@@ -7796,6 +7883,11 @@ function switchFeedTab(tab){
   document.querySelectorAll('.feed-tab').forEach(t=>t.classList.remove('active'));
   const activeTab=document.getElementById('feed-tab-'+tab);
   if(activeTab)activeTab.classList.add('active');
+  // Show main feed content, hide inline community
+  const mainContent=document.getElementById('feed-main-content');
+  const commInline=document.getElementById('feed-community-inline');
+  if(mainContent)mainContent.style.display='block';
+  if(commInline)commInline.style.display='none';
   renderFeed();
 }
 
