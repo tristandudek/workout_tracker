@@ -8081,14 +8081,32 @@ async function openChat(conversationId, otherUserId){
 
   // Load messages
   const{data:msgs}=await sb.from('messages').select('*').eq('conversation_id',conversationId).order('created_at');
+  // Fetch reel data for clip messages
+  const reelIds=[...new Set((msgs||[]).filter(m=>m.reel_id).map(m=>m.reel_id))];
+  let reelMap={};
+  if(reelIds.length){
+    const{data:reels}=await sb.from('reels').select('id,thumbnail_url,video_url').in('id',reelIds);
+    (reels||[]).forEach(r=>reelMap[r.id]=r);
+  }
   const container=document.getElementById('chat-messages');
   container.innerHTML=(msgs||[]).map(m=>{
-    const clipCard=m.reel_id?`<div style="background:var(--bg3);border-radius:var(--radius);padding:8px;margin-top:4px;cursor:pointer" onclick="nav('clips')">
-      <div class="flex gap-sm" style="align-items:center"><i data-lucide="film" style="width:14px;height:14px;color:var(--accent)"></i><span class="small" style="font-weight:600">Shared a clip</span></div>
-      <div style="margin-top:4px"><button class="btn btn-sm btn-primary" style="font-size:.65rem" onclick="event.stopPropagation();nav('clips')">Watch Clip →</button></div>
-    </div>`:'';
+    if(m.reel_id){
+      const reel=reelMap[m.reel_id];
+      const thumbSrc=reel?.thumbnail_url||'';
+      return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}" style="padding:0;overflow:hidden">
+        <div style="position:relative;cursor:pointer;border-radius:8px;overflow:hidden;aspect-ratio:9/16;max-width:200px;background:#000" onclick="nav('clips')" ${!thumbSrc&&reel?`data-clip-thumb-url="${reel.video_url}"`':''}>
+          ${thumbSrc?`<img src="${thumbSrc}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;background:#1a1a2e"></div>`}
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">
+              <div style="width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:14px solid #fff;margin-left:2px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-time" style="padding:4px 8px">${timeAgo(m.created_at)}</div>
+      </div>`;
+    }
     return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
-      ${esc(m.content)}${clipCard}
+      ${esc(m.content)}
       <div class="chat-time">${timeAgo(m.created_at)}</div>
     </div>`;
   }).join('');
@@ -8424,7 +8442,7 @@ async function sendClipDM(reelId, recipientId, recipientName){
   const senderName=currentProfile?.name||'Someone';
   const{error}=await sb.from('messages').insert({
     conversation_id:convoId,sender_id:currentUser.id,
-    content:senderName+' shared a clip with you',
+    content:'',
     reel_id:reelId
   });
   if(error){toast('Error sending');console.error(error);return}
