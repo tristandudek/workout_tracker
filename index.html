@@ -4852,7 +4852,7 @@ function searchRmForSlot(slot){
     const existing=new Set(ts['1rm_tiles']||[]);
     const matches=exs.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())&&!existing.has(e.id)).slice(0,8);
     container.innerHTML=matches.map(e=>`<div class="tile-modal-tile" style="padding:6px 10px">
-      <span style="flex:1;font-size:.8rem">${esc(e.name)}<span class="fg4 small" style="margin-left:6px">${esc(e.equipment||'')}</span></span>
+      <span style="flex:1;font-size:.8rem">${esc(e.name)}<span class="fg4 small" style="margin-left:6px">${esc((e.equipment||'').replace(/_/g,' '))}</span></span>
       <button class="btn btn-sm btn-primary" onclick="addRmToSlot(${slot},'${e.id}','${esc(e.name)}')" style="padding:2px 10px;font-size:.62rem">Select</button>
     </div>`).join('')||'<p class="fg4 small" style="padding:6px">No exercises found.</p>';
   },200);
