@@ -3277,57 +3277,61 @@ let pickerMuscle='', pickerEquip='', pickerType='', pickerTrack='';
 
 function openExercisePicker(target){
   pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';pickerTrack='';
-  renderExercisePicker('');
+  openModal(`
+    <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." oninput="updatePickerResults()"></div>
+      <div class="flex gap-sm mb-sm" style="flex-wrap:wrap">
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerType=this.value;updatePickerResults()">
+          <option value="">All Types</option>
+          <option value="resistance_training">Resistance</option>
+          <option value="cardio">Cardio</option>
+          <option value="yoga">Yoga</option>
+          <option value="sport">Sport</option>
+          <option value="other">Other</option>
+        </select>
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerMuscle=this.value;updatePickerResults()">
+          <option value="">All Muscles</option>
+          ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace('_',' ')}</option>`).join('')}
+        </select>
+        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerEquip=this.value;updatePickerResults()">
+          <option value="">All Equipment</option>
+          ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace('_',' ')}</option>`).join('')}
+        </select>
+      </div>
+      <div class="filter-bar" style="margin:0 0 8px">
+        <div class="chip active" onclick="pickerTrack='';updatePickerResults();document.querySelectorAll('#modal-content .filter-bar .chip').forEach(c=>c.classList.remove('active'));this.classList.add('active')">All</div>
+        <div class="chip" onclick="pickerTrack='reps';updatePickerResults();document.querySelectorAll('#modal-content .filter-bar .chip').forEach(c=>c.classList.remove('active'));this.classList.add('active')">Reps</div>
+        <div class="chip" onclick="pickerTrack='time';updatePickerResults();document.querySelectorAll('#modal-content .filter-bar .chip').forEach(c=>c.classList.remove('active'));this.classList.add('active')">Time</div>
+        <div class="chip" onclick="pickerTrack='distance';updatePickerResults();document.querySelectorAll('#modal-content .filter-bar .chip').forEach(c=>c.classList.remove('active'));this.classList.add('active')">Distance</div>
+      </div>
+      <div id="picker-results" style="max-height:350px;overflow-y:auto"></div>
+      <div class="divider"></div>
+      <a href="#" class="small" onclick="event.preventDefault();closeModal();openAddCustomExercise()">Can't find it? Add custom exercise</a>
+    </div>
+  `);
+  updatePickerResults();
+  if(typeof lucide!=='undefined')lucide.createIcons();
+  setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp)inp.focus()},100);
 }
 
-async function renderExercisePicker(q){
+let pickerSearchTimeout=null;
+async function updatePickerResults(){
+  const q=(document.getElementById('picker-search')?.value||'').trim();
   let exs=await getExercises();
   if(q)exs=fuzzySearchExercises(exs,q);
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
   if(pickerType)exs=exs.filter(e=>e.workout_type===pickerType);
   if(pickerTrack)exs=exs.filter(e=>(e.tracking_type||'reps')===pickerTrack);
-  openModal(`
-    <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
-    <div class="modal-body">
-      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." value="${esc(q||'')}" oninput="renderExercisePicker(this.value)"></div>
-      <div class="flex gap-sm mb-sm" style="flex-wrap:wrap">
-        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerType=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
-          <option value="">All Types</option>
-          <option value="resistance_training" ${pickerType==='resistance_training'?'selected':''}>Resistance</option>
-          <option value="cardio" ${pickerType==='cardio'?'selected':''}>Cardio</option>
-          <option value="yoga" ${pickerType==='yoga'?'selected':''}>Yoga</option>
-          <option value="sport" ${pickerType==='sport'?'selected':''}>Sport</option>
-          <option value="other" ${pickerType==='other'?'selected':''}>Other</option>
-        </select>
-        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerMuscle=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
-          <option value="">All Muscles</option>
-          ${ALL_MUSCLES.map(m=>`<option value="${m}" ${pickerMuscle===m?'selected':''}>${m.replace('_',' ')}</option>`).join('')}
-        </select>
-        <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerEquip=this.value;renderExercisePicker(document.getElementById('picker-search')?.value||'')">
-          <option value="">All Equipment</option>
-          ${ALL_EQUIP.map(e=>`<option value="${e}" ${pickerEquip===e?'selected':''}>${e.replace('_',' ')}</option>`).join('')}
-        </select>
-      </div>
-      <div class="filter-bar" style="margin:0 0 8px">
-        <div class="chip ${!pickerTrack?'active':''}" onclick="pickerTrack='';renderExercisePicker(document.getElementById('picker-search')?.value||'')">All</div>
-        <div class="chip ${pickerTrack==='reps'?'active':''}" onclick="pickerTrack='reps';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Reps</div>
-        <div class="chip ${pickerTrack==='time'?'active':''}" onclick="pickerTrack='time';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Time</div>
-        <div class="chip ${pickerTrack==='distance'?'active':''}" onclick="pickerTrack='distance';renderExercisePicker(document.getElementById('picker-search')?.value||'')">Distance</div>
-      </div>
-      <div style="max-height:350px;overflow-y:auto">
-        ${exs.slice(0,60).map(e=>`<div class="ex-card" style="margin-bottom:4px" onclick="pickExercise('${e.id}')">
-          <div class="thumb" style="width:36px;height:36px">${e.diagram}</div>
-          <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
-        </div>`).join('')}
-        ${exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 results. Refine search.</p>':''}
-        ${!exs.length?'<p class="fg3 text-center" style="padding:16px">No matches found.</p>':''}
-      </div>
-      <div class="divider"></div>
-      <a href="#" class="small" onclick="event.preventDefault();closeModal();openAddCustomExercise()">Can't find it? Add custom exercise</a>
-    </div>
-  `);
-  setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}},100);
+  const container=document.getElementById('picker-results');
+  if(!container)return;
+  container.innerHTML=exs.slice(0,60).map(e=>`<div class="ex-card" style="margin-bottom:4px" onclick="pickExercise('${e.id}')">
+    <div class="thumb" style="width:36px;height:36px">${e.diagram}</div>
+    <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
+  </div>`).join('')
+  +(exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 results. Refine search.</p>':'')
+  +(!exs.length?'<p class="fg3 text-center" style="padding:16px">No matches found.</p>':'');
 }
 
 async function pickExercise(id){
