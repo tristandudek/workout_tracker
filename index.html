@@ -3276,11 +3276,11 @@ let pickerTarget='create';
 let pickerMuscle='', pickerEquip='', pickerType='', pickerTrack='';
 
 function openExercisePicker(target){
-  pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';pickerTrack='';
+  pickerTarget=target;pickerMuscle='';pickerEquip='';pickerType='';pickerTrack='';_pickerExsCache=null;
   openModal(`
     <div class="modal-header"><h2>Add Exercise</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." oninput="updatePickerResults()"></div>
+      <div class="search-wrap"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="picker-search" placeholder="Search exercises..." oninput="updatePickerResults()" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()"></div>
       <div class="flex gap-sm mb-sm" style="flex-wrap:wrap">
         <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerType=this.value;updatePickerResults()">
           <option value="">All Types</option>
@@ -3310,15 +3310,26 @@ function openExercisePicker(target){
       <a href="#" class="small" onclick="event.preventDefault();closeModal();openAddCustomExercise()">Can't find it? Add custom exercise</a>
     </div>
   `);
-  updatePickerResults();
+  // Pre-cache exercises then render initial results
+  getExercises().then(exs=>{_pickerExsCache=exs;_doUpdatePickerResults()});
   if(typeof lucide!=='undefined')lucide.createIcons();
-  setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp)inp.focus()},100);
+  setTimeout(()=>{const inp=document.getElementById('picker-search');if(inp)inp.focus()},150);
 }
 
 let pickerSearchTimeout=null;
-async function updatePickerResults(){
-  const q=(document.getElementById('picker-search')?.value||'').trim();
-  let exs=await getExercises();
+let _pickerExsCache=null;
+function updatePickerResults(){
+  // Debounce to avoid excessive DOM updates
+  if(pickerSearchTimeout)clearTimeout(pickerSearchTimeout);
+  pickerSearchTimeout=setTimeout(()=>_doUpdatePickerResults(),150);
+}
+async function _doUpdatePickerResults(){
+  const input=document.getElementById('picker-search');
+  const q=(input?.value||'').trim();
+  console.log('Input event fired:',q);
+  // Use cached exercises to avoid async focus loss
+  if(!_pickerExsCache)_pickerExsCache=await getExercises();
+  let exs=_pickerExsCache;
   if(q)exs=fuzzySearchExercises(exs,q);
   if(pickerMuscle)exs=exs.filter(e=>e.muscleGroups.includes(pickerMuscle));
   if(pickerEquip)exs=exs.filter(e=>e.equipment===pickerEquip);
@@ -3330,8 +3341,9 @@ async function updatePickerResults(){
     <div class="thumb" style="width:36px;height:36px">${e.diagram}</div>
     <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
   </div>`).join('')
-  +(exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 results. Refine search.</p>':'')
+  +(exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 of '+exs.length+'. Refine search.</p>':'')
   +(!exs.length?'<p class="fg3 text-center" style="padding:16px">No matches found.</p>':'');
+  console.log('Results updated, input still focused:',document.activeElement===input);
 }
 
 async function pickExercise(id){
