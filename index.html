@@ -25,6 +25,7 @@
   --font-mono:'JetBrains Mono',monospace;
   --radius:8px;--radius2:12px;
   --shadow:0 1px 3px rgba(0,0,0,.06);--shadow-hover:0 4px 12px rgba(0,0,0,.08);
+  --bottom-bar-height:64px;
 }
 html{font-size:15px;-webkit-tap-highlight-color:transparent}
 body{
@@ -348,11 +349,13 @@ select.input{appearance:none;cursor:pointer;
 .video-modal-close{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;z-index:2}
 
 /* Reels */
-.reels-feed{height:calc(100vh - 56px - 64px - env(safe-area-inset-bottom,0px));overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch}
-.reel-card{height:calc(100vh - 56px - 64px - env(safe-area-inset-bottom,0px));scroll-snap-align:start;position:relative;background:#000;border-radius:var(--radius2);overflow:hidden;margin-bottom:4px}
+.reels-feed{height:calc(100dvh - 56px - var(--bottom-bar-height) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 56px - var(--bottom-bar-height));overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;padding-bottom:var(--bottom-bar-height)}
+.reel-card{height:calc(100dvh - 56px - var(--bottom-bar-height) - env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 56px - var(--bottom-bar-height));scroll-snap-align:start;position:relative;background:#000;border-radius:var(--radius2);overflow:hidden;margin-bottom:4px}
+.reel-actions{padding-bottom:calc(var(--bottom-bar-height) + 8px)}
 @media(min-width:768px){
-  .reels-feed{height:calc(100vh - 56px - 16px)}
-  .reel-card{height:calc(100vh - 56px - 16px)}
+  .reels-feed{height:calc(100dvh - 56px - 16px);max-height:calc(100dvh - 56px - 16px);padding-bottom:0}
+  .reel-card{height:calc(100dvh - 56px - 16px);max-height:calc(100dvh - 56px - 16px)}
+  .reel-actions{padding-bottom:8px}
 }
 .reel-card video{width:100%;height:100%;object-fit:cover;cursor:pointer}
 .reel-actions{position:absolute;right:12px;bottom:100px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:2}
@@ -374,6 +377,11 @@ select.input{appearance:none;cursor:pointer;
 .reel-thumb video,.reel-thumb img{width:100%;height:100%;object-fit:cover}
 .reel-thumb .thumb-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;background:rgba(0,0,0,.3)}
 /* Clip Editor */
+.clip-thumb-strip{display:flex;gap:4px;padding:8px 16px;background:#111;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.clip-thumb-strip::-webkit-scrollbar{display:none}
+.clip-thumb-item{width:48px;height:48px;border-radius:4px;overflow:hidden;cursor:pointer;flex-shrink:0;border:2px solid transparent}
+.clip-thumb-item.active{border-color:var(--accent)}
+.clip-thumb-item img{width:100%;height:100%;object-fit:cover}
 .clip-editor{position:fixed;inset:0;z-index:2000;background:#000;display:flex;flex-direction:column}
 .clip-editor-preview{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000}
 .clip-editor-preview video{width:100%;height:100%;object-fit:contain}
@@ -4499,13 +4507,20 @@ async function renderProfileClipsGrid(){
   }
 
   const fmtViews=n=>n>=1000?(n/1000).toFixed(1)+'k':n.toString();
-  container.innerHTML=`<div class="profile-posts-grid" style="gap:1px">${uploadTile}${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000">
-    ${c.thumbnail_url?`<img src="${c.thumbnail_url}" loading="lazy">`:`<video src="${c.video_url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`}
+  container.innerHTML=`<div class="profile-posts-grid" style="gap:1px">${uploadTile}${clips.map(c=>`<div class="profile-post-thumb" onclick="nav('clips')" style="background:#000" data-clip-id="${c.id}" data-video-url="${c.video_url}">
+    ${c.thumbnail_url?`<img src="${c.thumbnail_url}" loading="lazy">`:`<img class="clip-auto-thumb" data-src="${c.video_url}" style="width:100%;height:100%;object-fit:cover" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>">`}
     <div style="position:absolute;inset:0;background:linear-gradient(transparent 60%,rgba(0,0,0,.6));pointer-events:none"></div>
     <div style="position:absolute;bottom:6px;left:6px;color:#fff;font-size:.65rem"><i data-lucide="play" style="width:12px;height:12px;vertical-align:middle"></i></div>
     <div style="position:absolute;bottom:6px;right:6px;color:rgba(255,255,255,.8);font-size:.6rem;font-family:var(--font-mono)">👁 ${fmtViews(c.views_count||0)}</div>
   </div>`).join('')}</div>`;
   if(typeof lucide!=='undefined')lucide.createIcons();
+  // Generate thumbnails for clips without stored thumbnails
+  document.querySelectorAll('.clip-auto-thumb').forEach(async img=>{
+    const url=img.dataset.src;
+    if(!url)return;
+    const thumb=await generateVideoThumbnail(url);
+    if(thumb)img.src=thumb;
+  });
 }
 
 // ---- Tile Management ----
@@ -8266,6 +8281,7 @@ function openClipEditor(){
         <div class="clip-trim-handle" id="clip-trim-right" style="right:0"></div>
       </div>
     </div>
+    <div class="clip-thumb-strip" id="clip-thumb-strip"></div>
     <div id="clip-tool-panel"></div>
     <div class="clip-toolbar">
       <button class="clip-tool-btn" onclick="toggleClipTool('trim')">✂️<span>Trim</span></button>
@@ -8282,6 +8298,7 @@ function openClipEditor(){
     clipTrimEnd=clipDuration;
     document.getElementById('clip-trim-end-t').textContent=fmtClipTime(clipDuration);
     updateTrimUI();
+    generateClipThumbnails(video);
   };
   video.ontimeupdate=()=>{
     if(video.currentTime>=clipTrimEnd)video.currentTime=clipTrimStart;
@@ -8450,6 +8467,77 @@ function setupOverlayDrag(){
   document.addEventListener('touchend',endHandler);
 }
 
+let clipSelectedThumbUrl=null;
+let clipSelectedThumbBlob=null;
+
+function generateClipThumbnails(video){
+  const strip=document.getElementById('clip-thumb-strip');
+  if(!strip||!video.duration)return;
+  const dur=video.duration;
+  const times=[0,.15,.3,.45,.6,.75,.9,1].map(p=>Math.min(p*dur,dur-0.1));
+  const canvas=document.createElement('canvas');
+  canvas.width=120;canvas.height=120;
+  const ctx=canvas.getContext('2d');
+  let idx=0;
+  // Default to 1 second
+  const defaultTime=Math.min(1,dur-0.1);
+
+  function captureFrame(time,i){
+    return new Promise(resolve=>{
+      const tempVid=document.createElement('video');
+      tempVid.src=clipEditorUrl;
+      tempVid.muted=true;tempVid.preload='auto';
+      tempVid.onseeked=()=>{
+        ctx.drawImage(tempVid,0,0,120,120);
+        const dataUrl=canvas.toDataURL('image/jpeg',0.7);
+        resolve(dataUrl);
+        tempVid.remove();
+      };
+      tempVid.onloadeddata=()=>{tempVid.currentTime=time};
+      tempVid.onerror=()=>{resolve(null);tempVid.remove()};
+    });
+  }
+
+  (async()=>{
+    for(let i=0;i<times.length;i++){
+      const dataUrl=await captureFrame(times[i],i);
+      if(!dataUrl)continue;
+      const isDefault=i===0;
+      if(isDefault){clipSelectedThumbUrl=dataUrl}
+      const div=document.createElement('div');
+      div.className='clip-thumb-item'+(isDefault?' active':'');
+      div.innerHTML=`<img src="${dataUrl}">`;
+      div.onclick=()=>{
+        clipSelectedThumbUrl=dataUrl;
+        strip.querySelectorAll('.clip-thumb-item').forEach(t=>t.classList.remove('active'));
+        div.classList.add('active');
+        // Convert to blob for upload
+        canvas.toBlob(b=>{clipSelectedThumbBlob=b},'image/jpeg',0.8);
+      };
+      strip.appendChild(div);
+      // Pre-select default (frame at ~1s)
+      if(Math.abs(times[i]-defaultTime)<0.2&&!clipSelectedThumbBlob){
+        div.click();
+      }
+    }
+  })();
+}
+
+function generateVideoThumbnail(videoUrl){
+  return new Promise(resolve=>{
+    const vid=document.createElement('video');
+    vid.src=videoUrl;vid.muted=true;vid.preload='auto';vid.crossOrigin='anonymous';
+    vid.onseeked=()=>{
+      const c=document.createElement('canvas');c.width=200;c.height=200;
+      c.getContext('2d').drawImage(vid,0,0,200,200);
+      resolve(c.toDataURL('image/jpeg',0.7));
+      vid.remove();
+    };
+    vid.onloadeddata=()=>{vid.currentTime=Math.min(1,vid.duration-0.1)};
+    vid.onerror=()=>{resolve(null);vid.remove()};
+  });
+}
+
 function finishClipEditor(){
   console.log('Saving overlays:',{text:clipTextOverlays,emoji:clipEmojiOverlays,plan:{id:selectedReelPlanId,name:selectedReelPlanName}});
   const editor=document.getElementById('clip-editor');
@@ -8488,11 +8576,17 @@ async function submitReel(){
   console.log('Public URL:',videoUrl);
   if(!videoUrl){toast('Failed to get URL');return}
   const caption=document.getElementById('reel-caption')?.value.trim()||null;
-  // Build plan overlay data
+  // Upload thumbnail if available
+  let thumbnailUrl=null;
+  if(clipSelectedThumbBlob){
+    const thumbPath=`${currentUser.id}/${Date.now()}_thumb.jpg`;
+    const{error:thErr}=await sb.storage.from('reels').upload(thumbPath,clipSelectedThumbBlob,{upsert:true,contentType:'image/jpeg'});
+    if(!thErr){const{data:thUrl}=sb.storage.from('reels').getPublicUrl(thumbPath);thumbnailUrl=thUrl?.publicUrl||null}
+    console.log('Thumbnail upload:',thumbnailUrl,thErr);
+  }
   const planOverlay=selectedReelPlanId?{id:selectedReelPlanId,name:selectedReelPlanName}:null;
-  console.log('Saving reel:',{caption,plan:planOverlay,textOverlays:clipTextOverlays,emojiOverlays:clipEmojiOverlays,trim:[clipTrimStart,clipTrimEnd]});
   const{data:reelData,error}=await sb.from('reels').insert({
-    user_id:currentUser.id,video_url:videoUrl,caption,
+    user_id:currentUser.id,video_url:videoUrl,caption,thumbnail_url:thumbnailUrl,
     linked_plan_id:selectedReelPlanId||null,is_public:true,
     trim_start:clipTrimStart||0,trim_end:clipTrimEnd||0,
     text_overlays:clipTextOverlays.length?clipTextOverlays:null,
@@ -8504,6 +8598,7 @@ async function submitReel(){
   clipEditorFile=null;clipEditorUrl=null;
   selectedReelPlanId=null;selectedReelPlanName=null;
   clipTextOverlays=[];clipEmojiOverlays=[];
+  clipSelectedThumbUrl=null;clipSelectedThumbBlob=null;
   closeModal();toast('Clip posted!');
   nav('clips');
 }
