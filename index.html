@@ -392,7 +392,6 @@ select.input{appearance:none;cursor:pointer;
 .clip-overlay:hover .clip-overlay-delete,.clip-overlay.active .clip-overlay-delete{display:flex}
 .clip-plan-card{position:absolute;bottom:16px;right:16px;background:rgba(56,189,248,.9);color:#fff;padding:6px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;z-index:5;white-space:nowrap}
 .clip-plan-card .clip-plan-remove{background:none;border:none;color:rgba(255,255,255,.7);font-size:14px;cursor:pointer;margin-left:4px}
-.reel-plan-pill-fixed{position:absolute;bottom:16px;right:16px;z-index:3;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:20px;font-size:.72rem;font-weight:700;white-space:nowrap;cursor:pointer}
 .clip-trim-bar{padding:8px 16px;background:#111}
 .clip-trim-track{position:relative;height:32px;background:#333;border-radius:4px;margin:4px 0}
 .clip-trim-fill{position:absolute;top:0;bottom:0;background:rgba(56,189,248,.3);border-radius:4px}
@@ -8245,8 +8244,8 @@ async function renderReelsFeed(){
     return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-user-id="${r.user_id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
       <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
       ${textOvls}${emojiOvls}
-      ${r.linked_plan_id?`<div style="position:absolute;top:16px;left:16px;z-index:6;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(planName)} →</div>`:''}
-      <div style="position:absolute;top:16px;right:16px;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      ${r.linked_plan_id?`<div style="position:absolute;top:16px;left:16px;z-index:100;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(planName)} →</div>`:''}
+      <div style="position:absolute;top:16px;right:16px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <div style="background:rgba(0,0,0,.5);color:#fff;padding:4px 10px;border-radius:999px;font-size:.68rem;font-family:var(--font-mono)">👁 ${fmtCount(r.views_count)}</div>
         ${isOwnClip?`<div class="post-menu-wrap" style="position:relative">
           <button class="post-menu-btn" style="background:rgba(0,0,0,.5);color:#fff;width:28px;height:28px;border-radius:50%;border:none;font-size:16px;cursor:pointer" onclick="event.stopPropagation();togglePostMenu('clip-${r.id}')">&#8943;</button>
