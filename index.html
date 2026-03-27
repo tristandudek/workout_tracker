@@ -309,7 +309,7 @@ select.input{appearance:none;cursor:pointer;
 .aw-discard-btn:hover{background:rgba(239,68,68,.08)}
 .aw-finish-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:var(--font-display);transition:opacity .15s}
 .aw-finish-btn:hover{opacity:.85}
-.aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;overflow:hidden;border-radius:var(--radius2);box-shadow:var(--shadow)}
+.aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;border-radius:var(--radius2);box-shadow:var(--shadow)}
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
 #global-rest-timer{
@@ -3811,7 +3811,7 @@ async function renderActiveWorkout(){
       let ssAllDone=allDone;
       const ssExs=ae.supersetExercises||[];
       ssExs.forEach(se=>{if(se.sets)ssAllDone=ssAllDone&&se.sets.every(s=>s.completed)});
-      return `<div class="aw-exercise" style="border:2px solid var(--accent);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px${ssAllDone?';opacity:.6':''}">
+      return `<div class="aw-exercise" style="border:2px solid var(--accent);border-radius:var(--radius2);margin-bottom:10px${ssAllDone?';opacity:.6':''}">
         <div style="background:var(--accent-light);padding:4px 14px;font-size:.7rem;font-weight:700;color:var(--accent);font-family:var(--font-body)">SUPERSET</div>
         <div class="aw-exercise" style="border:none;margin:0">${renderExCard(ae,ei,prev,true)}</div>
         ${ssExs.map((se,si)=>{
