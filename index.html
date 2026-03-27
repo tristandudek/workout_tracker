@@ -7027,10 +7027,8 @@ async function renderCommunityFeed(communityId, members){
     </div>
   </div>`;
 
-  // Get workout posts: public from members OR explicitly posted to this community
-  const{data:rawPublicPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').in('user_id',memberIds).eq('is_public',true).order('created_at',{ascending:false}).limit(20);
-  const publicPosts=await attachProfiles(rawPublicPosts||[]);
-  const{data:rawCommPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(20);
+  // Get workout posts ONLY explicitly shared to this community
+  const{data:rawCommPosts}=await sb.from('workout_posts').select('*,workout_logs(workout_name,start_time,end_time,exercises)').contains('community_ids',[communityId]).order('created_at',{ascending:false}).limit(30);
   const commPosts=await attachProfiles(rawCommPosts||[]);
   // Get community direct posts
   const{data:rawDirectPosts,error:dpErr}=await sb.from('community_posts').select('*').eq('community_id',communityId).order('created_at',{ascending:false}).limit(30);
@@ -7044,10 +7042,8 @@ async function renderCommunityFeed(communityId, members){
     myLikedCpIds=new Set((myLikes||[]).map(l=>l.post_id));
   }
 
-  // Merge workout posts and dedupe
-  const postMap={};
-  [...(publicPosts||[]),...(commPosts||[])].forEach(p=>{postMap[p.id]={...p,_type:'workout'}});
-  const workoutPosts=Object.values(postMap);
+  // Workout posts explicitly shared to this community
+  const workoutPosts=(commPosts||[]).map(p=>({...p,_type:'workout'}));
   // Tag community direct posts
   const communityDirectPosts=(directPosts||[]).map(p=>({...p,_type:'community'}));
   // Combine all posts
