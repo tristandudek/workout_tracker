@@ -8238,33 +8238,31 @@ async function renderReelsFeed(){
     const textOvls=(r.text_overlays||[]).map(t=>`<div class="reel-text-overlay" style="left:${t.x}%;top:${t.y}%;font-size:${t.size||20}px;color:${t.color||'#fff'}">${esc(t.text)}</div>`).join('');
     const emojiOvls=(r.emoji_overlays||[]).map(e=>`<div class="reel-emoji-overlay" style="left:${e.x}%;top:${e.y}%;font-size:2rem">${e.emoji}</div>`).join('');
     const po=r.plan_overlay;
-    const planOvl=r.linked_plan_id?`<div class="reel-plan-pill-fixed" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(po?.name||plan?.name||'Plan')} →</div>`:'';
     const trimStart=r.trim_start||0;
     const trimEnd=r.trim_end||0;
     const isOwnClip=r.user_id===currentUser.id;
+    const planName=po?.name||plan?.name||'Plan';
     return `<div class="reel-card" id="reel-${r.id}" data-reel-id="${r.id}" data-user-id="${r.user_id}" data-trim-start="${trimStart}" data-trim-end="${trimEnd}">
       <video src="${r.video_url}${trimStart?'#t='+trimStart:''}" loop playsinline muted onclick="this.paused?this.play():this.pause()"></video>
-      ${textOvls}${emojiOvls}${planOvl}
-      ${isOwnClip?`<div style="position:absolute;top:12px;right:12px;z-index:10">
-        <div class="post-menu-wrap" style="position:relative">
+      ${textOvls}${emojiOvls}
+      ${r.linked_plan_id?`<div style="position:absolute;top:16px;left:16px;z-index:6;background:rgba(56,189,248,.9);color:#fff;padding:5px 12px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap" onclick="event.stopPropagation();openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(planName)} →</div>`:''}
+      <div style="position:absolute;top:16px;right:16px;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div style="background:rgba(0,0,0,.5);color:#fff;padding:4px 10px;border-radius:999px;font-size:.68rem;font-family:var(--font-mono)">👁 ${fmtCount(r.views_count)}</div>
+        ${isOwnClip?`<div class="post-menu-wrap" style="position:relative">
           <button class="post-menu-btn" style="background:rgba(0,0,0,.5);color:#fff;width:28px;height:28px;border-radius:50%;border:none;font-size:16px;cursor:pointer" onclick="event.stopPropagation();togglePostMenu('clip-${r.id}')">&#8943;</button>
           <div class="post-menu" id="post-menu-clip-${r.id}" style="right:0;left:auto">
             <button class="post-menu-item" style="color:#ef4444" onclick="deleteClip('${r.id}','${r.video_url}','${r.thumbnail_url||''}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Clip</button>
           </div>
-        </div>
-      </div>`:''}`+`
+        </div>`:''}</div>
       <div class="reel-actions">
         <div class="reel-action"><div class="reel-avatar" onclick="openPublicProfile('${r.user_id}')">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div></div>
         <div class="reel-action"><button class="reel-action-btn ${likedSet.has(r.id)?'liked':''}" onclick="toggleReelLike('${r.id}',this)"><i data-lucide="heart" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.likes_count)}</span></div>
         <div class="reel-action"><button class="reel-action-btn" onclick="openReelComments('${r.id}')"><i data-lucide="message-circle" style="width:20px;height:20px"></i></button><span class="reel-action-count">${fmtCount(r.comments_count)}</span></div>
         <div class="reel-action"><button class="reel-action-btn" onclick="shareReelDM('${r.id}')"><i data-lucide="send" style="width:20px;height:20px"></i></button></div>
-        ${plan?`<div class="reel-action"><button class="reel-action-btn" onclick="openPlanDetail('${r.linked_plan_id}',false)"><i data-lucide="map" style="width:20px;height:20px"></i></button></div>`:''}
       </div>
       <div class="reel-bottom">
         <div class="reel-username" onclick="openPublicProfile('${r.user_id}')">@${esc(p.username)}</div>
         ${r.caption?`<div class="reel-caption">${esc(r.caption)}</div>`:''}
-        ${plan?`<div class="reel-plan-pill" onclick="openPlanDetail('${r.linked_plan_id}',false)">📋 ${esc(plan.name)}${plan.visibility==='public_paid'?' · $'+(+plan.price).toFixed(2):''}</div>`:''}
-        <div class="reel-views">👁 ${fmtCount(r.views_count)} views</div>
       </div>
       <div id="reel-comments-sheet-${r.id}" class="reel-comment-sheet" style="display:none"></div>
     </div>`;
