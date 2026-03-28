@@ -2561,7 +2561,7 @@ function stBadgeHtml(st){
   if(st==='standard'||!st)return'';
   const cls=st==='ascending_pyramid'?'pyramid-asc':st==='descending_pyramid'?'pyramid-desc':st==='rest_pause'?'rest-pause':st;
   const tip=ST_TIPS[st]||'';
-  return `<span class="set-type-badge set-type-${cls}">${st.replace('_',' ')}${tip?`<span class="st-tip">${tip}</span>`:''}</span>`;
+  return `<span class="set-type-badge set-type-${cls}">${st.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}${tip?`<span class="st-tip">${tip}</span>`:''}</span>`;
 }
 
 function fmtDuration(mins){
@@ -2645,12 +2645,12 @@ async function renderHome(){
    DATABASE
    ============================================================= */
 let dbMuscleFilter=new Set(), dbEquipFilter=new Set();
-const ALL_MUSCLES=['chest','back','shoulders','biceps','triceps','forearms','core','abs','obliques','quads','hamstrings','glutes','calves','hip_flexors','lats','traps','rear_delts','full_body','flexibility','hips','cardio'];
+const ALL_MUSCLES=['abs','back','biceps','calves','cardio','chest','core','flexibility','forearms','full_body','glutes','hamstrings','hip_flexors','hips','lats','obliques','quads','rear_delts','shoulders','traps','triceps'];
 const ALL_EQUIP=['barbell','dumbbell','kettlebell','cable','machine','smith_machine','bodyweight','jump_rope','resistance_band','cardio_machine','yoga','basketball','football','baseball','tennis','golf','soccer','other_sports','other'];
 
 async function renderDatabase(){
-  document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace('_',' ')}</div>`).join('');
-  document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace('_',' ')}</div>`).join('');
+  document.getElementById('db-muscle-filters').innerHTML=ALL_MUSCLES.map(m=>`<div class="chip ${dbMuscleFilter.has(m)?'active':''}" onclick="toggleFilter('muscle','${m}')">${m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div>`).join('');
+  document.getElementById('db-equip-filters').innerHTML=ALL_EQUIP.map(e=>`<div class="chip ${dbEquipFilter.has(e)?'active':''}" onclick="toggleFilter('equip','${e}')">${e.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div>`).join('');
   const q=(document.getElementById('db-search').value||'').toLowerCase();
   let exs=await getExercises();
   if(q)exs=fuzzySearchExercises(exs,q);
@@ -2659,7 +2659,7 @@ async function renderDatabase(){
   const grid=document.getElementById('db-grid');
   grid.innerHTML=exs.slice(0,100).map(e=>`<div class="ex-card" onclick="openExerciseDetail('${e.id}')">
     <div class="thumb">${e.diagram}</div>
-    <div class="info"><div class="name">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
+    <div class="info"><div class="name">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())} &middot; ${e.equipment.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div></div>
   </div>`).join('');
   if(exs.length>100)grid.innerHTML+=`<p class="fg3 small text-center" style="grid-column:1/-1;padding:12px">Showing 100 of ${exs.length} results. Refine your search.</p>`;
   if(!exs.length)grid.innerHTML='<p class="fg3 text-center" style="grid-column:1/-1;padding:20px">No exercises found.</p>';
@@ -2694,8 +2694,8 @@ async function openExerciseDetail(id){
     <div class="modal-body">
       <div class="text-center mb-md">${ex.diagram.replace('viewBox="0 0 120 120"','viewBox="0 0 120 120" width="140" height="140"')}</div>
       <div class="flex gap-sm wrap mb-md">
-        ${ex.muscleGroups.map(m=>`<span class="tag tag-muscle">${m.replace('_',' ')}</span>`).join('')}
-        <span class="tag tag-equip">${ex.equipment.replace('_',' ')}</span>
+        ${ex.muscleGroups.map(m=>`<span class="tag tag-muscle">${m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>`).join('')}
+        <span class="tag tag-equip">${ex.equipment.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
       </div>
       <p class="small" style="line-height:1.6;color:var(--fg2)">${esc(ex.instructions)}</p>
       ${ex.photo_url?`<div class="mt-md"><img src="${ex.photo_url}" style="max-width:100%;border:1px solid var(--bg4);border-radius:var(--radius)"></div>`:''}
@@ -2723,11 +2723,11 @@ function openAddCustomExercise(){
       <input class="input mb-sm" id="custom-name" placeholder="Exercise name">
       <select class="input mb-sm" id="custom-muscle">
         <option value="">Primary muscle group</option>
-        ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace('_',' ')}</option>`).join('')}
+        ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
       </select>
       <select class="input mb-sm" id="custom-equip">
         <option value="">Equipment / Type</option>
-        ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace('_',' ')}</option>`).join('')}
+        ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
       </select>
       <textarea class="input mb-sm" id="custom-instr" placeholder="Instructions (optional)"></textarea>
       <div class="profile-field">
@@ -2810,11 +2810,11 @@ async function editCustomExercise(id){
       <input class="input mb-sm" id="edit-custom-name" placeholder="Exercise name" value="${esc(ex.name)}">
       <select class="input mb-sm" id="edit-custom-muscle">
         <option value="">Primary muscle group</option>
-        ${ALL_MUSCLES.map(m=>`<option value="${m}"${m===ex.muscleGroups[0]?' selected':''}>${m.replace('_',' ')}</option>`).join('')}
+        ${ALL_MUSCLES.map(m=>`<option value="${m}"${m===ex.muscleGroups[0]?' selected':''}>${m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
       </select>
       <select class="input mb-sm" id="edit-custom-equip">
         <option value="">Equipment / Type</option>
-        ${ALL_EQUIP.map(e=>`<option value="${e}"${e===ex.equipment?' selected':''}>${e.replace('_',' ')}</option>`).join('')}
+        ${ALL_EQUIP.map(e=>`<option value="${e}"${e===ex.equipment?' selected':''}>${e.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
       </select>
       <textarea class="input mb-sm" id="edit-custom-instr" placeholder="Instructions (optional)">${esc(ex.instructions==='Custom exercise.'?'':ex.instructions)}</textarea>
     </div>
@@ -3105,7 +3105,7 @@ function renderWoCards(wos){
       <div class="flex between" style="align-items:flex-start;gap:6px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>
       ${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}
       <div class="wo-meta">${w.exercises.length} exercises</div>
-      ${(w.workout_types||[]).length?`<div style="margin-top:4px">${w.workout_types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}</div>`:''}
+      ${(w.workout_types||[]).length?`<div style="margin-top:4px">${w.workout_types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>`).join('')}</div>`:''}
     </div>
     <div class="wo-actions">
       <button class="btn btn-sm btn-primary" onclick="startFromTemplate('${w.id}')">Start</button>
@@ -3353,11 +3353,11 @@ function openExercisePicker(target){
         </select>
         <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerMuscle=this.value;updatePickerResults()">
           <option value="">All Muscles</option>
-          ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace('_',' ')}</option>`).join('')}
+          ${ALL_MUSCLES.map(m=>`<option value="${m}">${m.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
         </select>
         <select class="input" style="font-size:.8rem;flex:1;min-width:120px" onchange="pickerEquip=this.value;updatePickerResults()">
           <option value="">All Equipment</option>
-          ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace('_',' ')}</option>`).join('')}
+          ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
         </select>
       </div>
       <div class="filter-bar" style="margin:0 0 8px">
@@ -3400,7 +3400,7 @@ async function _doUpdatePickerResults(){
   if(!container)return;
   container.innerHTML=exs.slice(0,60).map(e=>`<div class="ex-card" style="margin-bottom:4px" onclick="pickExercise('${e.id}')">
     <div class="thumb" style="width:36px;height:36px">${e.diagram}</div>
-    <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace('_',' ')} &middot; ${e.equipment.replace('_',' ')}</div></div>
+    <div class="info"><div class="name" style="font-size:.82rem">${esc(e.name)}</div><div class="meta">${e.muscleGroups[0].replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())} &middot; ${e.equipment.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</div></div>
   </div>`).join('')
   +(exs.length>60?'<p class="fg3 small text-center" style="padding:8px">Showing 60 of '+exs.length+'. Refine search.</p>':'')
   +(!exs.length?'<p class="fg3 text-center" style="padding:16px">No matches found.</p>':'');
@@ -3538,7 +3538,7 @@ async function showStartFromWorkout(){
       <div class="search-wrap mb-sm"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="start-wo-search" placeholder="Search workouts..." oninput="filterStartWorkouts()"></div>
       <div id="start-wo-list">
         ${wos.length?wos.map(w=>`<div class="wo-card start-wo-item" style="cursor:pointer;margin-bottom:6px" data-name="${esc(w.name.toLowerCase())}" onclick="closeModal();startFromTemplate('${w.id}')">
-          <div class="wo-info" style="flex:1"><div class="flex between" style="align-items:flex-start;gap:4px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises${(w.workout_types||[]).length?' · '+w.workout_types.map(t=>t.replace('_',' ')).join(', '):''}</div></div>
+          <div class="wo-info" style="flex:1"><div class="flex between" style="align-items:flex-start;gap:4px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises${(w.workout_types||[]).length?' · '+w.workout_types.map(t=>t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join(', '):''}</div></div>
           <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
         </div>`).join(''):'<p class="fg3 small">No workouts yet. Create one first.</p>'}
       </div>
@@ -4243,7 +4243,7 @@ function showSummaryModal(dur, totalSets, totalVol, prs){
   // Count set types
   const stCounts={};
   if(activeWorkout){activeWorkout.exercises.forEach(ae=>{const st=ae.setType||'standard';if(st!=='standard'){stCounts[st]=(stCounts[st]||0)+1}})}
-  const stSummary=Object.entries(stCounts).map(([k,v])=>`${v} ${k.replace('_',' ')}${v>1?'s':''}`).join(' · ');
+  const stSummary=Object.entries(stCounts).map(([k,v])=>`${v} ${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}${v>1?'s':''}`).join(' · ');
 
   openModal(`
     <div class="modal-header"><h2>Workout Complete!</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
@@ -6781,6 +6781,7 @@ function closeModal(){
    UTILS
    ============================================================= */
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function cap(s){return(s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
 function findExercise(exs,id,name){
   let ex=exs.find(e=>e.id===id);
   if(!ex&&name)ex=exs.find(e=>e.name===name);
@@ -7622,11 +7623,11 @@ async function renderChallengeCard(c, isAdmin){
   // Build rules display
   let rulesHtml='';
   if(rules.length){
-    rulesHtml=rules.map(r=>`<div class="small fg2">${CH_ICONS[r.workout_type]||''} ${r.workout_type.replace('_',' ')}: ${r.times_per_week}x/week${r.min_minutes?' · '+r.min_minutes+' min min':''}</div>`).join('');
+    rulesHtml=rules.map(r=>`<div class="small fg2">${CH_ICONS[r.workout_type]||''} ${r.workout_type.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}: ${r.times_per_week}x/week${r.min_minutes?' · '+r.min_minutes+' min min':''}</div>`).join('');
   }else{
     // Legacy format
     const types=c.allowed_workout_types||[];
-    rulesHtml=`<div style="display:flex;gap:4px;flex-wrap:wrap"><span class="feed-stat-pill"><span class="pill-val">${c.workouts_per_week||3}x</span> / week</span>${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace('_',' ')}</span>`).join('')}${!types.length?'<span class="feed-stat-pill">All types</span>':''}</div>`;
+    rulesHtml=`<div style="display:flex;gap:4px;flex-wrap:wrap"><span class="feed-stat-pill"><span class="pill-val">${c.workouts_per_week||3}x</span> / week</span>${types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>`).join('')}${!types.length?'<span class="feed-stat-pill">All types</span>':''}</div>`;
   }
 
   // Progress (simplified — total completions vs total required)
