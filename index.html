@@ -4557,7 +4557,7 @@ async function renderProfilePostsGrid(){
           <div class="feed-user">${esc(prof.name||'')}</div>
           <div class="feed-time">${timeAgo(p.created_at)}</div>
         </div>
-        ${isOwn?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+        ${isOwn?postMenuHtml(p.id,p.is_public!==false):''}
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
       <div class="feed-stat-pills">
@@ -4601,11 +4601,20 @@ async function renderProfilePostsGrid(){
         </div>
         <div style="padding:0 14px 10px">
           <button class="btn btn-sm btn-primary" onclick="shareExistingLog('${l.id}')"><i data-lucide="share" style="width:12px;height:12px"></i> Share Now</button>
+          <button class="btn btn-sm" style="margin-left:6px;color:#ef4444;border-color:#ef4444" onclick="deleteWorkoutLog('${l.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button>
         </div>
       </div>`;
     }).join('');
   }
   if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function deleteWorkoutLog(logId){
+  if(!confirm('Delete this workout permanently? This cannot be undone.'))return;
+  await sb.from('workout_logs').delete().eq('id',logId);
+  invalidateCache('logs');
+  toast('Workout deleted');
+  renderProfilePostsGrid();
 }
 
 async function shareExistingLog(logId){
@@ -5252,7 +5261,7 @@ async function renderProfileActivityFeed(){
               <div class="feed-user">${esc(p.profiles?.name)}</div>
               <div class="feed-time">${timeAgo(p.created_at)}</div>
             </div>
-            ${isOwn?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+            ${isOwn?postMenuHtml(p.id,p.is_public!==false):''}
           </div>
           <div class="feed-summary"><strong>${esc(wl?.workout_name||'Workout')}</strong></div>
           <div class="feed-stat-pills">
@@ -5870,7 +5879,7 @@ async function renderFeed(){
           <div class="feed-user" onclick="openPublicProfile('${p.post_user_id}')">${esc(p.author_name)}</div>
           <div class="feed-time">${timeAgo(p.post_created_at)}</div>
         </div>
-        ${p.post_user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.post_id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.post_id}"><button class="post-menu-item" onclick="deletePost('${p.post_id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+        ${p.post_user_id===currentUser.id?postMenuHtml(p.post_id,true):''}
       </div>
       <div class="feed-summary"><strong>${esc(p.workout_name||'Workout')}</strong></div>
       <div class="feed-stat-pills">
@@ -5905,26 +5914,41 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.post-menu-wrap'))document.querySelectorAll('.post-menu.open').forEach(m=>m.classList.remove('open'));
 });
 
+function postMenuHtml(postId,isPublic){
+  const visLabel=isPublic?'Make Private':'Make Public';
+  const visIcon=isPublic?'eye-off':'eye';
+  return `<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${postId}')">&#8943;</button><div class="post-menu" id="post-menu-${postId}"><button class="post-menu-item" onclick="togglePostVisibility('${postId}')"><i data-lucide="${visIcon}" style="width:12px;height:12px"></i> ${visLabel}</button><button class="post-menu-item" style="color:#ef4444" onclick="deletePost('${postId}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete</button></div></div>`;
+}
+
+async function togglePostVisibility(postId){
+  const{data:post}=await sb.from('workout_posts').select('is_public').eq('id',postId).single();
+  if(!post)return;
+  const newVis=!post.is_public;
+  await sb.from('workout_posts').update({is_public:newVis}).eq('id',postId);
+  toast(newVis?'Post is now public':'Post is now private');
+  if(currentView==='feed')await renderFeed();
+  if(currentView==='profile')await renderProfilePostsGrid();
+}
+
 async function deletePost(postId){
-  if(!confirm('Are you sure you want to delete this post? This cannot be undone.'))return;
-  // Get post to check for photos
-  const{data:post}=await sb.from('workout_posts').select('photo_urls').eq('id',postId).single();
+  if(!confirm('Are you sure? This will permanently delete this post and its workout history.'))return;
+  const{data:post}=await sb.from('workout_posts').select('photo_urls,workout_log_id').eq('id',postId).single();
   // Delete photos from storage
-  if(post&&post.photo_urls&&post.photo_urls.length){
+  if(post?.photo_urls?.length){
     for(const url of post.photo_urls){
-      try{
-        const path=new URL(url).pathname.split('/storage/v1/object/public/post-photos/')[1];
-        if(path)await sb.storage.from('post-photos').remove([path]);
-      }catch(e){console.error('Photo delete error:',e)}
+      try{const path=new URL(url).pathname.split('/storage/v1/object/public/post-photos/')[1];if(path)await sb.storage.from('post-photos').remove([path])}catch(e){}
     }
   }
-  // Delete the post
-  const{error}=await sb.from('workout_posts').delete().eq('id',postId);
-  if(error){toast('Error deleting post');return}
-  // Remove from DOM
+  // Delete the post record
+  await sb.from('workout_posts').delete().eq('id',postId);
+  // Also delete the workout log so it doesn't show as private
+  if(post?.workout_log_id){
+    await sb.from('workout_logs').delete().eq('id',post.workout_log_id);
+    invalidateCache('logs');
+  }
   const el=document.getElementById('post-'+postId);
   if(el)el.remove();
-  toast('Post deleted');
+  toast('Post and workout deleted');
 }
 
 async function toggleLike(postId, btn){
@@ -7097,7 +7121,7 @@ async function renderCommunityFeed(communityId, members){
           <div class="feed-user" onclick="openPublicProfile('${p.user_id}')">${esc(p.profiles?.name)}</div>
           <div class="feed-time">${timeAgo(p.created_at)}</div>
         </div>
-        ${p.user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();togglePostMenu('${p.id}')">&#8943;</button><div class="post-menu" id="post-menu-${p.id}"><button class="post-menu-item" onclick="deletePost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
+        ${p.user_id===currentUser.id?postMenuHtml(p.id,p.is_public!==false):''}
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
       ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
