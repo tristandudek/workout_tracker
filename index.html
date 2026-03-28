@@ -1147,6 +1147,11 @@ select.input{appearance:none;cursor:pointer;
       </div>
     </div>
   </div>
+  <div style="display:flex;align-items:center;gap:6px;padding:8px 0 0">
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.72rem;color:var(--fg3)">
+      <input type="checkbox" id="aw-autofill-toggle" onchange="toggleAutoFill(this.checked)"> Auto-fill weight down
+    </label>
+  </div>
   <div id="aw-exercises" class="mt-sm"></div>
   <button class="btn btn-block mt-sm" onclick="openExercisePicker('active')">+ Add Exercise</button>
 </div>
@@ -3862,16 +3867,17 @@ function awDrop(e,i){
   renderActiveWorkout();
 }
 
+let awAutoFill=false;
+function toggleAutoFill(on){awAutoFill=on}
+
 function updateSet(ei,si,field,val){
   activeWorkout.exercises[ei].sets[si][field]=val;
-  if(field==='weight'){
-    // Mark this set as manually entered
+  if(field==='weight'&&awAutoFill){
     activeWorkout.exercises[ei].sets[si]._manual=true;
-    // Cascade weight down to auto-filled or empty sets
     if(val){
       const sets=activeWorkout.exercises[ei].sets;
       for(let i=si+1;i<sets.length;i++){
-        if(sets[i]._manual)break; // stop at manually entered set
+        if(sets[i]._manual)break;
         sets[i].weight=val;
       }
       renderActiveWorkout();
@@ -3893,7 +3899,7 @@ function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length
 
 function updateSupersetSet(ei,si,ssi,field,val){
   activeWorkout.exercises[ei].supersetExercises[si].sets[ssi][field]=val;
-  if(field==='weight'){
+  if(field==='weight'&&awAutoFill){
     activeWorkout.exercises[ei].supersetExercises[si].sets[ssi]._manual=true;
     if(val){
       const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
