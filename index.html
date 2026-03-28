@@ -4275,15 +4275,30 @@ function showSummaryModal(dur, totalSets, totalVol, prs){
 }
 
 async function saveAsTemplate(){
-  const name=document.getElementById('save-template-name').value.trim();
+  const name=document.getElementById('save-template-name')?.value.trim();
+  const desc=document.getElementById('save-template-desc')?.value.trim()||'';
   if(!name){toast('Enter a name');return}
+  // Build template exercises with full data
+  const templateExs=activeWorkout.exercises.map(e=>{
+    const completedSets=e.sets.filter(s=>s.completed);
+    const reps=completedSets.map(s=>s.reps).filter(r=>r>0);
+    const minRep=reps.length?Math.min(...reps):8;
+    const maxRep=reps.length?Math.max(...reps):12;
+    const targetReps=minRep===maxRep?''+minRep:minRep+'-'+maxRep;
+    const ex={exerciseId:e.exerciseId,exerciseName:e.exerciseName||'Unknown',targetSets:e.sets.length,targetReps,restTime:e.restTime||90,setType:e.setType||'standard',notes:''};
+    if(e.supersetExercises){
+      ex.supersetExercises=e.supersetExercises.map(se=>({exerciseId:se.exerciseId,exerciseName:se.exerciseName||'Unknown',targetReps:se.targetReps||targetReps}));
+    }
+    return ex;
+  });
   const{error}=await sb.from('workout_templates').insert({
-    user_id:currentUser.id,name,
-    exercises:activeWorkout.exercises.map(e=>({exerciseId:e.exerciseId,targetSets:e.sets.length,targetReps:'',notes:''}))
+    user_id:currentUser.id,name,description:desc,exercises:templateExs
   });
   if(error){toast('Error saving template');console.error(error);return}
   invalidateCache('workouts');
-  toast('Template saved!');
+  const btn=document.getElementById('save-template-btn');
+  if(btn)btn.outerHTML='<span class="fg3 small">✓ Template saved!</span>';
+  toast('Template saved — '+name);
 }
 
 async function confirmFinish(){
@@ -6686,9 +6701,15 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
         ${comms.map(c=>`<label class="flex gap-sm mb-sm" style="align-items:center;cursor:pointer;padding:6px 0"><input type="checkbox" class="share-comm-check" value="${c.id}"> <span class="small">${esc(c.name)}</span></label>`).join('')}
       </div>`:''}
     </div>
+    ${!wo?.fromTemplate?`<div class="divider"></div>
+      <div class="small fg2 mb-sm" style="font-weight:600">Save as reusable workout?</div>
+      <input class="input mb-sm" id="save-template-name" placeholder="Workout name" value="${esc(wo?.workoutName||'')}">
+      <input class="input mb-sm" id="save-template-desc" placeholder="Description (optional)">
+      <button class="btn btn-sm btn-block mb-sm" id="save-template-btn" style="border:1.5px solid var(--accent);color:var(--accent);background:transparent" onclick="saveAsTemplate()"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save as Template</button>
+    `:''}
     <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn btn-primary btn-block" onclick="submitPostV2()">Post & Finish</button>
-      <button class="btn btn-ghost btn-block" onclick="console.log('Workout saved without posting, workout_log_id:',activeWorkout?._logId);closeModal();finishCleanup()">Skip, just save</button>
+      <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
     </div>
   `);
 }
