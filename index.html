@@ -313,7 +313,7 @@ select.input{appearance:none;cursor:pointer;
 .aw-exercise.completed{opacity:.6}
 .aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
 #global-rest-timer{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;
+  position:fixed;bottom:calc(var(--bottom-bar-height) + 16px);left:50%;transform:translateX(-50%);z-index:9999;
   display:none;align-items:center;gap:10px;
   padding:12px 24px;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.2);
   border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);
@@ -6676,7 +6676,7 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
   const defaultVis=hasCommunities?'feed_communities':'public';
 
   openModal(`
-    <div class="modal-header"><h2>Share Your Workout 💪</h2><button class="modal-close" onclick="closeModal();finishCleanup()">&times;</button></div>
+    <div class="modal-header"><h2>Share Your Workout 💪</h2><button class="modal-close" onclick="closeModal();resumeWorkoutAfterCancel()">&times;</button></div>
     <div class="modal-body" style="max-height:70vh;overflow-y:auto">
       <div class="feed-stat-pills mb-md" style="padding:0">
         <span class="feed-stat-pill"><span class="pill-val">${esc(wo?.workoutName||'Workout')}</span></span>
@@ -6779,6 +6779,21 @@ async function submitPostV2(){
   }
   closeModal();
   finishCleanup();
+}
+
+function resumeWorkoutAfterCancel(){
+  if(!activeWorkout)return;
+  // Undo the finish — delete the log that was just saved and resume
+  if(activeWorkout._logId){
+    sb.from('workout_logs').delete().eq('id',activeWorkout._logId);
+    invalidateCache('logs');
+    activeWorkout._logId=null;
+  }
+  activeWorkout.endTime=null;
+  saveActiveWO(activeWorkout);
+  nav('active');
+  renderActiveWorkout();
+  toast('Workout resumed');
 }
 
 function finishCleanup(){
