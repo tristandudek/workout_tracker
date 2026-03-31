@@ -701,7 +701,7 @@ select.input{appearance:none;cursor:pointer;
 .post-menu-wrap{position:relative;margin-left:auto}
 .post-menu-btn{background:none;border:none;color:var(--fg3);cursor:pointer;font-size:1.2rem;padding:4px 8px;border-radius:var(--radius);line-height:1}
 .post-menu-btn:hover{background:var(--bg3);color:var(--fg)}
-.post-menu{position:absolute;top:100%;right:0;background:var(--bg);border:1px solid var(--bg4);border-radius:var(--radius);box-shadow:var(--shadow-hover);z-index:10;display:none;min-width:140px}
+.post-menu{position:absolute;top:100%;right:0;background:var(--bg);border:1px solid var(--bg4);border-radius:var(--radius);box-shadow:var(--shadow-hover);z-index:9999;display:none;min-width:140px}
 .post-menu.open{display:block}
 .post-menu-item{display:block;width:100%;padding:8px 14px;background:none;border:none;text-align:left;font-size:.82rem;color:var(--red);cursor:pointer;font-family:var(--font-body)}
 .post-menu-item:hover{background:var(--bg2)}
@@ -884,6 +884,16 @@ select.input{appearance:none;cursor:pointer;
   h1{font-size:1.9rem}
   #profile-badge{padding:8px 10px}
 }
+.community-leaderboard{margin-bottom:14px;padding:14px;background:var(--bg);border:1px solid var(--bg4);border-radius:var(--radius2);box-shadow:var(--shadow)}
+.community-leaderboard h4{font-family:var(--font-display);font-size:.8rem;margin-bottom:10px;color:var(--fg2);display:flex;align-items:center;gap:6px}
+.lb-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lb-card{text-align:center;padding:10px 6px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);position:relative}
+.lb-card .lb-icon{font-size:1.1rem;margin-bottom:4px}
+.lb-card .lb-avatar{width:36px;height:36px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;background:var(--accent);overflow:hidden}
+.lb-card .lb-avatar img{width:100%;height:100%;object-fit:cover}
+.lb-card .lb-name{font-size:.68rem;font-weight:600;font-family:var(--font-display);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-card .lb-stat{font-size:.72rem;font-weight:700;font-family:var(--font-mono);color:var(--accent);margin-top:2px}
+.lb-card .lb-label{font-size:.58rem;color:var(--fg3);margin-top:1px;text-transform:uppercase;letter-spacing:.03em}
 </style>
 </head>
 <body>
@@ -4962,7 +4972,17 @@ async function addRmToSlot(slot, exerciseId, exerciseName){
   // Calculate estimated 1RM
   const logs=await getLogs();
   let best1rm=0,bestWeight=0,bestReps=0;
-  logs.forEach(l=>{l.exercises.forEach(ex=>{if(ex.exerciseId===exerciseId){ex.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}})}})});
+  const nameLC=exerciseName.toLowerCase();
+  logs.forEach(l=>{l.exercises.forEach(ex=>{
+    if(ex.exerciseId===exerciseId||(ex.exerciseName||'').toLowerCase()===nameLC){
+      ex.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
+    }
+    if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{
+      if(se.exerciseId===exerciseId||(se.exerciseName||'').toLowerCase()===nameLC){
+        if(se.sets)se.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
+      }
+    });
+  })});
   await sb.from('profile_1rm_tiles').upsert({
     user_id:currentUser.id,exercise_id:exerciseId,exercise_name:exerciseName,
     weight:bestWeight,weight_unit:getUnit(),reps:bestReps,
@@ -4984,14 +5004,16 @@ async function recalc1rmTiles(){
     const logs=await getLogs();
     for(const tile of tiles){
       let best1rm=0,bestWeight=0,bestReps=0;
+      const tileId=tile.exercise_id;
+      const tileName=(tile.exercise_name||'').toLowerCase();
+      function matchEx(ex){return ex.exerciseId===tileId||(ex.exerciseName||'').toLowerCase()===tileName}
+      function checkSets(sets){
+        (sets||[]).forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
+      }
       logs.forEach(l=>{l.exercises.forEach(ex=>{
-        if(ex.exerciseId===tile.exercise_id){
-          ex.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
-        }
+        if(matchEx(ex))checkSets(ex.sets);
         if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{
-          if(se.exerciseId===tile.exercise_id&&se.sets){
-            se.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
-          }
+          if(matchEx(se))checkSets(se.sets);
         });
       })});
       if(best1rm>0){
@@ -6028,11 +6050,21 @@ function togglePostMenu(postId){
   const menu=document.getElementById('post-menu-'+postId);
   if(!menu)return;
   const isOpen=menu.classList.contains('open');
-  document.querySelectorAll('.post-menu.open').forEach(m=>m.classList.remove('open'));
-  if(!isOpen)menu.classList.add('open');
+  document.querySelectorAll('.post-menu.open').forEach(m=>{m.classList.remove('open');m.style.position='';m.style.top='';m.style.left=''});
+  if(!isOpen){
+    // Use fixed positioning if inside an overflow-hidden container
+    const btn=menu.previousElementSibling||menu.parentElement.querySelector('.post-menu-btn');
+    if(btn&&btn.closest('.profile-tab-panel')){
+      const r=btn.getBoundingClientRect();
+      menu.style.position='fixed';
+      menu.style.top=(r.bottom+4)+'px';
+      menu.style.left=(r.right-140)+'px';
+    }
+    menu.classList.add('open');
+  }
 }
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.post-menu-wrap'))document.querySelectorAll('.post-menu.open').forEach(m=>m.classList.remove('open'));
+  if(!e.target.closest('.post-menu-wrap'))document.querySelectorAll('.post-menu.open').forEach(m=>{m.classList.remove('open');m.style.position='';m.style.top='';m.style.left=''});
 });
 
 function postMenuHtml(postId,isPublic){
@@ -7137,6 +7169,18 @@ async function openCommunityDetail(communityId){
   const showAdminTools=isAdmin||isCreator;
   console.log('Is admin:',isAdmin,'Is creator:',isCreator,'Show admin tools:',showAdminTools,'Members count:',(members||[]).length);
 
+  // Auto-post results for any ended challenges in this community
+  if(isAdmin){
+    const today=new Date().toISOString().split('T')[0];
+    const{data:ended}=await sb.from('community_challenges').select('*').eq('community_id',communityId).lt('end_date',today);
+    if(ended&&ended.length){
+      for(const c of ended){
+        const{data:existing}=await sb.from('workout_posts').select('id').eq('challenge_id',c.id).eq('post_type','challenge_completion').maybeSingle();
+        if(!existing)await generateChallengePost(c);
+      }
+    }
+  }
+
   const header=document.getElementById('community-detail-header');
   header.innerHTML=`${comm.cover_photo_url?`<div style="width:100%;height:200px;position:relative;border-radius:var(--radius2);overflow:hidden;margin-bottom:12px">
     <img src="${comm.cover_photo_url}" style="width:100%;height:100%;object-fit:cover">
@@ -7170,6 +7214,61 @@ function showCommunityTab(tab, el){
 }
 
 let pendingCommunityPostPhotos=[];
+
+async function buildCommunityLeaderboard(memberIds, members){
+  if(!memberIds.length)return'';
+  const oneWeekAgo=new Date(Date.now()-7*24*60*60*1000).toISOString();
+  const{data:logs}=await sb.from('workout_logs').select('user_id,start_time,end_time,exercises').in('user_id',memberIds).gte('start_time',oneWeekAgo);
+  if(!logs||!logs.length)return'';
+
+  // Aggregate per user
+  const stats={};
+  logs.forEach(l=>{
+    if(!stats[l.user_id])stats[l.user_id]={workouts:0,time:0,volume:0};
+    stats[l.user_id].workouts++;
+    if(l.end_time&&l.start_time)stats[l.user_id].time+=Math.round((new Date(l.end_time)-new Date(l.start_time))/60000);
+    (l.exercises||[]).forEach(ex=>{
+      if(ex.sets)ex.sets.forEach(s=>{if(s.completed)stats[l.user_id].volume+=(s.weight||0)*(s.reps||0)});
+      if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)stats[l.user_id].volume+=(s.weight||0)*(s.reps||0)})});
+    });
+  });
+
+  const profMap={};
+  members.forEach(m=>{if(m.profiles)profMap[m.user_id]=m.profiles});
+
+  function topUser(field){
+    let best=null,bestVal=0;
+    Object.entries(stats).forEach(([uid,s])=>{if(s[field]>bestVal){bestVal=s[field];best=uid}});
+    return best?{uid:best,val:bestVal,prof:profMap[best]||{}}:null;
+  }
+
+  const mostWorkouts=topUser('workouts');
+  const mostTime=topUser('time');
+  const mostVolume=topUser('volume');
+  if(!mostWorkouts&&!mostTime&&!mostVolume)return'';
+
+  function card(leader,icon,formatVal,label){
+    if(!leader)return`<div class="lb-card"><div class="lb-icon">${icon}</div><div class="lb-name fg3">—</div><div class="lb-label">${label}</div></div>`;
+    const p=leader.prof;
+    const av=p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase();
+    return`<div class="lb-card" style="cursor:pointer" onclick="openPublicProfile('${leader.uid}')">
+      <div class="lb-icon">${icon}</div>
+      <div class="lb-avatar">${av}</div>
+      <div class="lb-name">${esc(p.name||'User')}</div>
+      <div class="lb-stat">${formatVal}</div>
+      <div class="lb-label">${label}</div>
+    </div>`;
+  }
+
+  return`<div class="community-leaderboard">
+    <h4><span style="font-size:1rem">🏆</span> Weekly Leaderboard</h4>
+    <div class="lb-cards">
+      ${card(mostWorkouts,'🏋️',mostWorkouts?mostWorkouts.val+' workout'+(mostWorkouts.val!==1?'s':''):'','Most Workouts')}
+      ${card(mostTime,'⏱️',mostTime?fmtDuration(mostTime.val):'','Most Time')}
+      ${card(mostVolume,'💪',mostVolume?fmtVolume(mostVolume.val)+' '+getUnit():'','Most Volume')}
+    </div>
+  </div>`;
+}
 
 async function renderCommunityFeed(communityId, members){
   const memberIds=members.map(m=>m.user_id);
@@ -7221,7 +7320,8 @@ async function renderCommunityFeed(communityId, members){
   const allPosts=[...workoutPosts,...communityDirectPosts].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 
   if(!allPosts.length){
-    container.innerHTML=composerHtml+'<p class="fg3 small">No activity yet in this community. Be the first to post!</p>';
+    const lbEmpty=await buildCommunityLeaderboard(memberIds, members);
+    container.innerHTML=composerHtml+lbEmpty+'<p class="fg3 small">No activity yet in this community. Be the first to post!</p>';
     if(typeof lucide!=='undefined')lucide.createIcons();
     return;
   }
@@ -7233,7 +7333,9 @@ async function renderCommunityFeed(communityId, members){
     return new Date(b.created_at)-new Date(a.created_at);
   });
 
-  container.innerHTML=composerHtml+allPosts.map(p=>{
+  const leaderboardHtml=await buildCommunityLeaderboard(memberIds, members);
+
+  container.innerHTML=composerHtml+leaderboardHtml+allPosts.map(p=>{
     // Community direct post
     if(p._type==='community'){
       return renderCommunityPostCard(p, myLikedCpIds.has(p.id));
@@ -7914,24 +8016,24 @@ async function checkChallengeCompletions(workoutLogId, durationMins){
    CHALLENGE COMPLETION POSTS
    ============================================================= */
 async function checkEndedChallenges(){
-  // Check if any challenges ended in the last 24 hours without a completion post
-  const{data:memberships}=await sb.from('community_members').select('community_id').eq('user_id',currentUser.id);
+  // Check for any ended challenges without a completion post (no time limit)
+  const{data:memberships}=await sb.from('community_members').select('community_id,role').eq('user_id',currentUser.id);
   if(!memberships||!memberships.length)return;
   const commIds=memberships.map(m=>m.community_id);
+  const roleMap={};
+  memberships.forEach(m=>roleMap[m.community_id]=m.role);
 
-  const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
   const today=new Date().toISOString().split('T')[0];
 
-  const{data:ended}=await sb.from('community_challenges').select('*').in('community_id',commIds).lte('end_date',today).gte('end_date',yesterday);
+  const{data:ended}=await sb.from('community_challenges').select('*').in('community_id',commIds).lt('end_date',today);
   if(!ended||!ended.length)return;
 
   for(const c of ended){
     // Check if completion post already exists
     const{data:existing}=await sb.from('workout_posts').select('id').eq('challenge_id',c.id).eq('post_type','challenge_completion').maybeSingle();
     if(existing)continue;
-    // Only generate if current user is admin (or first to check)
-    const{data:mem}=await sb.from('community_members').select('role').eq('community_id',c.community_id).eq('user_id',currentUser.id).single();
-    if(mem&&mem.role==='admin'){
+    // Any admin in the community can trigger the auto-post
+    if(roleMap[c.community_id]==='admin'){
       await generateChallengePost(c);
     }
   }
@@ -7972,13 +8074,14 @@ async function generateChallengePost(challenge){
   if(dnf.length){caption+=`❌ DID NOT FINISH\n${dnf.map(e=>`${e.name} — ${e.done}/${e.total} workouts`).join('\n')}\n\n`}
   caption+=`${ironWill.length} crushed it · ${grindApproved.length} came close · ${dnf.length} fell short`;
 
-  // Create the post
+  // Create the post (include community_ids so it shows in community feed)
   await sb.from('workout_posts').insert({
     user_id:currentUser.id,
     caption,
     post_type:'challenge_completion',
     challenge_id:c.id,
-    is_public:true
+    is_public:true,
+    community_ids:[c.community_id]
   });
 
   // Notify all community members
