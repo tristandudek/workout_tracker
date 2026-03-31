@@ -315,7 +315,7 @@ select.input{appearance:none;cursor:pointer;
 #global-rest-timer{
   position:fixed;bottom:calc(var(--bottom-bar-height) + 16px);left:50%;transform:translateX(-50%);z-index:9999;
   display:none;align-items:center;gap:10px;
-  padding:12px 24px;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.2);
+  padding:12px 24px;background:rgba(0,0,0,.9);border:1.5px solid rgba(255,255,255,.25);
   border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25);
   font-family:var(--font-body);font-size:1rem;font-weight:600;color:#fff;
   transition:color .3s,background .3s,border .3s;
@@ -2107,7 +2107,7 @@ function getWorkoutType(equip,name){
   return'other';
 }
 
-const timeExercises=new Set(['Plank','Side Plank','L-Sit','Wall Sit','Hollow Body Hold','Superman Hold','Dragon Flag','Dead Bug','Bird Dog','Sprint Intervals','Tempo Run','Easy Jog','Treadmill Run','Stair Climb','Rowing Machine','Assault Bike','Ski Erg','Elliptical']);
+const timeExercises=new Set(['Plank','Side Plank','L-Sit','Wall Sit','Hollow Body Hold','Superman Hold','Dead Bug','Bird Dog','Sprint Intervals','Tempo Run','Easy Jog','Treadmill Run','Stair Climb','Rowing Machine','Assault Bike','Ski Erg','Elliptical']);
 const distanceExercises=new Set(['1 Mile Run','2 Mile Run','5K Run','10K Run','Half Marathon','Marathon','400m Sprint','200m Sprint','100m Sprint','800m Run','1 Mile Walk','Trail Run']);
 function getTrackingType(equip,name){
   if(equip==='yoga')return'time';
@@ -2512,6 +2512,49 @@ function countTotalSets(exercises){
     }
   });
   return total;
+}
+
+const _feedExerciseCache={};
+function openWorkoutDetailModal(postId){
+  const exercises=_feedExerciseCache[postId];
+  if(!exercises||!exercises.length){openModal('<p style="padding:20px;color:var(--fg2)">No exercise data available.</p>');return}
+  const unit=getUnit();
+  let html=`<h3 style="margin-bottom:12px;font-family:var(--font-display)">Workout Details</h3>`;
+  exercises.forEach(ex=>{
+    const name=ex.exerciseName||ex.name||'Exercise';
+    const sets=(ex.sets||[]).filter(s=>s.completed);
+    html+=`<div style="margin-bottom:14px">
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:4px;font-family:var(--font-display)">${esc(name)}</div>`;
+    if(sets.length){
+      html+=`<table class="set-table" style="width:100%;font-size:.78rem">
+        <thead><tr><th>Set</th><th>Weight</th><th>Reps</th></tr></thead><tbody>`;
+      sets.forEach((s,i)=>{
+        html+=`<tr><td>${i+1}</td><td>${s.weight||0} ${unit}</td><td>${s.reps||s.time||'—'}</td></tr>`;
+      });
+      html+=`</tbody></table>`;
+    }else{
+      html+=`<div style="font-size:.75rem;color:var(--fg3)">No completed sets</div>`;
+    }
+    if(ex.supersetExercises){
+      ex.supersetExercises.forEach(se=>{
+        const seName=se.exerciseName||se.name||'Exercise';
+        const seSets=(se.sets||[]).filter(s=>s.completed);
+        html+=`<div style="margin-top:8px;padding-left:10px;border-left:2px solid var(--accent)">
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">${esc(seName)}</div>`;
+        if(seSets.length){
+          html+=`<table class="set-table" style="width:100%;font-size:.78rem">
+            <thead><tr><th>Set</th><th>Weight</th><th>Reps</th></tr></thead><tbody>`;
+          seSets.forEach((s,i)=>{
+            html+=`<tr><td>${i+1}</td><td>${s.weight||0} ${unit}</td><td>${s.reps||s.time||'—'}</td></tr>`;
+          });
+          html+=`</tbody></table>`;
+        }
+        html+=`</div>`;
+      });
+    }
+    html+=`</div>`;
+  });
+  openModal(html);
 }
 
 function renderExerciseSummary(exercises){
@@ -3813,7 +3856,7 @@ async function renderActiveWorkout(){
       let ssAllDone=allDone;
       const ssExs=ae.supersetExercises||[];
       ssExs.forEach(se=>{if(se.sets)ssAllDone=ssAllDone&&se.sets.every(s=>s.completed)});
-      return `<div class="aw-exercise" style="border:2px solid var(--accent);border-radius:var(--radius2);margin-bottom:10px${ssAllDone?';opacity:.6':''}">
+      return `<div class="aw-exercise" style="border:2px solid var(--accent);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px${ssAllDone?';opacity:.6':''}">
         <div style="background:var(--accent-light);padding:4px 14px;font-size:.7rem;font-weight:700;color:var(--accent);font-family:var(--font-body)">SUPERSET</div>
         <div class="aw-exercise" style="border:none;margin:0">${renderExCard(ae,ei,prev,true)}</div>
         ${ssExs.map((se,si)=>{
@@ -3985,12 +4028,32 @@ function startGlobalRestTimer(targetSeconds){
         el.style.color='#22c55e';el.style.background='rgba(34,197,94,0.15)';el.style.border='1.5px solid #22c55e';
       }else{
         el.style.color='#ef4444';el.style.background='rgba(239,68,68,0.15)';el.style.border='1.5px solid #ef4444';
+        if(!globalRestReached){globalRestReached=true;playRestTimerAlert()}
       }
     }else{
       el.style.color='#fff';el.style.background='rgba(0,0,0,0.7)';el.style.border='1.5px solid rgba(255,255,255,0.2)';
     }
     console.log('Timer tick - elapsed:',globalRestElapsed,'target:',globalRestTarget,'color:',globalRestElapsed<globalRestTarget?'GREEN':'RED');
   },1000);
+}
+
+function playRestTimerAlert(){
+  // Haptic vibration (mobile)
+  if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
+  // Audio beep via Web Audio API
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.25,0.5].forEach(delay=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.frequency.value=880;
+      osc.type='sine';
+      gain.gain.value=0.3;
+      osc.start(ctx.currentTime+delay);
+      osc.stop(ctx.currentTime+delay+0.15);
+    });
+  }catch(e){console.log('Audio alert error:',e)}
 }
 
 function stopGlobalRestTimer(){
@@ -4239,6 +4302,9 @@ async function finishWorkout(){
 
   // Check challenge completions
   await checkChallengeCompletions(logData.id,dur);
+
+  // Recalculate 1RM tiles for any exercises in this workout
+  await recalc1rmTiles();
 
   // Step 2: Always show share modal
   console.log('Showing share workout modal');
@@ -4566,6 +4632,7 @@ async function renderProfilePostsGrid(){
   const prof=currentProfile||{};
   container.innerHTML=posts.map(p=>{
     const wl=p.workout_logs;
+    _feedExerciseCache[p.id]=wl?.exercises||[];
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
     let vol=0;
     if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
@@ -4580,8 +4647,8 @@ async function renderProfilePostsGrid(){
         </div>
         ${isOwn?postMenuHtml(p.id,p.is_public!==false):''}
       </div>
-      ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
-      <div class="feed-stat-pills">
+      ${wl?`<div class="feed-summary" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')"><strong>${esc(wl.workout_name)}</strong></div>`:''}
+      <div class="feed-stat-pills" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')">
         <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
         <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
@@ -4908,6 +4975,30 @@ async function addRmToSlot(slot, exerciseId, exerciseName){
   await saveTileSettings(ts);
   toast(exerciseName+' added');
   renderRmRows();
+}
+
+async function recalc1rmTiles(){
+  try{
+    const{data:tiles}=await sb.from('profile_1rm_tiles').select('exercise_id,exercise_name').eq('user_id',currentUser.id);
+    if(!tiles||!tiles.length)return;
+    const logs=await getLogs();
+    for(const tile of tiles){
+      let best1rm=0,bestWeight=0,bestReps=0;
+      logs.forEach(l=>{l.exercises.forEach(ex=>{
+        if(ex.exerciseId===tile.exercise_id){
+          ex.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
+        }
+        if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{
+          if(se.exerciseId===tile.exercise_id&&se.sets){
+            se.sets.forEach(s=>{if(s.completed&&s.weight>0&&s.reps>0){const e=s.weight*(1+s.reps/30);if(e>best1rm){best1rm=e;bestWeight=s.weight;bestReps=s.reps}}});
+          }
+        });
+      })});
+      if(best1rm>0){
+        await sb.from('profile_1rm_tiles').update({weight:bestWeight,reps:bestReps,estimated_1rm:Math.round(best1rm),weight_unit:getUnit()}).eq('user_id',currentUser.id).eq('exercise_id',tile.exercise_id);
+      }
+    }
+  }catch(e){console.log('recalc1rmTiles error:',e.message)}
 }
 
 async function clearRmSlot(slot){
@@ -5872,6 +5963,14 @@ async function renderFeed(){
     error=res.error;
   }
 
+  // Fetch which posts the current user has liked
+  if(data&&data.length){
+    const postIds=data.map(p=>p.post_id);
+    const{data:myLikes}=await sb.from('post_likes').select('post_id').in('post_id',postIds).eq('user_id',currentUser.id);
+    const likedSet=new Set((myLikes||[]).map(l=>l.post_id));
+    data.forEach(p=>p.i_liked=likedSet.has(p.post_id));
+  }
+
   const list=document.getElementById('feed-list');
   const empty=document.getElementById('feed-empty');
 
@@ -5890,6 +5989,7 @@ async function renderFeed(){
   }
   empty.classList.add('hidden');
   list.innerHTML=data.map(p=>{
+    _feedExerciseCache[p.post_id]=p.workout_exercises||[];
     const photos=p.photo_urls||[];
     return `<div class="feed-card" id="post-${p.post_id}">
       <div class="feed-header">
@@ -5902,8 +6002,8 @@ async function renderFeed(){
         </div>
         ${p.post_user_id===currentUser.id?postMenuHtml(p.post_id,true):''}
       </div>
-      <div class="feed-summary"><strong>${esc(p.workout_name||'Workout')}</strong></div>
-      <div class="feed-stat-pills">
+      <div class="feed-summary" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.post_id}')"><strong>${esc(p.workout_name||'Workout')}</strong></div>
+      <div class="feed-stat-pills" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.post_id}')">
         <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(p.workout_duration||0)}</span></span>
         <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${p.workout_exercise_count}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(p.workout_exercises)}</span> sets</span>
@@ -5979,7 +6079,7 @@ async function toggleLike(postId, btn){
     btn.classList.remove('liked');
     btn.innerHTML=`&#9825; <span class="count">${Math.max(0,parseInt(btn.querySelector('.count').textContent)-1)}</span>`;
   }else{
-    await sb.from('post_likes').insert({user_id:currentUser.id,post_id:postId});
+    await sb.from('post_likes').upsert({user_id:currentUser.id,post_id:postId},{onConflict:'user_id,post_id',ignoreDuplicates:true});
     btn.classList.add('liked');
     btn.innerHTML=`&#10084; <span class="count">${parseInt(btn.querySelector('.count').textContent)+1}</span>`;
     // Notify post owner
@@ -6380,14 +6480,15 @@ async function renderPubPosts(userId,profile){
   if(!posts||!posts.length){panel.innerHTML='<p class="fg3 small" style="text-align:center;padding:30px">No posts yet.</p>';return}
   panel.innerHTML=posts.map(p=>{
     const wl=p.workout_logs;
+    _feedExerciseCache[p.id]=wl?.exercises||[];
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
     let vol=0;if(wl&&wl.exercises)wl.exercises.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
     const photos=p.photo_urls||[];
     return `<div class="feed-card">
       <div class="feed-header"><div class="feed-avatar">${prof.avatar_url?`<img src="${prof.avatar_url}">`:(prof.name||'?')[0].toUpperCase()}</div>
       <div style="flex:1"><div class="feed-user">${esc(prof.name)}</div><div class="feed-time">${timeAgo(p.created_at)}</div></div></div>
-      ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong></div>`:''}
-      <div class="feed-stat-pills">
+      ${wl?`<div class="feed-summary" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')"><strong>${esc(wl.workout_name)}</strong></div>`:''}
+      <div class="feed-stat-pills" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')">
         <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
         <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
