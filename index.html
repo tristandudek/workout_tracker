@@ -3955,22 +3955,28 @@ function awDrop(e,i){
   renderActiveWorkout();
 }
 
-// Mobile touch drag support
-let _touchDragIdx=null,_touchClone=null,_touchStartY=0;
+// Mobile touch drag support — long-press (300ms) on drag handle to start
+let _touchDragIdx=null,_touchClone=null,_touchLongPress=null,_touchActive=false;
 function awTouchStart(e,i){
   const handle=e.target.closest('.drag');
   if(!handle)return;
-  _touchDragIdx=i;
-  _touchStartY=e.touches[0].clientY;
-  const card=handle.closest('.aw-exercise');
-  card.classList.add('dragging');
-  _touchClone=card.cloneNode(true);
-  _touchClone.style.cssText='position:fixed;z-index:9999;pointer-events:none;opacity:.7;width:'+card.offsetWidth+'px;left:'+card.getBoundingClientRect().left+'px;top:'+e.touches[0].clientY+'px;transform:translateY(-50%)';
-  document.body.appendChild(_touchClone);
-  e.preventDefault();
+  const startY=e.touches[0].clientY;
+  const startX=e.touches[0].clientX;
+  _touchLongPress=setTimeout(()=>{
+    _touchDragIdx=i;
+    _touchActive=true;
+    const card=handle.closest('.aw-exercise');
+    card.classList.add('dragging');
+    _touchClone=card.cloneNode(true);
+    _touchClone.style.cssText='position:fixed;z-index:9999;pointer-events:none;opacity:.7;width:'+card.offsetWidth+'px;left:'+card.getBoundingClientRect().left+'px;top:'+startY+'px;transform:translateY(-50%)';
+    document.body.appendChild(_touchClone);
+    if(navigator.vibrate)navigator.vibrate(30);
+  },300);
 }
 function awTouchMove(e){
-  if(_touchDragIdx===null)return;
+  // Cancel long-press if finger moves before drag activates
+  if(!_touchActive&&_touchLongPress){clearTimeout(_touchLongPress);_touchLongPress=null;return}
+  if(!_touchActive||_touchDragIdx===null)return;
   e.preventDefault();
   const y=e.touches[0].clientY;
   if(_touchClone)_touchClone.style.top=y+'px';
@@ -3980,7 +3986,8 @@ function awTouchMove(e){
   if(card&&parseInt(card.dataset.ei)!==_touchDragIdx)card.classList.add('drag-over');
 }
 function awTouchEnd(e){
-  if(_touchDragIdx===null)return;
+  if(_touchLongPress){clearTimeout(_touchLongPress);_touchLongPress=null}
+  if(!_touchActive){_touchDragIdx=null;return}
   if(_touchClone){_touchClone.remove();_touchClone=null}
   const overEl=document.querySelector('.aw-exercise.drag-over');
   if(overEl){
@@ -3991,6 +3998,7 @@ function awTouchEnd(e){
   }
   document.querySelectorAll('.aw-exercise.dragging,.aw-exercise.drag-over').forEach(el=>{el.classList.remove('dragging','drag-over')});
   _touchDragIdx=null;
+  _touchActive=false;
 }
 
 let awAutoFill=false;
