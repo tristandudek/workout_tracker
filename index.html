@@ -309,9 +309,9 @@ select.input{appearance:none;cursor:pointer;
 .aw-discard-btn:hover{background:rgba(239,68,68,.08)}
 .aw-finish-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:var(--font-display);transition:opacity .15s}
 .aw-finish-btn:hover{opacity:.85}
-.aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;border-radius:var(--radius2);box-shadow:var(--shadow)}
-.aw-exercise.completed{opacity:.6}
-.aw-exercise.completed .aw-ex-body{max-height:0;padding:0;overflow:hidden;transition:max-height .3s}
+.aw-exercise{background:var(--bg);border:1px solid var(--bg4);margin-bottom:10px;border-radius:var(--radius2);box-shadow:var(--shadow);transition:opacity .15s}
+.aw-exercise.dragging{opacity:.5}
+.aw-exercise.drag-over{border-top:3px solid var(--accent)}
 #global-rest-timer{
   position:fixed;bottom:calc(var(--bottom-bar-height) + 16px);left:50%;transform:translateX(-50%);z-index:9999;
   display:none;align-items:center;gap:10px;
@@ -894,6 +894,21 @@ select.input{appearance:none;cursor:pointer;
 .lb-card .lb-name{font-size:.68rem;font-weight:600;font-family:var(--font-display);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-card .lb-stat{font-size:.72rem;font-weight:700;font-family:var(--font-mono);color:var(--accent);margin-top:2px}
 .lb-card .lb-label{font-size:.58rem;color:var(--fg3);margin-top:1px;text-transform:uppercase;letter-spacing:.03em}
+.mention-dropdown{position:absolute;z-index:10000;background:var(--bg);border:1px solid var(--bg4);border-radius:var(--radius);box-shadow:var(--shadow-hover);max-height:180px;overflow-y:auto;width:240px}
+.mention-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:.82rem}
+.mention-item:hover,.mention-item.active{background:var(--bg2)}
+.mention-item .feed-avatar{width:28px;height:28px;min-width:28px;font-size:.6rem}
+.caption-tag{color:var(--accent);font-weight:600;cursor:pointer}
+.caption-tag:hover{text-decoration:underline}
+.coach-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:linear-gradient(135deg,rgba(234,179,8,.15),rgba(245,158,11,.15));border:1px solid rgba(234,179,8,.4);border-radius:20px;font-size:.75rem;font-weight:600;color:#eab308;font-family:var(--font-display);margin-top:6px}
+.coaching-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);margin-bottom:6px}
+.coaching-card .feed-avatar{width:36px;height:36px;min-width:36px;font-size:.7rem}
+.coaching-card-info{flex:1;min-width:0}
+.coaching-card-name{font-family:var(--font-display);font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coaching-card-sub{font-size:.7rem;color:var(--fg3)}
+.chat-special-card{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);margin-bottom:4px}
+.chat-special-card i,.chat-special-card .card-icon{color:var(--accent);flex-shrink:0}
+.coaching-req-banner{padding:10px 14px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:var(--radius);margin-bottom:10px;font-size:.82rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -1712,6 +1727,7 @@ const raw=[
 // ===== BODYWEIGHT =====
 ["Pull-Up",["lats","biceps","back"],"bodyweight","Hang from bar with overhand grip. Pull chin above bar. Lower with full control. Full dead hang at bottom.","bw_pull"],
 ["Chin-Up",["biceps","lats","back"],"bodyweight","Hang with underhand grip. Pull chin above bar. Emphasizes biceps more than pull-ups.","bw_pull"],
+["Neutral Grip Pull-Up",["lats","biceps","back"],"bodyweight","Hang from parallel handles with palms facing each other. Pull chin above handles. Easier on shoulders than wide grip. Great for overall back development.","bw_pull"],
 ["Push-Up",["chest","triceps","shoulders","core"],"bodyweight","Hands shoulder width, body straight. Lower chest to floor. Push back up to lockout. Core tight throughout.","bw_push"],
 ["Diamond Push-Up",["triceps","chest"],"bodyweight","Hands together forming diamond shape. Push-up with narrow hand position. Intense tricep focus.","bw_push"],
 ["Wide Push-Up",["chest","shoulders"],"bodyweight","Hands wider than shoulder width. Push-up emphasizing chest stretch and contraction.","bw_push"],
@@ -1833,6 +1849,7 @@ const raw=[
 ["Cable Oblique Crunch",["obliques"],"cable","Side bend against cable resistance. One side at a time. Controlled range of motion.","cable_pull"],
 ["Landmine Squat",["quads","glutes"],"barbell","Hold end of landmine barbell at chest. Squat deep. Angled resistance path.","barbell_squat"],
 ["Landmine Rotational Press",["core","shoulders","obliques"],"barbell","Hold end of barbell at shoulder. Press while rotating. Rotational power development.","barbell_press"],
+["Landmine Rotation",["obliques","core","abs"],"barbell","Hold the end of a landmine barbell with both hands and arms extended. Rotate the bar from side to side in a controlled arc, engaging the obliques and core throughout. Keep hips stable and feet planted.","barbell_row"],
 ["Dumbbell Around the World",["chest","shoulders"],"dumbbell","Lie on bench. Arc dumbbells from hips over head in circular path. Full chest stretch.","db_fly"],
 ["Cable Woodchop (Low to High)",["obliques","core"],"cable","Low cable, pull diagonally up and across body. Rotational power from low to high.","cable_pull"],
 ["Cable Woodchop (High to Low)",["obliques","core"],"cable","High cable, pull diagonally down and across body. Rotational power from high to low.","cable_pull"],
@@ -3827,7 +3844,7 @@ async function renderActiveWorkout(){
     const setLabel=si=>st==='drop'?'Drop '+(si+1):(si+1);
     const targetRep=ae.targetReps||'';
     const targetSetsNum=ae.targetSets||0;
-    return `<div class="aw-ex-header" onclick="if(this.parentElement.classList.contains('completed'))this.parentElement.classList.toggle('completed')">
+    return `<div class="aw-ex-header">
         <span class="drag">&#x2630;</span>
         <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}${exInfoIcon(ae)}</span>
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
@@ -3866,8 +3883,10 @@ async function renderActiveWorkout(){
       let ssAllDone=allDone;
       const ssExs=ae.supersetExercises||[];
       ssExs.forEach(se=>{if(se.sets)ssAllDone=ssAllDone&&se.sets.every(s=>s.completed)});
-      return `<div class="aw-exercise" style="border:2px solid var(--accent);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px${ssAllDone?';opacity:.6':''}">
-        <div style="background:var(--accent-light);padding:4px 14px;font-size:.7rem;font-weight:700;color:var(--accent);font-family:var(--font-body)">SUPERSET</div>
+      return `<div class="aw-exercise" data-ei="${ei}" draggable="true" style="border:2px solid var(--accent);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px"
+        ondragstart="awDragStart(event,${ei})" ondragover="awDragOver(event,${ei})" ondragend="awDragEnd()" ondrop="awDrop(event,${ei})"
+        ontouchstart="awTouchStart(event,${ei})" ontouchmove="awTouchMove(event)" ontouchend="awTouchEnd(event)">
+        <div style="background:var(--accent-light);padding:4px 14px;font-size:.7rem;font-weight:700;color:var(--accent);font-family:var(--font-body);display:flex;align-items:center;gap:6px"><span class="drag" style="cursor:grab;color:var(--accent)">&#x2630;</span> SUPERSET</div>
         <div class="aw-exercise" style="border:none;margin:0">${renderExCard(ae,ei,prev,true)}</div>
         ${ssExs.map((se,si)=>{
           if(!se.sets)se.sets=[{weight:0,reps:0,completed:false}];
@@ -3903,30 +3922,85 @@ async function renderActiveWorkout(){
       </div>`;
     }
 
-    return`<div class="aw-exercise ${allDone?'completed':''}" draggable="true" data-ei="${ei}"
-      ondragstart="awDragStart(event,${ei})" ondragover="event.preventDefault()" ondrop="awDrop(event,${ei})">
+    return`<div class="aw-exercise" draggable="true" data-ei="${ei}"
+      ondragstart="awDragStart(event,${ei})" ondragover="awDragOver(event,${ei})" ondragend="awDragEnd()" ondrop="awDrop(event,${ei})"
+      ontouchstart="awTouchStart(event,${ei})" ontouchmove="awTouchMove(event)" ontouchend="awTouchEnd(event)">
       ${renderExCard(ae,ei,prev,false)}
     </div>`;
   }).join('');
 }
 
 let awDragIdx=null;
-function awDragStart(e,i){awDragIdx=i}
+function awDragStart(e,i){
+  awDragIdx=i;
+  e.target.closest('.aw-exercise').classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+function awDragOver(e,i){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.aw-exercise.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  if(awDragIdx!==null&&awDragIdx!==i)e.target.closest('.aw-exercise')?.classList.add('drag-over');
+}
+function awDragEnd(){
+  document.querySelectorAll('.aw-exercise.dragging,.aw-exercise.drag-over').forEach(el=>{el.classList.remove('dragging','drag-over')});
+}
 function awDrop(e,i){
   e.preventDefault();
+  awDragEnd();
   if(awDragIdx===null||awDragIdx===i)return;
   const [moved]=activeWorkout.exercises.splice(awDragIdx,1);
   activeWorkout.exercises.splice(i,0,moved);
+  awDragIdx=null;
   renderActiveWorkout();
+}
+
+// Mobile touch drag support
+let _touchDragIdx=null,_touchClone=null,_touchStartY=0;
+function awTouchStart(e,i){
+  const handle=e.target.closest('.drag');
+  if(!handle)return;
+  _touchDragIdx=i;
+  _touchStartY=e.touches[0].clientY;
+  const card=handle.closest('.aw-exercise');
+  card.classList.add('dragging');
+  _touchClone=card.cloneNode(true);
+  _touchClone.style.cssText='position:fixed;z-index:9999;pointer-events:none;opacity:.7;width:'+card.offsetWidth+'px;left:'+card.getBoundingClientRect().left+'px;top:'+e.touches[0].clientY+'px;transform:translateY(-50%)';
+  document.body.appendChild(_touchClone);
+  e.preventDefault();
+}
+function awTouchMove(e){
+  if(_touchDragIdx===null)return;
+  e.preventDefault();
+  const y=e.touches[0].clientY;
+  if(_touchClone)_touchClone.style.top=y+'px';
+  document.querySelectorAll('.aw-exercise.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  const el=document.elementFromPoint(e.touches[0].clientX,y);
+  const card=el?.closest?.('.aw-exercise[data-ei]');
+  if(card&&parseInt(card.dataset.ei)!==_touchDragIdx)card.classList.add('drag-over');
+}
+function awTouchEnd(e){
+  if(_touchDragIdx===null)return;
+  if(_touchClone){_touchClone.remove();_touchClone=null}
+  const overEl=document.querySelector('.aw-exercise.drag-over');
+  if(overEl){
+    const targetIdx=parseInt(overEl.dataset.ei);
+    const [moved]=activeWorkout.exercises.splice(_touchDragIdx,1);
+    activeWorkout.exercises.splice(targetIdx,0,moved);
+    renderActiveWorkout();
+  }
+  document.querySelectorAll('.aw-exercise.dragging,.aw-exercise.drag-over').forEach(el=>{el.classList.remove('dragging','drag-over')});
+  _touchDragIdx=null;
 }
 
 let awAutoFill=false;
 function toggleAutoFill(on){awAutoFill=on}
 
 function updateSet(ei,si,field,val){
-  activeWorkout.exercises[ei].sets[si][field]=val;
+  const s=activeWorkout.exercises[ei].sets[si];
+  s[field]=val;
   if(field==='weight'&&awAutoFill){
-    activeWorkout.exercises[ei].sets[si]._manual=true;
+    s._manual=true;
     if(val){
       const sets=activeWorkout.exercises[ei].sets;
       for(let i=si+1;i<sets.length;i++){
@@ -3935,6 +4009,14 @@ function updateSet(ei,si,field,val){
       }
       renderActiveWorkout();
     }
+  }
+  // Auto-complete when reps are entered
+  if(field==='reps'&&val&&!s.completed){
+    s.completed=true;
+    saveActiveWO(activeWorkout);
+    renderActiveWorkout();
+    onAnySetComplete(activeWorkout.exercises[ei]);
+    return;
   }
   saveActiveWO(activeWorkout);
 }
@@ -3951,9 +4033,10 @@ function toggleSet(ei,si){
 function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length-1)}
 
 function updateSupersetSet(ei,si,ssi,field,val){
-  activeWorkout.exercises[ei].supersetExercises[si].sets[ssi][field]=val;
+  const s=activeWorkout.exercises[ei].supersetExercises[si].sets[ssi];
+  s[field]=val;
   if(field==='weight'&&awAutoFill){
-    activeWorkout.exercises[ei].supersetExercises[si].sets[ssi]._manual=true;
+    s._manual=true;
     if(val){
       const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
       for(let i=ssi+1;i<sets.length;i++){
@@ -3962,6 +4045,14 @@ function updateSupersetSet(ei,si,ssi,field,val){
       }
       renderActiveWorkout();
     }
+  }
+  // Auto-complete when reps are entered
+  if(field==='reps'&&val&&!s.completed){
+    s.completed=true;
+    saveActiveWO(activeWorkout);
+    renderActiveWorkout();
+    onAnySetComplete(activeWorkout.exercises[ei]);
+    return;
   }
   saveActiveWO(activeWorkout);
 }
@@ -4530,7 +4621,13 @@ async function renderProfile(){
 
   // Edit Profile button
   const actionEl=document.getElementById('profile-action-btns');
-  if(actionEl)actionEl.innerHTML=`<button class="btn btn-sm" onclick="nav('my-info')" style="width:100%"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit Profile</button>`;
+  if(actionEl){
+    const isCoach=p.is_coach;
+    actionEl.innerHTML=`<div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="nav('my-info')" style="flex:1"><i data-lucide="pencil" style="width:12px;height:12px"></i> Edit Profile</button>
+      <button class="btn btn-sm" onclick="openCoachSettingsModal()" style="flex:1;${isCoach?'border-color:#eab308;color:#eab308':''}"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> ${isCoach?'Coach Settings':'Become a Coach'}</button>
+    </div>`;
+  }
 
   // ---- Fetch all stats with fallback to 0 ----
   let totalWorkouts=0,streak=0,totalVolume=0;
@@ -4597,6 +4694,23 @@ async function renderProfile(){
     `;
   }
   console.log('Tiles rendered');
+
+  // ---- Coaching section ----
+  if(p.is_coach){
+    const coachSection=document.getElementById('profile-coachees')||document.createElement('div');
+    coachSection.id='profile-coachees';
+    coachSection.style.cssText='margin-top:12px';
+    const tilesEl=document.getElementById('profile-tiles');
+    if(tilesEl&&!document.getElementById('profile-coachees')){
+      const wrapper=document.createElement('div');
+      wrapper.className='profile-section';
+      wrapper.style.marginTop='12px';
+      wrapper.innerHTML=`<h3 class="mb-sm" style="font-size:.85rem;display:flex;align-items:center;gap:6px"><i data-lucide="graduation-cap" style="width:14px;height:14px;color:#eab308"></i> My Coachees</h3>`;
+      wrapper.appendChild(coachSection);
+      tilesEl.parentNode.insertBefore(wrapper,tilesEl.nextSibling);
+    }
+    renderCoachees();
+  }
 
   // ---- Body metrics chart ----
   try{await renderMetricsChart()}catch(e){console.error('Chart error:',e)}
@@ -4665,7 +4779,7 @@ async function renderProfilePostsGrid(){
         ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
       </div>
 
-      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
@@ -5044,6 +5158,230 @@ async function toggleRmPublic(exerciseId){
   renderRmRows();
 }
 
+/* =============================================================
+   COACHING PLATFORM
+   ============================================================= */
+function openCoachSettingsModal(){
+  const isCoach=currentProfile?.is_coach||false;
+  const price=currentProfile?.coaching_price||'';
+  openModal(`
+    <div class="modal-header"><h2>${isCoach?'Coach Settings':'Become a Coach'}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <p class="small fg2 mb-md">${isCoach?'Update your coaching settings below.':'Set up your coaching profile. Other users will be able to request you as their coach.'}</p>
+      <label class="small fg2" style="font-weight:600">Monthly Coaching Price ($)</label>
+      <input class="input mb-sm" id="coach-price-input" type="number" min="1" step="1" placeholder="e.g. 50" value="${price}">
+      ${isCoach?`<label class="flex gap-sm mb-md" style="align-items:center;cursor:pointer">
+        <input type="checkbox" id="coach-disable-check"> <span class="small">Disable coaching (stop accepting new requests)</span>
+      </label>`:''}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-block" onclick="saveCoachSettings()">${isCoach?'Save':'Activate Coaching'}</button>
+    </div>
+  `);
+}
+
+async function saveCoachSettings(){
+  const price=parseFloat(document.getElementById('coach-price-input').value);
+  if(!price||price<=0){toast('Please enter a valid price');return}
+  const disable=document.getElementById('coach-disable-check')?.checked;
+  const isCoach=!disable;
+  await sb.from('profiles').update({is_coach:isCoach,coaching_price:price}).eq('id',currentUser.id);
+  currentProfile.is_coach=isCoach;
+  currentProfile.coaching_price=price;
+  closeModal();
+  toast(isCoach?'Coaching activated!':'Coaching disabled');
+  renderProfile();
+}
+
+async function renderCoachees(){
+  const container=document.getElementById('profile-coachees');
+  if(!container)return;
+  const{data:rels}=await sb.from('coaching_relationships').select('*').eq('coach_id',currentUser.id).in('status',['active','pending']).order('created_at',{ascending:false});
+  if(!rels||!rels.length){container.innerHTML='<p class="small fg3">No coachees yet.</p>';return}
+  const uids=rels.map(r=>r.coachee_id);
+  const{data:profiles}=await sb.from('profiles').select('id,name,username,avatar_url').in('id',uids);
+  const pMap={};(profiles||[]).forEach(p=>pMap[p.id]=p);
+  const pending=rels.filter(r=>r.status==='pending');
+  const active=rels.filter(r=>r.status==='active');
+  let html='';
+  if(pending.length){
+    html+=`<div class="small fg2 mb-sm" style="font-weight:600">Pending Requests</div>`;
+    html+=pending.map(r=>{
+      const p=pMap[r.coachee_id]||{};
+      return`<div class="coaching-card">
+        <div class="feed-avatar" onclick="openPublicProfile('${r.coachee_id}')" style="cursor:pointer">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div>
+        <div class="coaching-card-info">
+          <div class="coaching-card-name">${esc(p.name||'User')}</div>
+          <div class="coaching-card-sub">${r.request_message?esc(r.request_message.slice(0,60)):'No message'}</div>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="acceptCoachingRequest('${r.id}','${r.coachee_id}')">Accept</button>
+        <button class="btn btn-sm" onclick="declineCoachingRequest('${r.id}','${r.coachee_id}')">Decline</button>
+      </div>`;
+    }).join('');
+  }
+  if(active.length){
+    html+=`<div class="small fg2 mb-sm" style="font-weight:600;${pending.length?'margin-top:12px':''}">Active Coachees</div>`;
+    html+=active.map(r=>{
+      const p=pMap[r.coachee_id]||{};
+      return`<div class="coaching-card">
+        <div class="feed-avatar" onclick="openPublicProfile('${r.coachee_id}')" style="cursor:pointer">${p.avatar_url?`<img src="${p.avatar_url}">`:(p.name||'?')[0].toUpperCase()}</div>
+        <div class="coaching-card-info">
+          <div class="coaching-card-name">${esc(p.name||'User')}</div>
+          <div class="coaching-card-sub">$${r.monthly_price}/mo</div>
+        </div>
+        <button class="btn btn-sm" onclick="openOrCreateConversation('${r.coachee_id}')"><i data-lucide="message-square" style="width:12px;height:12px"></i></button>
+        <button class="btn btn-sm" style="color:#ef4444" onclick="endCoachingRelationship('${r.id}')">End</button>
+      </div>`;
+    }).join('');
+  }
+  container.innerHTML=html;
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function acceptCoachingRequest(relId,coacheeId){
+  await sb.from('coaching_relationships').update({status:'active',updated_at:new Date().toISOString()}).eq('id',relId);
+  const name=currentProfile?.name||'Your coach';
+  await sb.from('notifications').insert({user_id:coacheeId,type:'coaching_accepted',message:`${name} accepted your coaching request!`});
+  toast('Coaching request accepted!');
+  renderCoachees();
+}
+
+async function declineCoachingRequest(relId,coacheeId){
+  await sb.from('coaching_relationships').update({status:'ended',updated_at:new Date().toISOString()}).eq('id',relId);
+  await sb.from('notifications').insert({user_id:coacheeId,type:'coaching_declined',message:'Your coaching request was declined.'});
+  toast('Request declined');
+  renderCoachees();
+}
+
+async function endCoachingRelationship(relId){
+  if(!confirm('End this coaching relationship?'))return;
+  await sb.from('coaching_relationships').update({status:'ended',updated_at:new Date().toISOString()}).eq('id',relId);
+  toast('Coaching ended');
+  renderCoachees();
+}
+
+function openRequestCoachingModal(coachId,coachName,price){
+  openModal(`
+    <div class="modal-header"><h2>Request Coaching</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="coach-badge mb-md" style="justify-content:center"><i data-lucide="graduation-cap" style="width:14px;height:14px"></i> ${esc(coachName)} — $${price}/mo</div>
+      <p class="small fg2 mb-sm">Send a message with your request. Tell them about your goals and what you're looking for in coaching.</p>
+      <textarea class="input mb-sm" id="coaching-request-msg" placeholder="Hi, I'd love to work with you..." style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-block" onclick="submitCoachingRequest('${coachId}',${price})">Send Request — $${price}/mo</button>
+    </div>
+  `);
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function submitCoachingRequest(coachId,price){
+  const msg=document.getElementById('coaching-request-msg')?.value.trim()||'';
+  const{error}=await sb.from('coaching_relationships').insert({coach_id:coachId,coachee_id:currentUser.id,status:'pending',monthly_price:price,request_message:msg});
+  if(error){
+    if(error.code==='23505'){toast('You already have a coaching request with this user');closeModal();return}
+    toast('Error sending request');console.error(error);return;
+  }
+  const name=currentProfile?.name||'Someone';
+  await sb.from('notifications').insert({user_id:coachId,type:'coaching_request',message:`${name} wants coaching from you!`});
+  closeModal();
+  toast('Coaching request sent!');
+}
+
+async function ensureConversation(otherUserId){
+  const{data:existing}=await sb.from('conversations').select('id').or(`and(participant_1.eq.${currentUser.id},participant_2.eq.${otherUserId}),and(participant_1.eq.${otherUserId},participant_2.eq.${currentUser.id})`).maybeSingle();
+  if(existing)return existing.id;
+  const{data:newConvo}=await sb.from('conversations').insert({participant_1:currentUser.id,participant_2:otherUserId,request_status:'accepted'}).select().single();
+  return newConvo?.id;
+}
+
+function openSharePlanPicker(recipientUserId){
+  openModal(`
+    <div class="modal-header"><h2>Share a Plan</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body" id="plan-picker-body"><p class="fg3 small">Loading plans...</p></div>
+  `);
+  loadSharePlanList(recipientUserId);
+}
+
+async function loadSharePlanList(recipientUserId){
+  const{data:plans}=await sb.from('workout_plans').select('id,name,description').eq('user_id',currentUser.id).order('name');
+  const body=document.getElementById('plan-picker-body');
+  if(!plans||!plans.length){body.innerHTML='<p class="fg3 small">You have no plans. Create one first.</p>';return}
+  body.innerHTML=plans.map(p=>`<div class="coaching-card" style="cursor:pointer" onclick="sharePlanViaMessage('${p.id}','${esc(p.name)}','${recipientUserId}')">
+    <div style="font-size:1.2rem">📋</div>
+    <div class="coaching-card-info">
+      <div class="coaching-card-name">${esc(p.name)}</div>
+      ${p.description?`<div class="coaching-card-sub">${esc(p.description.slice(0,60))}</div>`:''}
+    </div>
+    <i data-lucide="send" style="width:14px;height:14px;color:var(--accent)"></i>
+  </div>`).join('');
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
+async function sharePlanViaMessage(planId,planName,recipientUserId){
+  const convoId=await ensureConversation(recipientUserId);
+  if(!convoId){toast('Error creating conversation');return}
+  await sb.from('messages').insert({conversation_id:convoId,sender_id:currentUser.id,content:'Shared a plan: '+planName,message_type:'plan_share',plan_id:planId});
+  await sb.from('conversations').update({last_message_at:new Date().toISOString()}).eq('id',convoId);
+  closeModal();
+  toast('Plan shared!');
+  if(currentConversationId===convoId)openChat(convoId,recipientUserId);
+}
+
+async function sendWorkoutToCoach(){
+  if(!activeWorkout||!activeWorkout._logId)return;
+  try{
+    const{data:rels}=await sb.from('coaching_relationships').select('coach_id').eq('coachee_id',currentUser.id).eq('status','active');
+    if(!rels||!rels.length)return;
+    for(const rel of rels){
+      const convoId=await ensureConversation(rel.coach_id);
+      if(!convoId)continue;
+      const summary=`Completed: ${activeWorkout.workoutName||'Workout'} — ${activeWorkout._dur||0}min, ${activeWorkout._totalSets||0} sets, ${fmtVolume(activeWorkout._totalVol||0)} ${getUnit()}`;
+      await sb.from('messages').insert({conversation_id:convoId,sender_id:currentUser.id,content:summary,message_type:'workout_update',workout_log_id:activeWorkout._logId});
+      await sb.from('conversations').update({last_message_at:new Date().toISOString()}).eq('id',convoId);
+    }
+  }catch(e){console.log('sendWorkoutToCoach error:',e.message)}
+}
+
+async function viewWorkoutLog(logId){
+  const{data:log}=await sb.from('workout_logs').select('*').eq('id',logId).single();
+  if(!log){toast('Workout not found');return}
+  const unit=getUnit();
+  let html=`<div class="modal-header"><h2>${esc(log.workout_name||'Workout')}</h2><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body">`;
+  const dur=log.end_time&&log.start_time?Math.round((new Date(log.end_time)-new Date(log.start_time))/60000):0;
+  html+=`<div class="feed-stat-pills mb-md" style="padding:0">
+    <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
+    <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${(log.exercises||[]).length}</span> exercises</span>
+  </div>`;
+  (log.exercises||[]).forEach(ex=>{
+    const name=ex.exerciseName||ex.name||'Exercise';
+    const sets=(ex.sets||[]).filter(s=>s.completed);
+    html+=`<div style="margin-bottom:14px">
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:4px;font-family:var(--font-display)">${esc(name)}</div>`;
+    if(sets.length){
+      html+=`<table class="set-table" style="width:100%;font-size:.78rem">
+        <thead><tr><th>Set</th><th>Weight</th><th>Reps</th></tr></thead><tbody>`;
+      sets.forEach((s,i)=>{html+=`<tr><td>${i+1}</td><td>${s.weight||0} ${unit}</td><td>${s.reps||s.time||'—'}</td></tr>`});
+      html+=`</tbody></table>`;
+    }else html+=`<div style="font-size:.75rem;color:var(--fg3)">No completed sets</div>`;
+    if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{
+      const seSets=(se.sets||[]).filter(s=>s.completed);
+      html+=`<div style="margin-top:8px;padding-left:10px;border-left:2px solid var(--accent)">
+        <div style="font-weight:600;font-size:.8rem;margin-bottom:4px">${esc(se.exerciseName||'Exercise')}</div>`;
+      if(seSets.length){
+        html+=`<table class="set-table" style="width:100%;font-size:.78rem"><thead><tr><th>Set</th><th>Weight</th><th>Reps</th></tr></thead><tbody>`;
+        seSets.forEach((s,i)=>{html+=`<tr><td>${i+1}</td><td>${s.weight||0} ${unit}</td><td>${s.reps||s.time||'—'}</td></tr>`});
+        html+=`</tbody></table>`;
+      }
+      html+=`</div>`;
+    });
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  openModal(html);
+  if(typeof lucide!=='undefined')lucide.createIcons();
+}
+
 async function renderMetricsChart(){
   if(typeof Chart!=='undefined')Chart.defaults.font.family='DM Sans';
   const{data,error}=await sb.from('body_metrics').select('*').eq('user_id',currentUser.id).order('recorded_at',{ascending:true});
@@ -5405,7 +5743,7 @@ async function renderProfileActivityFeed(){
             ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
           </div>
     
-          ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+          ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
           ${renderFeedPhotos(photos)}
           <div class="feed-actions">
             <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
@@ -6031,7 +6369,7 @@ async function renderFeed(){
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(p.workout_exercises)}</span> sets</span>
         ${p.workout_volume?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(p.workout_volume)}</span> ${getUnit()}</span>`:''}
       </div>
-      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action ${p.i_liked?'liked':''}" onclick="toggleLike('${p.post_id}',this)">
@@ -6246,6 +6584,122 @@ function closeFeedSearch(){
 }
 
 /* =============================================================
+   @MENTION TAGGING SYSTEM
+   ============================================================= */
+let _mentionDropdown=null;
+let _mentionTimeout=null;
+let _mentionActiveIdx=-1;
+let _mentionResults=[];
+let _mentionTextarea=null;
+
+function initMentionListener(textarea){
+  textarea.addEventListener('input',handleMentionInput);
+  textarea.addEventListener('keydown',handleMentionKeydown);
+  textarea.addEventListener('blur',()=>setTimeout(closeMentionDropdown,200));
+}
+
+function handleMentionInput(e){
+  const ta=e.target;
+  _mentionTextarea=ta;
+  const val=ta.value;
+  const pos=ta.selectionStart;
+  // Find @ symbol before cursor
+  const before=val.substring(0,pos);
+  const match=before.match(/@(\w*)$/);
+  if(!match){closeMentionDropdown();return}
+  const query=match[1];
+  if(query.length<1){showMentionDropdown(ta,[]);return}
+  if(_mentionTimeout)clearTimeout(_mentionTimeout);
+  _mentionTimeout=setTimeout(async()=>{
+    const{data}=await sb.from('profiles').select('id,name,username,avatar_url').or(`name.ilike.%${query}%,username.ilike.%${query}%`).neq('id',currentUser.id).limit(6);
+    _mentionResults=data||[];
+    _mentionActiveIdx=-1;
+    showMentionDropdown(ta,_mentionResults);
+  },200);
+}
+
+function handleMentionKeydown(e){
+  if(!_mentionDropdown||_mentionDropdown.style.display==='none')return;
+  if(e.key==='ArrowDown'){e.preventDefault();_mentionActiveIdx=Math.min(_mentionActiveIdx+1,_mentionResults.length-1);highlightMentionItem()}
+  else if(e.key==='ArrowUp'){e.preventDefault();_mentionActiveIdx=Math.max(_mentionActiveIdx-1,0);highlightMentionItem()}
+  else if(e.key==='Enter'&&_mentionActiveIdx>=0){e.preventDefault();selectMention(_mentionResults[_mentionActiveIdx])}
+  else if(e.key==='Escape'){closeMentionDropdown()}
+}
+
+function showMentionDropdown(ta,results){
+  if(!_mentionDropdown){
+    _mentionDropdown=document.createElement('div');
+    _mentionDropdown.className='mention-dropdown';
+    document.body.appendChild(_mentionDropdown);
+  }
+  if(!results.length){_mentionDropdown.style.display='none';return}
+  const rect=ta.getBoundingClientRect();
+  _mentionDropdown.style.display='block';
+  _mentionDropdown.style.position='fixed';
+  _mentionDropdown.style.left=rect.left+'px';
+  _mentionDropdown.style.top=(rect.bottom+4)+'px';
+  _mentionDropdown.style.width=Math.min(rect.width,280)+'px';
+  _mentionDropdown.innerHTML=results.map((u,i)=>`<div class="mention-item${i===_mentionActiveIdx?' active':''}" onmousedown="selectMention(_mentionResults[${i}])">
+    <div class="feed-avatar">${u.avatar_url?`<img src="${u.avatar_url}">`:(u.name||'?')[0].toUpperCase()}</div>
+    <div><div style="font-weight:600;font-size:.8rem">${esc(u.name)}</div><div class="small fg3">@${esc(u.username)}</div></div>
+  </div>`).join('');
+}
+
+function highlightMentionItem(){
+  if(!_mentionDropdown)return;
+  _mentionDropdown.querySelectorAll('.mention-item').forEach((el,i)=>el.classList.toggle('active',i===_mentionActiveIdx));
+}
+
+function selectMention(user){
+  if(!_mentionTextarea||!user)return;
+  const ta=_mentionTextarea;
+  const val=ta.value;
+  const pos=ta.selectionStart;
+  const before=val.substring(0,pos);
+  const after=val.substring(pos);
+  const replaced=before.replace(/@\w*$/,'@'+user.username+' ');
+  ta.value=replaced+after;
+  ta.selectionStart=ta.selectionEnd=replaced.length;
+  ta.focus();
+  closeMentionDropdown();
+}
+
+function closeMentionDropdown(){
+  if(_mentionDropdown)_mentionDropdown.style.display='none';
+}
+
+function extractTaggedUsernames(text){
+  if(!text)return[];
+  const matches=text.match(/@(\w+)/g);
+  return matches?matches.map(m=>m.substring(1)):[];
+}
+
+async function resolveTaggedUsers(text){
+  const usernames=extractTaggedUsernames(text);
+  if(!usernames.length)return[];
+  const{data}=await sb.from('profiles').select('id,username').in('username',usernames);
+  return(data||[]).map(u=>u.id);
+}
+
+async function notifyTaggedUsers(taggedIds,message,relatedId){
+  for(const uid of taggedIds){
+    if(uid===currentUser.id)continue;
+    await sb.from('notifications').insert({user_id:uid,type:'tagged',message,related_id:relatedId});
+  }
+}
+
+function renderCaptionWithTags(text){
+  if(!text)return'';
+  return esc(text).replace(/@(\w+)/g,'<span class="caption-tag" onclick="findAndOpenProfile(\'$1\')">@$1</span>');
+}
+
+async function findAndOpenProfile(username){
+  const{data}=await sb.from('profiles').select('id').eq('username',username).maybeSingle();
+  if(data)openPublicProfile(data.id);
+  else toast('User not found');
+}
+
+/* =============================================================
    DISCOVER ATHLETES
    ============================================================= */
 let discoverAllAthletes=[];
@@ -6423,7 +6877,8 @@ async function openPublicProfile(userId){
     <p class="fg2 small">@${esc(profile.username)}</p>
     ${profile.member_number?`<p class="fg3" style="font-size:.7rem;margin-top:4px">Member #${profile.member_number}</p>`:''}
     ${profile.bio?`<p class="fg2 small mt-sm" style="max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5">${esc(profile.bio)}</p>`:''}
-    <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
+    ${profile.is_coach&&profile.coaching_price?`<div style="display:flex;justify-content:center;margin-top:6px"><div class="coach-badge"><i data-lucide="graduation-cap" style="width:14px;height:14px"></i> Coach — $${profile.coaching_price}/mo</div></div>`:''}
+    <div style="margin-top:8px;display:flex;gap:8px;justify-content:center" id="pub-profile-actions">
       <button class="btn btn-sm ${isFollowing?'btn-danger':'btn-primary'}" data-following="${isFollowing}" onclick="toggleFollow('${uid}',this)">${isFollowing?'Unfollow':'Follow'}</button>
       <button class="btn btn-sm" onclick="openOrCreateConversation('${uid}')"><i data-lucide="message-square" style="width:14px;height:14px"></i> Message</button>
     </div>
@@ -6472,6 +6927,22 @@ async function openPublicProfile(userId){
   document.getElementById('pub-profile-content').innerHTML=html;
   if(typeof lucide!=='undefined')lucide.createIcons();
   window.scrollTo(0,0);
+
+  // Add coaching request button if user is a coach
+  if(profile.is_coach&&profile.coaching_price){
+    const{data:existingRel}=await sb.from('coaching_relationships').select('status').eq('coach_id',userId).eq('coachee_id',currentUser.id).maybeSingle();
+    const actionsEl=document.getElementById('pub-profile-actions');
+    if(actionsEl){
+      if(existingRel?.status==='active'){
+        actionsEl.innerHTML+=`<button class="btn btn-sm" disabled style="opacity:.6;border-color:#eab308;color:#eab308"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> Currently Coached</button>`;
+      }else if(existingRel?.status==='pending'){
+        actionsEl.innerHTML+=`<button class="btn btn-sm" disabled style="opacity:.6"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> Request Pending</button>`;
+      }else{
+        actionsEl.innerHTML+=`<button class="btn btn-sm" style="border-color:#eab308;color:#eab308" onclick="openRequestCoachingModal('${uid}','${esc(profile.name)}',${profile.coaching_price})"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> Request Coaching</button>`;
+      }
+      if(typeof lucide!=='undefined')lucide.createIcons();
+    }
+  }
 
   // Render body comp chart for other user
   if(profile.is_weight_public||profile.is_body_fat_public){
@@ -6526,7 +6997,7 @@ async function renderPubPosts(userId,profile){
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
         ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span></span>`:''}
       </div>
-      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
@@ -6817,7 +7288,7 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
         <span class="feed-stat-pill"><span class="pill-val">${totalSets}</span> sets</span>
         <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(totalVol)}</span> ${getUnit()}</span>
       </div>
-      <textarea class="input mb-sm" id="share-caption-v2" placeholder="How did it go? Add a caption..." style="min-height:50px"></textarea>
+      <textarea class="input mb-sm" id="share-caption-v2" placeholder="How did it go? Add a caption... Use @ to tag people" style="min-height:50px"></textarea>
       <button class="btn btn-block mb-sm" onclick="document.getElementById('share-photos-v2').click()" style="height:44px">📷 Add Photos</button>
       <input type="file" id="share-photos-v2" accept="image/*" multiple style="display:none" onchange="previewSharePhotosV2(event)">
       <div id="share-preview-v2" class="share-photo-strip"></div>
@@ -6851,6 +7322,8 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
       <button class="btn btn-ghost btn-block" onclick="closeModal();finishCleanup()">Skip, just save</button>
     </div>
   `);
+  const _shareTa=document.getElementById('share-caption-v2');
+  if(_shareTa)initMentionListener(_shareTa);
 }
 
 function selectShareVis(vis){
@@ -6904,6 +7377,9 @@ async function submitPostV2(){
     });
     if(postErr){console.error('Post error:',postErr);toast('Error posting')}
     else{
+      // Notify tagged users
+      const taggedIds=await resolveTaggedUsers(caption);
+      if(taggedIds.length)await notifyTaggedUsers(taggedIds,(currentProfile?.name||'Someone')+' tagged you in a workout post');
       if(isPublic&&communityIds.length)toast('Posted to The Lab & communities!');
       else if(isPublic)toast('Posted to The Lab!');
       else if(communityIds.length)toast('Posted to communities!');
@@ -6929,7 +7405,8 @@ function resumeWorkoutAfterCancel(){
   toast('Workout resumed');
 }
 
-function finishCleanup(){
+async function finishCleanup(){
+  await sendWorkoutToCoach();
   invalidateCache('logs');
   saveActiveWO(null);
   activeWorkout=null;
@@ -7284,7 +7761,7 @@ async function renderCommunityFeed(communityId, members){
     </div>
     <div class="cp-expanded" id="cp-expanded">
       <div class="cp-expanded-inner">
-        <textarea class="cp-textarea" id="cp-content" placeholder="What's on your mind?" oninput="updateCpPostBtn()"></textarea>
+        <textarea class="cp-textarea" id="cp-content" placeholder="What's on your mind? Use @ to tag people" oninput="updateCpPostBtn()"></textarea>
         <div id="cp-photo-preview" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
         <div class="cp-actions">
           <div class="flex gap-sm" style="align-items:center">
@@ -7348,7 +7825,7 @@ async function renderCommunityFeed(communityId, members){
           <h3 style="font-size:1rem">Challenge Complete</h3>
           <div class="feed-time">${timeAgo(p.created_at)}</div>
         </div>
-        <div class="feed-caption" style="white-space:pre-line">${esc(p.caption||'')}</div>
+        <div class="feed-caption" style="white-space:pre-line">${renderCaptionWithTags(p.caption||'')}</div>
         <div class="feed-actions">
           <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
           <button class="feed-action" onclick="toggleComments('${p.id}')">&#128172; <span class="count">${p.comments_count||0}</span></button>
@@ -7370,7 +7847,7 @@ async function renderCommunityFeed(communityId, members){
         ${p.user_id===currentUser.id?postMenuHtml(p.id,p.is_public!==false):''}
       </div>
       ${wl?`<div class="feed-summary"><strong>${esc(wl.workout_name)}</strong> &middot; <span class="mono">${dur}m</span></div>`:''}
-      ${p.caption?`<div class="feed-caption">${esc(p.caption)}</div>`:''}
+      ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
       ${renderFeedPhotos(photos)}
       <div class="feed-actions">
         <button class="feed-action" onclick="toggleLike('${p.id}',this)">&#9825; <span class="count">${p.likes_count||0}</span></button>
@@ -7380,6 +7857,8 @@ async function renderCommunityFeed(communityId, members){
     </div>`;
   }).join('');
   if(typeof lucide!=='undefined')lucide.createIcons();
+  const _cpTa=document.getElementById('cp-content');
+  if(_cpTa)initMentionListener(_cpTa);
 }
 
 function renderCommunityPostCard(p, isLiked){
@@ -7393,7 +7872,7 @@ function renderCommunityPostCard(p, isLiked){
       </div>
       ${p.user_id===currentUser.id?`<div class="post-menu-wrap"><button class="post-menu-btn" onclick="event.stopPropagation();toggleCpMenu('${p.id}')">&#8943;</button><div class="post-menu" id="cp-menu-${p.id}"><button class="post-menu-item" onclick="deleteCommunityPost('${p.id}')"><i data-lucide="trash-2" style="width:12px;height:12px"></i> Delete Post</button></div></div>`:''}
     </div>
-    <div class="feed-caption" style="white-space:pre-line">${esc(p.content)}</div>
+    <div class="feed-caption" style="white-space:pre-line">${renderCaptionWithTags(p.content)}</div>
     ${renderFeedPhotos(photos)}
     <div class="feed-actions">
       <button class="feed-action ${isLiked?'liked':''}" onclick="toggleCpLike('${p.id}',this)">${isLiked?'&#10084;':'&#9825;'} <span class="count">${p.likes_count||0}</span></button>
@@ -7470,6 +7949,9 @@ async function createCommunityPost(communityId){
   }
   const{error}=await sb.from('community_posts').insert({community_id:communityId,user_id:currentUser.id,content:content||'',photo_urls:photoUrls});
   if(error){toast('Error creating post');console.error(error);return}
+  // Notify tagged users
+  const taggedIds=await resolveTaggedUsers(content);
+  if(taggedIds.length)await notifyTaggedUsers(taggedIds,(currentProfile?.name||'Someone')+' tagged you in a community post');
   pendingCommunityPostPhotos=[];
   toast('Posted!');
   // Re-render feed
@@ -8458,7 +8940,7 @@ async function openChat(conversationId, otherUserId){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-chat').classList.add('active');
 
-  const{data:profile}=await sb.from('profiles').select('name,username,avatar_url').eq('id',otherUserId).single();
+  const{data:profile}=await sb.from('profiles').select('name,username,avatar_url,is_coach,coaching_price').eq('id',otherUserId).single();
   const{data:convo}=await sb.from('conversations').select('request_status,participant_1,participant_2').eq('id',conversationId).single();
 
   document.getElementById('chat-header').innerHTML=`
@@ -8466,9 +8948,27 @@ async function openChat(conversationId, otherUserId){
     <div><div style="font-family:var(--font-display);font-weight:700;font-size:.9rem">${esc(profile?.name||'User')}</div><div class="small fg2">@${esc(profile?.username||'')}</div></div>
   `;
 
+  // Check coaching relationship
+  const{data:coachRel}=await sb.from('coaching_relationships').select('*').or(`and(coach_id.eq.${currentUser.id},coachee_id.eq.${otherUserId}),and(coach_id.eq.${otherUserId},coachee_id.eq.${currentUser.id})`).in('status',['pending','active']).maybeSingle();
+  const iAmCoach=coachRel&&coachRel.coach_id===currentUser.id;
+  const iAmCoachee=coachRel&&coachRel.coachee_id===currentUser.id;
+
+  // Add coaching buttons to header
+  const headerEl=document.getElementById('chat-header');
+  if(profile?.is_coach&&profile.coaching_price&&!coachRel){
+    headerEl.innerHTML+=`<button class="btn btn-sm" style="margin-left:auto;border-color:#eab308;color:#eab308;font-size:.7rem" onclick="openRequestCoachingModal('${otherUserId}','${esc(profile.name)}',${profile.coaching_price})"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> $${profile.coaching_price}/mo</button>`;
+  }else if(coachRel?.status==='active'&&iAmCoach){
+    headerEl.innerHTML+=`<button class="btn btn-sm" style="margin-left:auto;border-color:#eab308;color:#eab308;font-size:.7rem" onclick="openSharePlanPicker('${otherUserId}')"><i data-lucide="clipboard-list" style="width:12px;height:12px"></i> Share Plan</button>`;
+  }else if(coachRel?.status==='active'&&iAmCoachee){
+    headerEl.innerHTML+=`<span class="coach-badge" style="margin-left:auto;font-size:.65rem">Your Coach</span>`;
+  }
+
   const isPending=convo&&convo.request_status==='pending';
   const isRecipient=convo&&convo.participant_2===currentUser.id;
-  if(isPending&&isRecipient){
+  // Coaching request banner (for coach receiving pending request)
+  if(coachRel?.status==='pending'&&iAmCoach){
+    document.getElementById('chat-request-banner').innerHTML=`<div class="coaching-req-banner"><i data-lucide="graduation-cap" style="width:16px;height:16px;color:#eab308"></i> <span style="flex:1">${esc(profile?.name||'User')} wants coaching at <strong>$${coachRel.monthly_price}/mo</strong>${coachRel.request_message?' — "'+esc(coachRel.request_message.slice(0,80))+'"':''}</span><button class="btn btn-sm btn-primary" onclick="acceptCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Accept</button><button class="btn btn-sm" onclick="declineCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Decline</button></div>`;
+  }else if(isPending&&isRecipient){
     document.getElementById('chat-request-banner').innerHTML=`<div class="msg-request-banner">This is a message request. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="acceptConversation('${conversationId}')">Accept</button> <button class="btn btn-sm" style="margin-left:4px" onclick="declineConversation('${conversationId}')">Decline</button></div>`;
   }else{
     document.getElementById('chat-request-banner').innerHTML='';
@@ -8509,6 +9009,20 @@ async function openChat(conversationId, otherUserId){
           </div>
         </div>
         <div class="chat-time" style="padding:4px 8px">${timeAgo(m.created_at)}</div>
+      </div>`;
+    }
+    if(m.message_type==='plan_share'&&m.plan_id){
+      return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
+        <div class="chat-special-card"><span class="card-icon" style="font-size:1.2rem">📋</span><div><strong style="font-size:.8rem">Plan Shared</strong><br><span class="small fg2">${esc(m.content)}</span></div></div>
+        <button class="btn btn-sm btn-primary" onclick="openPlanDetail('${m.plan_id}',false)" style="margin-top:6px;width:100%">View Plan</button>
+        <div class="chat-time">${timeAgo(m.created_at)}</div>
+      </div>`;
+    }
+    if(m.message_type==='workout_update'&&m.workout_log_id){
+      return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
+        <div class="chat-special-card"><span class="card-icon" style="font-size:1.2rem">🏋️</span><div><strong style="font-size:.8rem">Workout Completed</strong><br><span class="small fg2">${esc(m.content)}</span></div></div>
+        <button class="btn btn-sm" onclick="viewWorkoutLog('${m.workout_log_id}')" style="margin-top:6px;width:100%">View Full Details</button>
+        <div class="chat-time">${timeAgo(m.created_at)}</div>
       </div>`;
     }
     return `<div class="chat-bubble ${m.sender_id===currentUser.id?'mine':'theirs'}">
@@ -8667,7 +9181,7 @@ async function renderReelsFeed(){
       </div>
       <div class="reel-bottom">
         <div class="reel-username" onclick="openPublicProfile('${r.user_id}')">@${esc(p.username)}</div>
-        ${r.caption?`<div class="reel-caption">${esc(r.caption)}</div>`:''}
+        ${r.caption?`<div class="reel-caption">${renderCaptionWithTags(r.caption)}</div>`:''}
       </div>
       <div id="reel-comments-sheet-${r.id}" class="reel-comment-sheet" style="display:none"></div>
     </div>`;
@@ -9169,13 +9683,15 @@ function finishClipEditor(){
         ${clipEmojiOverlays.length?' · '+clipEmojiOverlays.length+' emoji':''}
       </div>
       ${planInfo}
-      <textarea class="input mt-sm mb-sm" id="reel-caption" placeholder="Add a caption..." style="min-height:50px"></textarea>
+      <textarea class="input mt-sm mb-sm" id="reel-caption" placeholder="Add a caption... Use @ to tag people" style="min-height:50px"></textarea>
     </div>
     <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch">
       <button class="btn btn-primary btn-block" onclick="submitReel()">Post Clip</button>
       <button class="btn btn-ghost btn-block" onclick="closeModal()">Discard</button>
     </div>
   `);
+  const _clipTa=document.getElementById('reel-caption');
+  if(_clipTa)initMentionListener(_clipTa);
 }
 
 async function submitReel(){
@@ -9211,6 +9727,9 @@ async function submitReel(){
   }).select().single();
   console.log('Reel insert result:',reelData,error);
   if(error){toast('Error posting clip');console.error('Reel insert error:',error);return}
+  // Notify tagged users
+  const taggedIds=await resolveTaggedUsers(caption);
+  if(taggedIds.length)await notifyTaggedUsers(taggedIds,(currentProfile?.name||'Someone')+' tagged you in a clip');
   clipEditorFile=null;clipEditorUrl=null;
   selectedReelPlanId=null;selectedReelPlanName=null;
   clipTextOverlays=[];clipEmojiOverlays=[];
