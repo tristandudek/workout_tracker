@@ -2526,6 +2526,15 @@ function fuzzySearchExercises(exs,q){
 }
 
 const SET_COLS='<colgroup><col class="c-set"><col class="c-prev"><col class="c-wt"><col class="c-reps"><col class="c-check"><col class="c-del"></colgroup>';
+function countTotalExercises(exercises){
+  let total=0;
+  (exercises||[]).forEach(ex=>{
+    total++;
+    if(ex.supersetExercises)total+=ex.supersetExercises.length;
+  });
+  return total;
+}
+
 function countTotalSets(exercises){
   let total=0;
   (exercises||[]).forEach(ex=>{
@@ -2695,7 +2704,7 @@ async function renderHome(){
       const dur=l.endTime?Math.round((new Date(l.endTime)-new Date(l.startTime))/60000):0;
       const d=new Date(l.startTime);
       return `<div class="recent-card">
-        <div><div class="rc-name">${esc(l.workoutName)}</div><div class="rc-meta">${d.toLocaleDateString()} &middot; ${l.exercises.length} exercises</div></div>
+        <div><div class="rc-name">${esc(l.workoutName)}</div><div class="rc-meta">${d.toLocaleDateString()} &middot; ${countTotalExercises(l.exercises)} exercises</div></div>
         <div class="rc-dur">${dur}m</div>
       </div>`;
     }).join('');
@@ -3179,7 +3188,7 @@ function renderWoCards(wos){
     <div class="wo-info" style="flex:1">
       <div class="flex between" style="align-items:flex-start;gap:6px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>
       ${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}
-      <div class="wo-meta">${w.exercises.length} exercises</div>
+      <div class="wo-meta">${countTotalExercises(w.exercises)} exercises</div>
       ${(w.workout_types||[]).length?`<div style="margin-top:4px">${w.workout_types.map(t=>`<span class="wtype-pill wtype-${t}">${t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>`).join('')}</div>`:''}
     </div>
     <div class="wo-actions">
@@ -3596,7 +3605,7 @@ async function showPlanWorkouts(planId){
         }
         const wo=wos.find(w=>w.id===pw.workout_template_id);
         return `<div class="wo-card" style="cursor:pointer;margin-bottom:6px" onclick="closeModal();startFromTemplate('${pw.workout_template_id}')">
-          <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name">${wo?esc(wo.name):'Unknown'}</div><div class="wo-meta">${wo?wo.exercises.length+' exercises':'—'}</div></div>
+          <div class="wo-info"><div class="small fg3">W${pw.week||1} D${pw.day||1}</div><div class="wo-name">${wo?esc(wo.name):'Unknown'}</div><div class="wo-meta">${wo?countTotalExercises(wo.exercises)+' exercises':'—'}</div></div>
           <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
         </div>`;
       }).join('')}
@@ -3613,7 +3622,7 @@ async function showStartFromWorkout(){
       <div class="search-wrap mb-sm"><span class="search-icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input class="input" id="start-wo-search" placeholder="Search workouts..." oninput="filterStartWorkouts()"></div>
       <div id="start-wo-list">
         ${wos.length?wos.map(w=>`<div class="wo-card start-wo-item" style="cursor:pointer;margin-bottom:6px" data-name="${esc(w.name.toLowerCase())}" onclick="closeModal();startFromTemplate('${w.id}')">
-          <div class="wo-info" style="flex:1"><div class="flex between" style="align-items:flex-start;gap:4px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises${(w.workout_types||[]).length?' · '+w.workout_types.map(t=>t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join(', '):''}</div></div>
+          <div class="wo-info" style="flex:1"><div class="flex between" style="align-items:flex-start;gap:4px"><div class="wo-name">${esc(w.name)}</div>${woOwnerBadge(w)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${countTotalExercises(w.exercises)} exercises${(w.workout_types||[]).length?' · '+w.workout_types.map(t=>t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())).join(', '):''}</div></div>
           <i data-lucide="play" style="width:16px;height:16px;color:var(--accent)"></i>
         </div>`).join(''):'<p class="fg3 small">No workouts yet. Create one first.</p>'}
       </div>
@@ -4510,7 +4519,7 @@ async function renderHistory(){
       <div class="feed-stat-pills" style="padding:0">
         <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
         <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-        <span class="feed-stat-pill"><span class="pill-val">${l.exercises.length}</span> exercises</span>
+        <span class="feed-stat-pill"><span class="pill-val">${countTotalExercises(l.exercises)}</span> exercises</span>
       </div>
     </div>`;
   }).join('');
@@ -4782,7 +4791,7 @@ async function renderProfilePostsGrid(){
       ${wl?`<div class="feed-summary" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')"><strong>${esc(wl.workout_name)}</strong></div>`:''}
       <div class="feed-stat-pills" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')">
         <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
-        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(wl?.exercises)}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
         ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
       </div>
@@ -4816,7 +4825,7 @@ async function renderProfilePostsGrid(){
         <div class="feed-summary"><strong>${esc(l.workout_name||'Workout')}</strong></div>
         <div class="feed-stat-pills">
           <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
-          <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${l.exercises?.length||0}</span> exercises</span>
+          <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(l.exercises)}</span> exercises</span>
           ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${volStr}</span> ${getUnit()}</span>`:''}
         </div>
         <div style="padding:0 14px 10px">
@@ -5359,7 +5368,7 @@ async function viewWorkoutLog(logId){
   const dur=log.end_time&&log.start_time?Math.round((new Date(log.end_time)-new Date(log.start_time))/60000):0;
   html+=`<div class="feed-stat-pills mb-md" style="padding:0">
     <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
-    <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${(log.exercises||[]).length}</span> exercises</span>
+    <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(log.exercises)}</span> exercises</span>
   </div>`;
   (log.exercises||[]).forEach(ex=>{
     const name=ex.exerciseName||ex.name||'Exercise';
@@ -5746,7 +5755,7 @@ async function renderProfileActivityFeed(){
           <div class="feed-summary"><strong>${esc(wl?.workout_name||'Workout')}</strong></div>
           <div class="feed-stat-pills">
             <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
-            <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+            <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(wl?.exercises)}</span> exercises</span>
             <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
             ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
           </div>
@@ -5784,7 +5793,7 @@ async function renderProfileActivityFeed(){
           <div class="feed-stat-pills" style="padding:0;margin-bottom:4px">
             <span class="feed-stat-pill"><span class="pill-val">${fmtDuration(dur)}</span></span>
             <span class="feed-stat-pill"><span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>
-            <span class="feed-stat-pill"><span class="pill-val">${l.exercises?.length||0}</span> exercises</span>
+            <span class="feed-stat-pill"><span class="pill-val">${countTotalExercises(l.exercises)}</span> exercises</span>
           </div>
           <div class="small fg3">${new Date(l.start_time).toLocaleDateString()}</div>
         </div>`
@@ -6094,7 +6103,7 @@ let _returnToPlanAfterCreate=false;
 async function addWorkoutToPlan(){
   const wos=await getWorkouts();
   const woList=wos.map(w=>`<div class="wo-card" style="cursor:pointer" onclick="closeModal();const _lc2=planWorkouts.length?planWorkouts[planWorkouts.length-1].cycle||1:1;planWorkouts.push({workout_template_id:'${w.id}',cycle:_lc2});renderPlanWorkouts()">
-    <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${w.exercises.length} exercises</div></div>
+    <div class="wo-info"><div class="wo-name">${esc(w.name)}</div>${w.description?`<div class="small fg2" style="margin-top:2px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">${esc(w.description)}</div>`:''}<div class="wo-meta">${countTotalExercises(w.exercises)} exercises</div></div>
   </div>`).join('');
 
   openModal(`
@@ -6200,7 +6209,7 @@ async function openPlanDetail(planId, isOwn){
       <div class="wo-info">
         <div class="small fg3">W${pw.week||1} D${pw.day||1}</div>
         <div class="wo-name">${wo?esc(wo.name):'Unknown Workout'}</div>
-        <div class="wo-meta">${wo?wo.exercises.length+' exercises':'—'}</div>
+        <div class="wo-meta">${wo?countTotalExercises(wo.exercises)+' exercises':'—'}</div>
       </div>
       ${wo?`<button class="btn btn-sm btn-primary" onclick="closeModal();startFromTemplate('${wo.id}')"><i data-lucide="play" style="width:12px;height:12px"></i></button>`:''}
     </div>`;
@@ -6304,7 +6313,7 @@ async function renderFeed(){
       data=postsWithProfiles.map(p=>{
         const wl=p.workout_logs;
         const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_exercises:wl?.exercises||[],i_liked:false};
+        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_exercises:wl?.exercises||[],i_liked:false};
       });
     }else{data=[]}
   }else if(feedActiveTab==='following'){
@@ -6316,7 +6325,7 @@ async function renderFeed(){
     data=postsWithProfiles2.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_exercises:wl?.exercises||[],i_liked:false};
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_exercises:wl?.exercises||[],i_liked:false};
     });
   }else{
     // Suggested: all public posts except own
@@ -6326,7 +6335,7 @@ async function renderFeed(){
     data=postsWithProfiles3.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:wl?.exercises?.length||0,workout_volume:0,workout_exercises:wl?.exercises||[],i_liked:false};
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_volume:0,workout_exercises:wl?.exercises||[],i_liked:false};
     });
     error=res.error;
   }
@@ -7001,7 +7010,7 @@ async function renderPubPosts(userId,profile){
       ${wl?`<div class="feed-summary" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')"><strong>${esc(wl.workout_name)}</strong></div>`:''}
       <div class="feed-stat-pills" style="cursor:pointer" onclick="openWorkoutDetailModal('${p.id}')">
         <span class="feed-stat-pill"><i data-lucide="clock" style="width:12px;height:12px"></i> <span class="pill-val">${fmtDuration(dur)}</span></span>
-        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${wl?.exercises?.length||0}</span> exercises</span>
+        <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(wl?.exercises)}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
         ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span></span>`:''}
       </div>
@@ -7224,7 +7233,7 @@ function showShareWorkoutModal(workoutData, onDone){
   const wo=activeWorkout;
   const dur=wo?Math.round((new Date(wo.endTime)-new Date(wo.startTime))/60000):0;
   const vol=wo?calcVolume(wo.exercises):0;
-  const exCount=wo?wo.exercises.length:0;
+  const exCount=wo?countTotalExercises(wo.exercises):0;
   const isPublic=currentProfile&&currentProfile.is_workouts_public;
   openModal(`
     <div class="modal-header"><h2>Share Your Workout</h2><button class="modal-close" onclick="closeModal();window._shareOnDone&&window._shareOnDone(false)">&times;</button></div>
