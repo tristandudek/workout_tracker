@@ -191,6 +191,16 @@ CREATE POLICY "Public workout logs readable"
     )
   );
 
+CREATE POLICY "Logs linked to public posts are readable"
+  ON workout_logs FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM workout_posts
+      WHERE workout_posts.workout_log_id = workout_logs.id
+      AND workout_posts.is_public = true
+    )
+  );
+
 CREATE POLICY "Users can insert own logs"
   ON workout_logs FOR INSERT
   WITH CHECK (auth.uid() = user_id);
@@ -332,7 +342,12 @@ CREATE TABLE workout_posts (
   likes_count int DEFAULT 0,
   comments_count int DEFAULT 0,
   is_public boolean DEFAULT true,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  workout_name text,
+  workout_duration int DEFAULT 0,
+  workout_sets int DEFAULT 0,
+  workout_exercises_count int DEFAULT 0,
+  workout_volume numeric DEFAULT 0
 );
 
 CREATE INDEX idx_workout_posts_user ON workout_posts(user_id);

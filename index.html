@@ -1850,6 +1850,7 @@ const raw=[
 ["Landmine Squat",["quads","glutes"],"barbell","Hold end of landmine barbell at chest. Squat deep. Angled resistance path.","barbell_squat"],
 ["Landmine Rotational Press",["core","shoulders","obliques"],"barbell","Hold end of barbell at shoulder. Press while rotating. Rotational power development.","barbell_press"],
 ["Landmine Rotation",["obliques","core","abs"],"barbell","Hold the end of a landmine barbell with both hands and arms extended. Rotate the bar from side to side in a controlled arc, engaging the obliques and core throughout. Keep hips stable and feet planted.","barbell_row"],
+["One Arm Landmine Romanian Deadlift",["hamstrings","glutes","core"],"barbell","Stand on one leg holding the end of a landmine barbell in the opposite hand. Hinge at the hips, lowering the bar while extending the free leg behind you. Drive hips forward to return. Great for unilateral strength and balance.","barbell_deadlift"],
 ["Dumbbell Around the World",["chest","shoulders"],"dumbbell","Lie on bench. Arc dumbbells from hips over head in circular path. Full chest stretch.","db_fly"],
 ["Cable Woodchop (Low to High)",["obliques","core"],"cable","Low cable, pull diagonally up and across body. Rotational power from low to high.","cable_pull"],
 ["Cable Woodchop (High to Low)",["obliques","core"],"cable","High cable, pull diagonally down and across body. Rotational power from high to low.","cable_pull"],
@@ -2243,7 +2244,7 @@ async function getLogs(){
 }
 
 function getUnit(){return localStorage.getItem('wt_unit')||'lbs'}
-function setUnit(u){localStorage.setItem('wt_unit',u);document.querySelectorAll('#unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===u))}
+function setUnit(u){localStorage.setItem('wt_unit',u);document.querySelectorAll('#unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===u));if(activeWorkout)renderActiveWorkout()}
 
 const ACTIVE_WO_KEY='wt_active';
 function loadActiveWO(){try{return JSON.parse(localStorage.getItem(ACTIVE_WO_KEY))||null}catch(e){return null}}
@@ -2296,6 +2297,19 @@ async function seedExercisesIfNeeded(){
     }
     console.log('[Seed] Added',missing.length,'missing exercises');
     invalidateCache('exercises');
+  }
+
+  // Fix tracking_type for exercises that may have been seeded incorrectly
+  const trackingFixes={};
+  allExs.forEach(e=>{trackingFixes[e.name]=e.tracking_type});
+  const{data:dbExs}=await sb.from('exercises').select('id,name,tracking_type').is('created_by_user_id',null);
+  if(dbExs){
+    const toFix=dbExs.filter(e=>trackingFixes[e.name]&&trackingFixes[e.name]!==e.tracking_type);
+    for(const e of toFix){
+      await sb.from('exercises').update({tracking_type:trackingFixes[e.name]}).eq('id',e.id);
+      console.log('[Seed] Fixed tracking_type for',e.name,':',e.tracking_type,'→',trackingFixes[e.name]);
+    }
+    if(toFix.length)invalidateCache('exercises');
   }
 }
 
@@ -3351,7 +3365,7 @@ async function renderCreateExercises(){
         </div>
         <button class="btn btn-sm btn-danger" onclick="createExercises.splice(${i},1);renderCreateExercises()">&times;</button>
       </div>
-      ${ce.supersetExercises&&ce.supersetExercises.length?`<div class="superset-group mt-sm">${ce.supersetExercises.map((se,si)=>{const sex=exs.find(e=>e.id===se.exerciseId);return`<div class="flex between gap-sm" style="padding:6px 0;border-bottom:1px solid var(--bg4)"><div class="flex gap-sm" style="flex:1;align-items:center"><span class="small">${sex?esc(sex.name):'Unknown'}</span><input class="input" style="width:70px;padding:4px;height:24px;font-size:.72rem" value="${esc(se.targetReps||'8-12')}" onchange="createExercises[${i}].supersetExercises[${si}].targetReps=this.value" placeholder="8-12"></div><button class="btn btn-sm btn-danger" style="padding:2px 6px;height:24px;font-size:.65rem" onclick="createExercises[${i}].supersetExercises.splice(${si},1);renderCreateExercises()">&times;</button></div>`}).join('')}</div>`:''}
+      ${ce.supersetExercises&&ce.supersetExercises.length?`<div class="superset-group mt-sm">${ce.supersetExercises.map((se,si)=>{const sex=exs.find(e=>e.id===se.exerciseId);return`<div style="padding:8px 0;border-top:1px solid var(--bg4)"><div class="flex between gap-sm" style="margin-bottom:6px"><span style="font-family:var(--font-display);font-weight:700;font-size:.88rem">${sex?esc(sex.name):'Unknown'}</span><button class="btn btn-sm btn-danger" style="padding:2px 6px;height:24px;font-size:.65rem" onclick="createExercises[${i}].supersetExercises.splice(${si},1);renderCreateExercises()">&times;</button></div><div class="flex gap-sm" style="flex-wrap:wrap"><input class="input" style="width:50px;padding:6px;height:28px" type="number" min="1" value="${se.targetSets||3}" onchange="createExercises[${i}].supersetExercises[${si}].targetSets=+this.value" placeholder="#"><span class="fg3 small">&times;</span><input class="input" style="width:70px;padding:6px;height:28px" value="${esc(se.targetReps||'8-12')}" onchange="createExercises[${i}].supersetExercises[${si}].targetReps=this.value" placeholder="8-12"></div></div>`}).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -3512,7 +3526,7 @@ async function pickExercise(id){
   }
   if(pickerTarget==='superset'&&supersetTargetIdx!==null){
     if(!createExercises[supersetTargetIdx].supersetExercises)createExercises[supersetTargetIdx].supersetExercises=[];
-    createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,exerciseName:ex.name,targetReps:'8-12'});
+    createExercises[supersetTargetIdx].supersetExercises.push({exerciseId:id,exerciseName:ex.name,targetSets:3,targetReps:'8-12'});
     supersetTargetIdx=null;
     closeModal();renderCreateExercises();
   }else if(pickerTarget==='active-superset'&&supersetTargetIdx!==null){
@@ -3680,10 +3694,31 @@ async function startFromTemplate(id){
   beginActiveWorkout();
 }
 
-function findPreviousSets(exerciseId,logs){
+function findPreviousSets(exerciseId,logs,exerciseName){
   for(let i=logs.length-1;i>=0;i--){
-    const le=logs[i].exercises.find(e=>e.exerciseId===exerciseId);
-    if(le)return le.sets.filter(s=>s.completed);
+    const exs=logs[i].exercises||[];
+    // Search top-level exercises by ID
+    const le=exs.find(e=>e.exerciseId===exerciseId);
+    if(le&&le.sets)return le.sets.filter(s=>s.completed);
+    // Search inside superset secondary exercises by ID
+    for(const e of exs){
+      if(e.supersetExercises){
+        const se=e.supersetExercises.find(se=>se.exerciseId===exerciseId);
+        if(se&&se.sets)return se.sets.filter(s=>s.completed);
+      }
+    }
+    // Fallback: match by exercise name (handles ID mismatches between workouts)
+    if(exerciseName){
+      const nameNorm=exerciseName.toLowerCase().trim();
+      const byName=exs.find(e=>(e.exerciseName||'').toLowerCase().trim()===nameNorm);
+      if(byName&&byName.sets)return byName.sets.filter(s=>s.completed);
+      for(const e of exs){
+        if(e.supersetExercises){
+          const se=e.supersetExercises.find(se=>(se.exerciseName||'').toLowerCase().trim()===nameNorm);
+          if(se&&se.sets)return se.sets.filter(s=>s.completed);
+        }
+      }
+    }
   }
   return[];
 }
@@ -3754,7 +3789,7 @@ async function renderActiveWorkout(){
     const isAsc=st==='ascending_pyramid';
     const repScheme=isAsc?[12,10,8,6]:[6,8,10,12];
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:0,reps:0,completed:false}]});
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>{
       const suggestedReps=repScheme[si]||repScheme[repScheme.length-1];
       return `
@@ -3787,7 +3822,7 @@ async function renderActiveWorkout(){
     ae.sets.forEach((s,si)=>{
       if(!s.subSets){s.subSets=[];for(let d=0;d<numDrops;d++){s.subSets.push({weight:s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0,reps:0,completed:false})}}
     });
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
@@ -3816,7 +3851,7 @@ async function renderActiveWorkout(){
   function renderRestPauseBody(ae,ei,prev,targetRep){
     const rpDur=ae.restPauseDuration||15;
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
@@ -3864,7 +3899,7 @@ async function renderActiveWorkout(){
           :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
           :st==='drop'?renderDropSetBody(ae,ei,prev,targetRep)
           :`<table class="set-table">${SET_COLS}
-          <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>${ae.tracking_type==='time'?'Time':ae.tracking_type==='distance'?'Distance':'Reps'}</th><th>&#10003;</th><th></th></tr></thead>
+          <thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>${ae.tracking_type==='time'?'Time':ae.tracking_type==='distance'?'Distance':'Reps'}</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
@@ -3884,7 +3919,7 @@ async function renderActiveWorkout(){
 
   con.innerHTML=activeWorkout.exercises.map((ae,ei)=>{
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
-    const prev=findPreviousSets(ae.exerciseId,logs);
+    const prev=findPreviousSets(ae.exerciseId,logs,ae.exerciseName);
     const st=ae.setType||'standard';
 
     if(st==='superset'){
@@ -3900,7 +3935,7 @@ async function renderActiveWorkout(){
         ${ssExs.map((se,si)=>{
           if(!se.sets)se.sets=[{weight:0,reps:0,completed:false}];
           console.log('Rendering superset exercise',si,'sets:',se.sets.length);
-          const sePrev=findPreviousSets(se.exerciseId,logs);
+          const sePrev=findPreviousSets(se.exerciseId,logs,se.exerciseName);
           return `<div style="border-top:1px solid var(--bg4)"></div>
             <div class="aw-exercise" style="border:none;margin:0">
               <div class="aw-ex-header">
@@ -3909,7 +3944,7 @@ async function renderActiveWorkout(){
               </div>
               <div class="aw-ex-body">
                 <table class="set-table">${SET_COLS}
-                  <thead><tr><th>Set</th><th>Previous</th><th>Weight</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
+                  <thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
                   <tbody>
                     ${se.sets.map((s,ssi)=>`<tr>
                       <td>${ssi+1}</td>
@@ -4303,9 +4338,31 @@ async function openExHistoryModal(exId){
   const logs=await getLogs();
   const sessions=[];
   for(let i=logs.length-1;i>=0&&sessions.length<3;i--){
-    const le=logs[i].exercises.find(e=>e.exerciseId===exId);
+    let le=logs[i].exercises.find(e=>e.exerciseId===exId);
+    // Also search inside superset sub-exercises
+    if(!le){
+      for(const e of (logs[i].exercises||[])){
+        if(e.supersetExercises){
+          const se=e.supersetExercises.find(se=>se.exerciseId===exId);
+          if(se&&se.sets){le=se;break}
+        }
+      }
+    }
+    // Fallback: match by name
+    if(!le&&exName&&exName!=='Exercise'){
+      const n=exName.toLowerCase().trim();
+      le=logs[i].exercises.find(e=>(e.exerciseName||'').toLowerCase().trim()===n);
+      if(!le){
+        for(const e of (logs[i].exercises||[])){
+          if(e.supersetExercises){
+            const se=e.supersetExercises.find(se=>(se.exerciseName||'').toLowerCase().trim()===n);
+            if(se&&se.sets){le=se;break}
+          }
+        }
+      }
+    }
     if(le){
-      const completed=le.sets.filter(s=>s.completed&&s.weight>0);
+      const completed=(le.sets||[]).filter(s=>s.completed&&s.weight>0);
       if(completed.length){
         const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
         const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
@@ -4345,18 +4402,31 @@ async function openExHistoryModal(exId){
 
 async function openExerciseHistory(exId){
   const logs=await getLogs();
+  const allExs=await getExercises();
+  const exObj=allExs.find(e=>e.id===exId);
+  const exNameLc=exObj?(exObj.name||'').toLowerCase().trim():'';
   let history=[];
   logs.forEach(l=>{
-    l.exercises.forEach(le=>{
-      if(le.exerciseId===exId){
-        const completed=le.sets.filter(s=>s.completed&&s.weight>0);
-        if(completed.length){
-          const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
-          const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
-          history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed});
+    let found=null;
+    // Search top-level exercises
+    for(const le of (l.exercises||[])){
+      if(le.exerciseId===exId||(exNameLc&&(le.exerciseName||'').toLowerCase().trim()===exNameLc)){found=le;break}
+      // Search superset sub-exercises
+      if(le.supersetExercises){
+        for(const se of le.supersetExercises){
+          if(se.exerciseId===exId||(exNameLc&&(se.exerciseName||'').toLowerCase().trim()===exNameLc)){found=se;break}
         }
+        if(found)break;
       }
-    });
+    }
+    if(found){
+      const completed=(found.sets||[]).filter(s=>s.completed&&s.weight>0);
+      if(completed.length){
+        const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
+        const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+        history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed});
+      }
+    }
   });
   history=history.slice(-5).reverse();
   const exs=await getExercises();
@@ -4385,19 +4455,33 @@ async function finishWorkout(){
 
   const logs=await getLogs();
   const prs=[];
-  activeWorkout.exercises.forEach(ae=>{
-    const completedSets=ae.sets.filter(s=>s.completed&&s.weight>0);
+  function findPrevBestWeight(exerciseId,exerciseName){
+    let prevBest=0;
+    const nameNorm=(exerciseName||'').toLowerCase().trim();
+    logs.forEach(l=>(l.exercises||[]).forEach(le=>{
+      if(le.exerciseId===exerciseId||(nameNorm&&(le.exerciseName||'').toLowerCase().trim()===nameNorm)){
+        (le.sets||[]).forEach(s=>{if(s.completed&&s.weight>prevBest)prevBest=s.weight});
+      }
+      if(le.supersetExercises)le.supersetExercises.forEach(se=>{
+        if(se.exerciseId===exerciseId||(nameNorm&&(se.exerciseName||'').toLowerCase().trim()===nameNorm)){
+          (se.sets||[]).forEach(s=>{if(s.completed&&s.weight>prevBest)prevBest=s.weight});
+        }
+      });
+    }));
+    return prevBest;
+  }
+  function checkPr(exerciseId,exerciseName,sets){
+    const completedSets=(sets||[]).filter(s=>s.completed&&s.weight>0);
     if(!completedSets.length)return;
     const bestNow=completedSets.reduce((a,b)=>a.weight>b.weight?a:b);
-    let prevBest=0;
-    logs.forEach(l=>l.exercises.forEach(le=>{
-      if(le.exerciseId===ae.exerciseId){
-        le.sets.forEach(s=>{if(s.completed&&s.weight>prevBest)prevBest=s.weight});
-      }
-    }));
+    const prevBest=findPrevBestWeight(exerciseId,exerciseName);
     if(bestNow.weight>prevBest&&prevBest>0){
-      prs.push({name:ae.exerciseName,weight:bestNow.weight,reps:bestNow.reps});
+      prs.push({name:exerciseName,weight:bestNow.weight,reps:bestNow.reps});
     }
+  }
+  activeWorkout.exercises.forEach(ae=>{
+    checkPr(ae.exerciseId,ae.exerciseName,ae.sets);
+    if(ae.supersetExercises)ae.supersetExercises.forEach(se=>checkPr(se.exerciseId,se.exerciseName,se.sets));
   });
 
   activeWorkout._totalVol=totalVol;
@@ -4776,7 +4860,7 @@ async function renderProfilePostsGrid(){
     _feedExerciseCache[p.id]=wl?.exercises||[];
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
     let vol=0;
-    if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
+    if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})})});
     const photos=p.photo_urls||[];
     const isOwn=p.user_id===currentUser.id;
     return `<div class="feed-card" id="post-${p.id}">
@@ -4811,7 +4895,7 @@ async function renderProfilePostsGrid(){
     container.innerHTML+=unpostedLogs.map(l=>{
       const dur=l.end_time&&l.start_time?Math.round((new Date(l.end_time)-new Date(l.start_time))/60000):0;
       let vol=0;
-      if(l.exercises)(l.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
+      if(l.exercises)(l.exercises).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})})});
       const volStr=vol>=1000?(vol/1000).toFixed(1)+'k':vol.toLocaleString();
       return `<div class="feed-card" style="background:var(--bg2);border-style:dashed">
         <div class="feed-header">
@@ -4850,12 +4934,17 @@ async function shareExistingLog(logId){
   // Open share modal for an existing unposted workout log
   const{data:log}=await sb.from('workout_logs').select('*').eq('id',logId).single();
   if(!log){toast('Workout not found');return}
-  // Temporarily set activeWorkout._logId so submitPostV2 can use it
+  // Temporarily set activeWorkout so submitPostV2 can use it
   if(!activeWorkout)activeWorkout={};
   activeWorkout._logId=logId;
+  activeWorkout.workoutName=log.workout_name||'Workout';
+  activeWorkout.exercises=log.exercises||[];
   const dur=log.end_time&&log.start_time?Math.round((new Date(log.end_time)-new Date(log.start_time))/60000):0;
   let vol=0;let sets=0;
-  if(log.exercises)log.exercises.forEach(ex=>{if(ex.sets){sets+=ex.sets.length;ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})}});
+  if(log.exercises)log.exercises.forEach(ex=>{if(ex.sets){sets+=ex.sets.length;ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})}if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets){sets+=se.sets.length;se.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})}})});
+  activeWorkout._totalVol=vol;
+  activeWorkout._dur=dur;
+  activeWorkout._totalSets=sets;
   showShareWorkoutModalV2(dur,sets,vol);
 }
 
@@ -6313,7 +6402,11 @@ async function renderFeed(){
       data=postsWithProfiles.map(p=>{
         const wl=p.workout_logs;
         const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_exercises:wl?.exercises||[],i_liked:false};
+        const vol1=p.workout_volume||(()=>{let v=0;(wl?.exercises||[]).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)})})});return v})();
+        const _dur1=p.workout_duration??dur;
+        const _exCount1=p.workout_exercises_count??countTotalExercises(wl?.exercises);
+        const _sets1=p.workout_sets??countTotalSets(wl?.exercises);
+        return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count,comments_count:p.comments_count,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:p.workout_name||wl?.workout_name,workout_duration:_dur1,workout_exercise_count:_exCount1,workout_sets_count:_sets1,workout_volume:vol1,workout_exercises:wl?.exercises||[],i_liked:false};
       });
     }else{data=[]}
   }else if(feedActiveTab==='following'){
@@ -6325,7 +6418,11 @@ async function renderFeed(){
     data=postsWithProfiles2.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_exercises:wl?.exercises||[],i_liked:false};
+      const vol2=p.workout_volume||(()=>{let v=0;(wl?.exercises||[]).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)})})});return v})();
+      const _dur2=p.workout_duration??dur;
+      const _exCount2=p.workout_exercises_count??countTotalExercises(wl?.exercises);
+      const _sets2=p.workout_sets??countTotalSets(wl?.exercises);
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:p.workout_name||wl?.workout_name,workout_duration:_dur2,workout_exercise_count:_exCount2,workout_sets_count:_sets2,workout_volume:vol2,workout_exercises:wl?.exercises||[],i_liked:false};
     });
   }else{
     // Suggested: all public posts except own
@@ -6335,7 +6432,11 @@ async function renderFeed(){
     data=postsWithProfiles3.map(p=>{
       const wl=p.workout_logs;
       const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:wl?.workout_name,workout_duration:dur,workout_exercise_count:countTotalExercises(wl?.exercises),workout_volume:0,workout_exercises:wl?.exercises||[],i_liked:false};
+      const vol3=p.workout_volume||(()=>{let v=0;(wl?.exercises||[]).forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)v+=(s.weight||0)*(s.reps||0)})})});return v})();
+      const _dur3=p.workout_duration??dur;
+      const _exCount3=p.workout_exercises_count??countTotalExercises(wl?.exercises);
+      const _sets3=p.workout_sets??countTotalSets(wl?.exercises);
+      return{post_id:p.id,post_user_id:p.user_id,caption:p.caption,photo_urls:p.photo_urls,likes_count:p.likes_count||0,comments_count:p.comments_count||0,post_created_at:p.created_at,author_name:p.profiles?.name,author_username:p.profiles?.username,author_avatar_url:p.profiles?.avatar_url,workout_name:p.workout_name||wl?.workout_name,workout_duration:_dur3,workout_exercise_count:_exCount3,workout_sets_count:_sets3,workout_volume:vol3,workout_exercises:wl?.exercises||[],i_liked:false};
     });
     error=res.error;
   }
@@ -7002,7 +7103,7 @@ async function renderPubPosts(userId,profile){
     const wl=p.workout_logs;
     _feedExerciseCache[p.id]=wl?.exercises||[];
     const dur=wl&&wl.end_time&&wl.start_time?Math.round((new Date(wl.end_time)-new Date(wl.start_time))/60000):0;
-    let vol=0;if(wl&&wl.exercises)wl.exercises.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})});
+    let vol=0;if(wl&&wl.exercises)wl.exercises.forEach(ex=>{if(ex.sets)ex.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)});if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se.sets)se.sets.forEach(s=>{if(s.completed)vol+=(s.weight||0)*(s.reps||0)})})});
     const photos=p.photo_urls||[];
     return `<div class="feed-card">
       <div class="feed-header"><div class="feed-avatar">${prof.avatar_url?`<img src="${prof.avatar_url}">`:(prof.name||'?')[0].toUpperCase()}</div>
@@ -7384,13 +7485,23 @@ async function submitPostV2(){
 
   if(activeWorkout&&activeWorkout._logId){
     const shouldPost=isPublic||communityIds.length>0;
+    const _postDur=activeWorkout._dur||0;
+    const _postSets=activeWorkout._totalSets||0;
+    const _postVol=activeWorkout._totalVol||0;
+    const _postExCount=countTotalExercises(activeWorkout.exercises);
+    const _postName=activeWorkout.workoutName||'Workout';
     const{error:postErr}=await sb.from('workout_posts').insert({
       user_id:currentUser.id,
       workout_log_id:activeWorkout._logId,
       caption:caption||null,
       photo_urls:photoUrls,
       is_public:isPublic,
-      community_ids:communityIds
+      community_ids:communityIds,
+      workout_name:_postName,
+      workout_duration:_postDur,
+      workout_sets:_postSets,
+      workout_exercises_count:_postExCount,
+      workout_volume:_postVol
     });
     if(postErr){console.error('Post error:',postErr);toast('Error posting')}
     else{
