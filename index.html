@@ -6,7 +6,7 @@
 <title>Forgd</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏋️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -910,6 +910,7 @@ select.input{appearance:none;cursor:pointer;
 .chat-special-card i,.chat-special-card .card-icon{color:var(--accent);flex-shrink:0}
 .coaching-req-banner{padding:10px 14px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:var(--radius);margin-bottom:10px;font-size:.82rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
+<link rel="stylesheet" href="forgd-refresh.css">
 </head>
 <body>
 
@@ -1201,6 +1202,10 @@ select.input{appearance:none;cursor:pointer;
       <div class="profile-settings-dropdown" id="profile-settings-dropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--bg);border:1px solid var(--bg4);z-index:700;box-shadow:0 8px 24px rgba(0,0,0,.12);border-radius:var(--radius2);overflow:hidden">
         <button class="profile-menu-item" onclick="closeProfileSettings();nav('my-info')"><i data-lucide="user" style="width:16px;height:16px"></i> My Information</button>
         <button class="profile-menu-item" onclick="closeProfileSettings();nav('privacy')"><i data-lucide="shield" style="width:16px;height:16px"></i> Privacy Settings</button>
+        <button class="profile-menu-item" onclick="toggleTheme()">
+          <span>Theme</span>
+          <span id="theme-label" style="margin-left:auto;color:var(--fg3);font-size:.75rem"></span>
+        </button>
         <div class="divider" style="margin:4px 0"></div>
         <button class="profile-menu-item profile-menu-logout" onclick="handleLogout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Logout</button>
       </div>
@@ -1546,6 +1551,46 @@ select.input{appearance:none;cursor:pointer;
 </div><!-- #app-wrapper -->
 
 <script>
+/* =============================================================
+   THEME TOGGLE
+   ============================================================= */
+function toggleTheme(){
+  const root = document.documentElement;
+  const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('forgd-theme', next);
+  const lbl = document.getElementById('theme-label');
+  if (lbl) lbl.textContent = next === 'dark' ? 'Dark' : 'Light';
+}
+(function(){
+  const saved = localStorage.getItem('forgd-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.addEventListener('DOMContentLoaded', () => {
+    const lbl = document.getElementById('theme-label');
+    if (lbl) lbl.textContent = saved === 'dark' ? 'Dark' : 'Light';
+  });
+})();
+
+/* =============================================================
+   SPARKLINE HELPERS
+   ============================================================= */
+function buildSparkPath(points){
+  if (!points || points.length < 2) return 'M0 12 L95 12';
+  const min = Math.min(...points), max = Math.max(...points);
+  const range = max - min || 1;
+  return points.map((p,i) => {
+    const x = (i / (points.length - 1)) * 95;
+    const y = 22 - ((p - min) / range) * 20;
+    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
+  }).join(' ');
+}
+function lastSparkY(points){
+  if (!points || points.length < 2) return 12;
+  const min = Math.min(...points), max = Math.max(...points);
+  const range = max - min || 1;
+  return 22 - ((points[points.length-1] - min) / range) * 20;
+}
+
 /* =============================================================
    SUPABASE INIT
    ============================================================= */
@@ -4489,6 +4534,13 @@ async function finishWorkout(){
   activeWorkout._totalSets=totalSets;
   activeWorkout._prs=prs;
 
+  // Tag exercises that achieved PRs so feed cards can show is-pr pills
+  const prNames=new Set(prs.map(p=>p.name));
+  activeWorkout.exercises.forEach(ae=>{
+    if(prNames.has(ae.exerciseName))ae._hasPR=true;
+    if(ae.supersetExercises)ae.supersetExercises.forEach(se=>{if(prNames.has(se.exerciseName))se._hasPR=true});
+  });
+
   // Step 1: Save workout log to DB first
   console.log('Saving workout log...');
   const{data:logData,error:logErr}=await sb.from('workout_logs').insert({
@@ -4761,9 +4813,9 @@ async function renderProfile(){
     const{data:rmRows,error:rmErr}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',uid).order('display_order');
     console.log('1RM tiles fetched:',rmRows,rmErr);
     if(rmRows&&rmRows.length){
-      rmTilesHtml=rmRows.map(r=>`<div class="stat-box">
-        <div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'-'}<span style="font-size:.55rem;font-weight:500;color:var(--fg3);margin-left:2px">${r.weight_unit||'lbs'}</span></div>
-        <div class="lbl" style="overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(r.exercise_name)} 1RM</div>
+      rmTilesHtml=rmRows.map(r=>`<div class="pr-row" style="grid-template-columns:1fr 80px">
+        <div class="pr-ex">${esc(r.exercise_name)}</div>
+        <div class="pr-val">${r.estimated_1rm?Math.round(r.estimated_1rm):'-'}<span>${r.weight_unit||'lbs'}</span></div>
       </div>`).join('');
     }
   }catch(e){console.log('1RM tiles query error (table may not exist):',e.message)}
@@ -4878,6 +4930,7 @@ async function renderProfilePostsGrid(){
         <span class="feed-stat-pill"><i data-lucide="dumbbell" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalExercises(wl?.exercises)}</span> exercises</span>
         <span class="feed-stat-pill"><i data-lucide="layers" style="width:12px;height:12px"></i> <span class="pill-val">${countTotalSets(wl?.exercises)}</span> sets</span>
         ${vol?`<span class="feed-stat-pill"><i data-lucide="weight" style="width:12px;height:12px"></i> <span class="pill-val">${fmtVolume(vol)}</span> ${getUnit()}</span>`:''}
+        ${(()=>{const prExs=[];if(wl&&wl.exercises)(wl.exercises).forEach(ex=>{if(ex._hasPR){const best=(ex.sets||[]).filter(s=>s.completed&&s.weight>0).reduce((a,b)=>a.weight>b.weight?a:b,{weight:0,reps:0});if(best.weight)prExs.push(best)}if(ex.supersetExercises)ex.supersetExercises.forEach(se=>{if(se._hasPR){const best=(se.sets||[]).filter(s=>s.completed&&s.weight>0).reduce((a,b)=>a.weight>b.weight?a:b,{weight:0,reps:0});if(best.weight)prExs.push(best)}})});return prExs.map(pr=>`<span class="feed-stat-pill is-pr">PR <span class="pill-val">${pr.weight} × ${pr.reps}</span></span>`).join('')})()}
       </div>
 
       ${p.caption?`<div class="feed-caption">${renderCaptionWithTags(p.caption)}</div>`:''}
@@ -6979,7 +7032,7 @@ async function openPublicProfile(userId){
     if(rmIds.length){
       const{data:rmRows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',userId).eq('is_public',true).in('exercise_id',rmIds);
       if(rmRows&&rmRows.length){
-        rmTilesHtml=rmRows.map(r=>`<div class="stat-box"><div class="val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}<span style="font-size:.55rem;color:var(--fg3);margin-left:2px">${r.weight_unit||'lbs'}</span></div><div class="lbl">${esc(r.exercise_name)} 1RM</div></div>`).join('');
+        rmTilesHtml=rmRows.map(r=>`<div class="pr-row" style="grid-template-columns:1fr 80px"><div class="pr-ex">${esc(r.exercise_name)}</div><div class="pr-val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}<span>${r.weight_unit||'lbs'}</span></div></div>`).join('');
       }
     }
   }catch(e){}
