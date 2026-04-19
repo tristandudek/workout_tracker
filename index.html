@@ -3815,8 +3815,11 @@ async function renderActiveWorkout(){
   const allExs=await getExercises();
   const con=document.getElementById('aw-exercises');
 
-  // Resolve missing superset exercise names (independent set counts)
+  // Resolve missing superset exercise names + refresh tracking_type from DB
   activeWorkout.exercises.forEach(ae=>{
+    const foundMain=allExs.find(e=>e.id===ae.exerciseId);
+    if(foundMain&&foundMain.tracking_type)ae.tracking_type=foundMain.tracking_type;
+    if(!ae._unit)ae._unit=getUnit();
     if(ae.setType==='superset'&&ae.supersetExercises){
       ae.supersetExercises.forEach(se=>{
         // Resolve name if missing or looks like a UUID
@@ -3824,6 +3827,9 @@ async function renderActiveWorkout(){
           const found=allExs.find(e=>e.id===se.exerciseId);
           if(found)se.exerciseName=found.name;
         }
+        const foundSe=allExs.find(e=>e.id===se.exerciseId);
+        if(foundSe&&foundSe.tracking_type)se.tracking_type=foundSe.tracking_type;
+        if(!se._unit)se._unit=getUnit();
         // Ensure sets array exists but do NOT force match main exercise count
         if(!se.sets||!se.sets.length)se.sets=[{weight:'',reps:'',completed:false}];
       });
@@ -3834,7 +3840,7 @@ async function renderActiveWorkout(){
     const isAsc=st==='ascending_pyramid';
     const repScheme=isAsc?[12,10,8,6]:[6,8,10,12];
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:0,reps:0,completed:false}]});
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${ae._unit||getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>{
       const suggestedReps=repScheme[si]||repScheme[repScheme.length-1];
       return `
@@ -3867,7 +3873,7 @@ async function renderActiveWorkout(){
     ae.sets.forEach((s,si)=>{
       if(!s.subSets){s.subSets=[];for(let d=0;d<numDrops;d++){s.subSets.push({weight:s.weight?Math.round(s.weight*Math.pow(0.85,d+1)):0,reps:0,completed:false})}}
     });
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${ae._unit||getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
@@ -3896,7 +3902,7 @@ async function renderActiveWorkout(){
   function renderRestPauseBody(ae,ei,prev,targetRep){
     const rpDur=ae.restPauseDuration||15;
     ae.sets.forEach((s,si)=>{if(!s.subSets)s.subSets=[{weight:s.weight||0,reps:0,completed:false}]});
-    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
+    return `<table class="set-table">${SET_COLS}<thead><tr><th>Set</th><th>Previous</th><th>${ae._unit||getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead></table>`+
     ae.sets.map((s,si)=>`
       <table class="set-table">${SET_COLS}<tbody><tr>
         <td>${si+1}</td>
@@ -3928,27 +3934,34 @@ async function renderActiveWorkout(){
 
   function renderExCard(ae, ei, prev, isSuperset){
     const allDone=ae.sets.length>0&&ae.sets.every(s=>s.completed);
+    if(allDone&&ae._collapsed===undefined)ae._collapsed=true;
+    const collapsed=allDone&&ae._collapsed;
     const st=ae.setType||'standard';
     const stBadge=isSuperset?'':stBadgeHtml(st);
     const setLabel=si=>st==='drop'?'Drop '+(si+1):(si+1);
     const targetRep=ae.targetReps||'';
     const targetSetsNum=ae.targetSets||0;
-    return `<div class="aw-ex-header">
+    const exUnit=ae._unit||getUnit();
+    const doneSummary=allDone?`<span class="small fg3" style="margin-left:8px">${ae.sets.length} sets done</span>`:'';
+    const unitToggle=`<span class="unit-toggle" style="display:inline-flex;font-size:.6rem;margin-left:6px;vertical-align:middle"><span style="padding:2px 6px;cursor:pointer;${exUnit==='lbs'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleExUnit(${ei},'lbs')">LBS</span><span style="padding:2px 6px;cursor:pointer;${exUnit==='kg'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleExUnit(${ei},'kg')">KG</span></span>`;
+    return `<div class="aw-ex-header" ${allDone?`onclick="toggleExCollapse(${ei})" style="cursor:pointer"`:''}>
         <span class="drag">&#x2630;</span>
         <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}${exInfoIcon(ae)}</span>
+        ${unitToggle}
+        ${allDone?`<span style="color:var(--success);font-size:.7rem;font-weight:600;margin-left:auto">&#10003;</span>${doneSummary}`:''}
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
       </div>
-      <div class="aw-ex-body">
+      <div class="aw-ex-body" ${collapsed?'style="display:none"':''}>
         ${(st==='ascending_pyramid'||st==='descending_pyramid')?renderPyramidBody(ae,ei,prev,st,targetRep)
           :st==='rest_pause'?renderRestPauseBody(ae,ei,prev,targetRep)
           :st==='drop'?renderDropSetBody(ae,ei,prev,targetRep)
           :`<table class="set-table">${SET_COLS}
-          <thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>${ae.tracking_type==='time'?'Time':ae.tracking_type==='distance'?'Distance':'Reps'}</th><th>&#10003;</th><th></th></tr></thead>
+          <thead><tr><th>Set</th><th>Previous</th><th>${exUnit}</th><th>${ae.tracking_type==='time'?'Time':ae.tracking_type==='distance'?'Distance':'Reps'}</th><th>&#10003;</th><th></th></tr></thead>
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
-              <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps:'—'}</td>
+              <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps+(prev[si]._unit?' '+prev[si]._unit:''):'—'}</td>
               <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'')" placeholder="${ae.tracking_type==='distance'?'—':'0'}"></td>
               <td><input type="text" inputmode="${ae.tracking_type==='time'?'text':'numeric'}" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',this.value)" placeholder="${ae.tracking_type==='time'?'0:00':ae.tracking_type==='distance'?'dist':targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -3985,15 +3998,16 @@ async function renderActiveWorkout(){
             <div class="aw-exercise" style="border:none;margin:0">
               <div class="aw-ex-header">
                 <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${se.exerciseId}')">${esc(se.exerciseName||se.exerciseId)}${exInfoIcon(se)}</span>
+                <span class="unit-toggle" style="display:inline-flex;font-size:.6rem;margin-left:6px;vertical-align:middle"><span style="padding:2px 6px;cursor:pointer;${(se._unit||getUnit())==='lbs'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleSsExUnit(${ei},${si},'lbs')">LBS</span><span style="padding:2px 6px;cursor:pointer;${(se._unit||getUnit())==='kg'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleSsExUnit(${ei},${si},'kg')">KG</span></span>
                 <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:.65rem" onclick="activeWorkout.exercises[${ei}].supersetExercises.splice(${si},1);renderActiveWorkout()">&times;</button>
               </div>
               <div class="aw-ex-body">
                 <table class="set-table">${SET_COLS}
-                  <thead><tr><th>Set</th><th>Previous</th><th>${getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
+                  <thead><tr><th>Set</th><th>Previous</th><th>${se._unit||getUnit()}</th><th>Reps</th><th>&#10003;</th><th></th></tr></thead>
                   <tbody>
                     ${se.sets.map((s,ssi)=>`<tr>
                       <td>${ssi+1}</td>
-                      <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${se.exerciseId}')">${sePrev[ssi]?sePrev[ssi].weight+'×'+sePrev[ssi].reps:'—'}</td>
+                      <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${se.exerciseId}')">${sePrev[ssi]?sePrev[ssi].weight+'×'+sePrev[ssi].reps+(sePrev[ssi]._unit?' '+sePrev[ssi]._unit:''):'—'}</td>
                       <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" min="0" step="2.5" onchange="updateSupersetSet(${ei},${si},${ssi},'weight',+this.value)" placeholder="0"></td>
                       <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.reps||''}" min="0" onchange="updateSupersetSet(${ei},${si},${ssi},'reps',+this.value)" placeholder="${se.targetReps||'reps'}"></td>
                       <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSupersetSet(${ei},${si},${ssi})">&#10003;</div></td>
@@ -4094,8 +4108,10 @@ let awAutoFill=false;
 function toggleAutoFill(on){awAutoFill=on}
 
 function updateSet(ei,si,field,val){
-  const s=activeWorkout.exercises[ei].sets[si];
+  const ae=activeWorkout.exercises[ei];
+  const s=ae.sets[si];
   s[field]=val;
+  if(field==='weight')s._unit=ae._unit||getUnit();
   if(field==='weight'&&awAutoFill){
     s._manual=true;
     if(val){
@@ -4110,9 +4126,11 @@ function updateSet(ei,si,field,val){
   // Auto-complete when reps are entered
   if(field==='reps'&&val&&!s.completed){
     s.completed=true;
+    const allDone=ae.sets.every(s=>s.completed);
+    if(allDone)ae._collapsed=true;
     saveActiveWO(activeWorkout);
     renderActiveWorkout();
-    onAnySetComplete(activeWorkout.exercises[ei]);
+    onAnySetComplete(ae);
     return;
   }
   saveActiveWO(activeWorkout);
@@ -4121,17 +4139,41 @@ function updateSet(ei,si,field,val){
 function toggleSet(ei,si){
   const ae=activeWorkout.exercises[ei];
   ae.sets[si].completed=!ae.sets[si].completed;
+  // Auto-collapse when all sets done, expand when unchecking
+  const allDone=ae.sets.every(s=>s.completed);
+  if(allDone)ae._collapsed=true;
+  else ae._collapsed=false;
   saveActiveWO(activeWorkout);
   renderActiveWorkout();
   if(ae.sets[si].completed)onAnySetComplete(ae);
+}
+
+function toggleExCollapse(ei){
+  const ae=activeWorkout.exercises[ei];
+  ae._collapsed=!ae._collapsed;
+  renderActiveWorkout();
+}
+
+function toggleExUnit(ei,unit){
+  activeWorkout.exercises[ei]._unit=unit;
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
+}
+
+function toggleSsExUnit(ei,si,unit){
+  activeWorkout.exercises[ei].supersetExercises[si]._unit=unit;
+  saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 // addDropSet kept for backwards compat but drops are now sub-sets
 function addDropSet(ei){addDropSubSet(ei,activeWorkout.exercises[ei].sets.length-1)}
 
 function updateSupersetSet(ei,si,ssi,field,val){
-  const s=activeWorkout.exercises[ei].supersetExercises[si].sets[ssi];
+  const se=activeWorkout.exercises[ei].supersetExercises[si];
+  const s=se.sets[ssi];
   s[field]=val;
+  if(field==='weight')s._unit=se._unit||getUnit();
   if(field==='weight'&&awAutoFill){
     s._manual=true;
     if(val){
@@ -4411,33 +4453,37 @@ async function openExHistoryModal(exId){
       if(completed.length){
         const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
         const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
-        sessions.push({date:logs[i].startTime,woName:logs[i].workoutName,sets:le.sets,best,e1rm});
+        const exUnit=le._unit||best._unit||getUnit();
+        sessions.push({date:logs[i].startTime,woName:logs[i].workoutName,sets:le.sets,best,e1rm,unit:exUnit});
       }
     }
   }
-  let bestE1rm=0,bestSet=null;
-  sessions.forEach(s=>{if(s.e1rm>bestE1rm){bestE1rm=s.e1rm;bestSet=s.best}});
+  let bestE1rm=0,bestSet=null,bestUnit=getUnit();
+  sessions.forEach(s=>{if(s.e1rm>bestE1rm){bestE1rm=s.e1rm;bestSet=s.best;bestUnit=s.unit||getUnit()}});
   let html=`<div class="modal-header"><h2>${esc(exName)} — History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body" style="max-height:70vh;overflow-y:auto">`;
   if(!sessions.length){
     html+='<p class="fg3">No history yet — this will populate after your first logged session.</p>';
   }else{
-    html+=`<p class="small fg2 mb-md">Last ${sessions.length} session${sessions.length>1?'s':''} · Best 1RM: ${bestE1rm} ${getUnit()} · Best set: ${bestSet?bestSet.weight+'×'+bestSet.reps:'—'}</p>`;
+    html+=`<p class="small fg2 mb-md">Last ${sessions.length} session${sessions.length>1?'s':''} · Best 1RM: ${bestE1rm} ${bestUnit} · Best set: ${bestSet?bestSet.weight+'×'+bestSet.reps:'—'}</p>`;
     html+=sessions.map((s,si)=>{
       const d=new Date(s.date);
+      const sUnit=s.unit||getUnit();
       let setRows=s.sets.map((set,idx)=>{
-        let r=`<tr><td style="font-weight:600">Set ${idx+1}</td><td class="mono">${set.weight||'—'}</td><td class="mono">${set.reps||'—'}</td></tr>`;
+        const setU=set._unit||sUnit;
+        let r=`<tr><td style="font-weight:600">Set ${idx+1}</td><td class="mono">${set.weight?set.weight+' '+setU:'—'}</td><td class="mono">${set.reps||'—'}</td></tr>`;
         if(set.subSets&&set.subSets.length){
           set.subSets.forEach((sub,subi)=>{
-            r+=`<tr style="color:var(--fg3);font-size:.78rem"><td style="padding-left:16px">↳ ${sub.label||'Sub '+(subi+1)}</td><td class="mono">${sub.weight||'—'}</td><td class="mono">${sub.reps||'—'}</td></tr>`;
+            const subU=sub._unit||sUnit;
+            r+=`<tr style="color:var(--fg3);font-size:.78rem"><td style="padding-left:16px">↳ ${sub.label||'Sub '+(subi+1)}</td><td class="mono">${sub.weight?sub.weight+' '+subU:'—'}</td><td class="mono">${sub.reps||'—'}</td></tr>`;
           });
         }
         return r;
       }).join('');
       return `${si>0?'<div class="divider"></div>':''}
         <div class="mb-md">
-          <div class="flex between mb-sm"><div><div style="font-family:var(--font-display);font-weight:700;font-size:.85rem">${d.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'})}</div><div class="small fg3">${esc(s.woName)}</div></div><div class="small"><span class="accent mono">1RM: ${s.e1rm}</span></div></div>
+          <div class="flex between mb-sm"><div><div style="font-family:var(--font-display);font-weight:700;font-size:.85rem">${d.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'})}</div><div class="small fg3">${esc(s.woName)}</div></div><div class="small"><span class="accent mono">1RM: ${s.e1rm} ${sUnit}</span></div></div>
           <table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Set</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Weight</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Reps</th></tr></thead><tbody>${setRows}</tbody></table>
-          <div class="small fg2 mt-sm">Best: <span class="accent mono">${s.best.weight}×${s.best.reps}</span></div>
+          <div class="small fg2 mt-sm">Best: <span class="accent mono">${s.best.weight}×${s.best.reps} ${sUnit}</span></div>
         </div>`;
     }).join('');
   }
@@ -4469,7 +4515,8 @@ async function openExerciseHistory(exId){
       if(completed.length){
         const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
         const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
-        history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed});
+        const exUnit=found._unit||best._unit||getUnit();
+        history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed,unit:exUnit});
       }
     }
   });
@@ -4479,7 +4526,7 @@ async function openExerciseHistory(exId){
   openModal(`
     <div class="modal-header"><h2>${ex?esc(ex.name):'Exercise'} History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      ${history.length?history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best}</span><span class="accent mono small">E1RM: ${h.e1rm}</span></div>`).join(''):'<p class="fg3 small">No previous history for this exercise.</p>'}
+      ${history.length?history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best} ${h.unit||getUnit()}</span><span class="accent mono small">E1RM: ${h.e1rm} ${h.unit||getUnit()}</span></div>`).join(''):'<p class="fg3 small">No previous history for this exercise.</p>'}
     </div>
   `);
 }
