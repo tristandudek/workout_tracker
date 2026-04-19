@@ -4854,18 +4854,43 @@ async function renderProfile(){
 
   console.log('Stats:',{totalWorkouts,streak,totalVolume,followersCount,followingCount,plansCreatedCount,othersDoneCount,savedPlansCount,postsCount});
 
-  // ---- Fetch 1RM tiles ----
-  let rmTilesHtml='';
+  // ---- Fetch 1RM tiles + history for line charts ----
+  let rmRows=[];
   try{
-    const{data:rmRows,error:rmErr}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',uid).order('display_order');
-    console.log('1RM tiles fetched:',rmRows,rmErr);
-    if(rmRows&&rmRows.length){
-      rmTilesHtml=rmRows.map(r=>`<div class="pr-row" style="grid-template-columns:1fr 80px">
-        <div class="pr-ex">${esc(r.exercise_name)}</div>
-        <div class="pr-val">${r.estimated_1rm?Math.round(r.estimated_1rm):'-'}<span>${r.weight_unit||'lbs'}</span></div>
-      </div>`).join('');
-    }
+    const{data,error:rmErr}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',uid).order('display_order');
+    console.log('1RM tiles fetched:',data,rmErr);
+    if(data)rmRows=data;
   }catch(e){console.log('1RM tiles query error (table may not exist):',e.message)}
+
+  // Build 1RM history from workout logs (last 3 sessions per exercise)
+  const logs=await getLogs();
+  const rmHistories={};
+  for(const r of rmRows){
+    const exId=r.exercise_id;
+    const exNameLc=(r.exercise_name||'').toLowerCase().trim();
+    const sessions=[];
+    for(let i=logs.length-1;i>=0&&sessions.length<3;i--){
+      let found=null;
+      for(const le of (logs[i].exercises||[])){
+        if(le.exerciseId===exId||(exNameLc&&(le.exerciseName||'').toLowerCase().trim()===exNameLc)){found=le;break}
+        if(le.supersetExercises){
+          for(const se of le.supersetExercises){
+            if(se.exerciseId===exId||(exNameLc&&(se.exerciseName||'').toLowerCase().trim()===exNameLc)){found=se;break}
+          }
+          if(found)break;
+        }
+      }
+      if(found){
+        const completed=(found.sets||[]).filter(s=>s.completed&&s.weight>0);
+        if(completed.length){
+          const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
+          const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+          sessions.unshift({date:new Date(logs[i].startTime).toLocaleDateString([],{month:'short',day:'numeric'}),e1rm});
+        }
+      }
+    }
+    rmHistories[exId]=sessions;
+  }
 
   // ---- Render tile sections ----
   const volFmt=totalVolume>=1000?(totalVolume/1000).toFixed(1)+'k':totalVolume.toLocaleString();
@@ -4879,9 +4904,24 @@ async function renderProfile(){
         <div class="stat-box"><div class="val">${totalWorkouts}</div><div class="lbl">Workouts</div></div>
         <div class="stat-box"><div class="val">${streak}</div><div class="lbl">Day Streak</div></div>
         <div class="stat-box"><div class="val">${volFmt}</div><div class="lbl">Volume (${getUnit()})</div></div>
-        ${rmTilesHtml}
         ${editTileHtml}
       </div>
+      ${rmRows.length?`
+        <div class="stats-section-label" style="margin-top:16px">Estimated 1RM</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${rmRows.map(r=>{
+            const hist=rmHistories[r.exercise_id]||[];
+            return `<div class="stat-box" style="padding:12px 14px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+                <span style="font-family:var(--font-display);font-weight:600;font-size:.92rem;letter-spacing:-.01em">${esc(r.exercise_name)}</span>
+                <span style="font-family:var(--font-mono);font-weight:600;font-size:1.1rem">${r.estimated_1rm?Math.round(r.estimated_1rm):'-'} <span style="font-size:.7rem;color:var(--fg3);font-weight:400">${r.weight_unit||'lbs'}</span></span>
+              </div>
+              ${hist.length>=2?`<div style="height:60px"><canvas id="rm-chart-${r.exercise_id.replace(/[^a-zA-Z0-9]/g,'_')}"></canvas></div>`
+                :`<p class="fg3" style="font-size:.7rem;margin:0">Not enough history for chart</p>`}
+            </div>`;
+          }).join('')}
+        </div>
+      `:''}
       <div class="stats-section-label" style="margin-top:16px">Creator & Engagement Metrics</div>
       <div class="stats-strip">
         <div class="stat-box" style="cursor:pointer" onclick="openFollowList('followers','${uid}')"><div class="val">${followersCount}</div><div class="lbl">Followers</div></div>
@@ -4894,6 +4934,44 @@ async function renderProfile(){
     `;
   }
   console.log('Tiles rendered');
+
+  // ---- Render 1RM mini line charts ----
+  for(const r of rmRows){
+    const hist=rmHistories[r.exercise_id]||[];
+    if(hist.length<2)continue;
+    const canvasId='rm-chart-'+r.exercise_id.replace(/[^a-zA-Z0-9]/g,'_');
+    const canvas=document.getElementById(canvasId);
+    if(!canvas)continue;
+    new Chart(canvas,{
+      type:'line',
+      data:{
+        labels:hist.map(h=>h.date),
+        datasets:[{
+          data:hist.map(h=>h.e1rm),
+          borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#6b4cf0',
+          backgroundColor:'transparent',
+          borderWidth:2,
+          pointRadius:4,
+          pointBackgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accent-peach').trim()||'#ff8a5c',
+          pointBorderColor:'#fff',
+          pointBorderWidth:1.5,
+          tension:0.3
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{
+          backgroundColor:'#111',titleFont:{family:'DM Sans',weight:'600',size:11},bodyFont:{family:'JetBrains Mono',size:12},
+          callbacks:{label:ctx=>ctx.parsed.y+' '+(r.weight_unit||'lbs')}
+        }},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9,family:'DM Sans'},color:getComputedStyle(document.documentElement).getPropertyValue('--fg3').trim()||'#9a9186'}},
+          y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:9,family:'JetBrains Mono'},color:getComputedStyle(document.documentElement).getPropertyValue('--fg3').trim()||'#9a9186',callback:v=>v+' '+(r.weight_unit||'lbs')},
+            suggestedMin:Math.min(...hist.map(h=>h.e1rm))*0.9,suggestedMax:Math.max(...hist.map(h=>h.e1rm))*1.05}
+        }
+      }
+    });
+  }
 
   // ---- Coaching section ----
   if(p.is_coach){
@@ -7073,14 +7151,12 @@ async function openPublicProfile(userId){
   }
 
   // 1RM tiles
-  let rmTilesHtml='';
+  let pubRmRows=[];
   try{
     const rmIds=ts['1rm_tiles']||[];
     if(rmIds.length){
-      const{data:rmRows}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',userId).eq('is_public',true).in('exercise_id',rmIds);
-      if(rmRows&&rmRows.length){
-        rmTilesHtml=rmRows.map(r=>`<div class="pr-row" style="grid-template-columns:1fr 80px"><div class="pr-ex">${esc(r.exercise_name)}</div><div class="pr-val">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'}<span>${r.weight_unit||'lbs'}</span></div></div>`).join('');
-      }
+      const{data:rmData}=await sb.from('profile_1rm_tiles').select('*').eq('user_id',userId).eq('is_public',true).in('exercise_id',rmIds);
+      if(rmData)pubRmRows=rmData;
     }
   }catch(e){}
 
@@ -7109,8 +7185,16 @@ async function openPublicProfile(userId){
       ${pubTile(wm,'workouts',totalWorkouts,'Workouts')}
       ${pubTile(wm,'streak',streak,'Day Streak')}
       ${pubTile(wm,'volume',volFmt,'Volume')}
-      ${rmTilesHtml}
     </div>
+    ${pubRmRows.length?`
+      <div class="stats-section-label" style="margin-top:16px">Estimated 1RM</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${pubRmRows.map(r=>`<div class="stat-box" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:var(--font-display);font-weight:600;font-size:.88rem">${esc(r.exercise_name)}</span>
+          <span style="font-family:var(--font-mono);font-weight:600;font-size:1rem">${r.estimated_1rm?Math.round(r.estimated_1rm):'—'} <span style="font-size:.65rem;color:var(--fg3);font-weight:400">${r.weight_unit||'lbs'}</span></span>
+        </div>`).join('')}
+      </div>
+    `:''}
     <div class="stats-section-label" style="margin-top:16px">Creator & Engagement Metrics</div>
     <div class="stats-strip">
       ${pubTile(em,'followers',followersCount,'Followers',' style="cursor:pointer" onclick="openFollowList(\'followers\',\''+uid+'\')"')}
