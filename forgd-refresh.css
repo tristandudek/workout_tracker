@@ -70,7 +70,7 @@ h3{ font-size:1.1rem; line-height:1.3; }
 .feed-stat-pill.is-pr .pill-val{ color:var(--accent-peach); }
 .feed-exercises{ padding:0 16px 10px; font-size:.82rem; color:var(--fg2); line-height:1.7; font-family:var(--font-body); }
 .feed-exercises .fe-more{ color:var(--accent); font-weight:600; cursor:pointer; }
-.feed-caption{ padding:0 16px 12px; font-size:.94rem; line-height:1.55; color:var(--fg); font-family:var(--font-body); }
+.feed-caption{ padding:0 16px 12px; font-size:.94rem; line-height:1.55; color:var(--fg); font-family:var(--font-body); font-weight:400; }
 .feed-photos{ display:grid; gap:3px; padding:0; margin-bottom:4px; }
 .feed-photos.ph-1{ grid-template-columns:1fr; }
 .feed-photos.ph-2{ grid-template-columns:1fr 1fr; }
