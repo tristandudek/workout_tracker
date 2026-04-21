@@ -9401,12 +9401,28 @@ async function openChat(conversationId, otherUserId){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-chat').classList.add('active');
 
-  const{data:profile}=await sb.from('profiles').select('name,username,avatar_url,is_coach,coaching_price').eq('id',otherUserId).single();
+  // If otherUserId is missing, resolve it from the conversation
+  if(!otherUserId){
+    const{data:c}=await sb.from('conversations').select('participant_1,participant_2').eq('id',conversationId).single();
+    if(c)otherUserId=c.participant_1===currentUser.id?c.participant_2:c.participant_1;
+  }
+
+  const{data:profile,error:profileErr}=await sb.from('profiles').select('name,username,avatar_url,is_coach,coaching_price').eq('id',otherUserId).maybeSingle();
+  if(profileErr)console.error('Chat profile fetch error:',profileErr);
   const{data:convo}=await sb.from('conversations').select('request_status,participant_1,participant_2').eq('id',conversationId).single();
 
+  // Fallback: if profile name/username missing, try auth user metadata
+  let displayName=profile?.name||'';
+  let displayUsername=profile?.username||'';
+  if(!displayName&&otherUserId){
+    // Try fetching from the profiles table with a broader query
+    const{data:fallback}=await sb.from('profiles').select('name,username').eq('id',otherUserId).maybeSingle();
+    if(fallback){displayName=fallback.name||'';displayUsername=fallback.username||''}
+  }
+
   document.getElementById('chat-header').innerHTML=`
-    <div class="feed-avatar" onclick="openPublicProfile('${otherUserId}')" style="cursor:pointer">${profile?.avatar_url?`<img src="${profile.avatar_url}">`:(profile?.name||'?')[0].toUpperCase()}</div>
-    <div><div style="font-family:var(--font-display);font-weight:700;font-size:.9rem">${esc(profile?.name||'User')}</div><div class="small fg2">@${esc(profile?.username||'')}</div></div>
+    <div class="feed-avatar" onclick="openPublicProfile('${otherUserId}')" style="cursor:pointer">${profile?.avatar_url?`<img src="${profile.avatar_url}">`:(displayName||'?')[0].toUpperCase()}</div>
+    <div><div style="font-family:var(--font-display);font-weight:700;font-size:.9rem">${esc(displayName||'User')}</div>${displayUsername?`<div class="small fg2">@${esc(displayUsername)}</div>`:''}</div>
   `;
 
   // Check coaching relationship
@@ -9417,7 +9433,7 @@ async function openChat(conversationId, otherUserId){
   // Add coaching buttons to header
   const headerEl=document.getElementById('chat-header');
   if(profile?.is_coach&&profile.coaching_price&&!coachRel){
-    headerEl.innerHTML+=`<button class="btn btn-sm" style="margin-left:auto;border-color:#eab308;color:#eab308;font-size:.7rem" onclick="openRequestCoachingModal('${otherUserId}','${esc(profile.name)}',${profile.coaching_price})"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> $${profile.coaching_price}/mo</button>`;
+    headerEl.innerHTML+=`<button class="btn btn-sm" style="margin-left:auto;border-color:#eab308;color:#eab308;font-size:.7rem" onclick="openRequestCoachingModal('${otherUserId}','${esc(displayName)}',${profile.coaching_price})"><i data-lucide="graduation-cap" style="width:12px;height:12px"></i> $${profile.coaching_price}/mo</button>`;
   }else if(coachRel?.status==='active'&&iAmCoach){
     headerEl.innerHTML+=`<button class="btn btn-sm" style="margin-left:auto;border-color:#eab308;color:#eab308;font-size:.7rem" onclick="openSharePlanPicker('${otherUserId}')"><i data-lucide="clipboard-list" style="width:12px;height:12px"></i> Share Plan</button>`;
   }else if(coachRel?.status==='active'&&iAmCoachee){
@@ -9428,7 +9444,7 @@ async function openChat(conversationId, otherUserId){
   const isRecipient=convo&&convo.participant_2===currentUser.id;
   // Coaching request banner (for coach receiving pending request)
   if(coachRel?.status==='pending'&&iAmCoach){
-    document.getElementById('chat-request-banner').innerHTML=`<div class="coaching-req-banner"><i data-lucide="graduation-cap" style="width:16px;height:16px;color:#eab308"></i> <span style="flex:1">${esc(profile?.name||'User')} wants coaching at <strong>$${coachRel.monthly_price}/mo</strong>${coachRel.request_message?' — "'+esc(coachRel.request_message.slice(0,80))+'"':''}</span><button class="btn btn-sm btn-primary" onclick="acceptCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Accept</button><button class="btn btn-sm" onclick="declineCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Decline</button></div>`;
+    document.getElementById('chat-request-banner').innerHTML=`<div class="coaching-req-banner"><i data-lucide="graduation-cap" style="width:16px;height:16px;color:#eab308"></i> <span style="flex:1">${esc(displayName||'User')} wants coaching at <strong>$${coachRel.monthly_price}/mo</strong>${coachRel.request_message?' — "'+esc(coachRel.request_message.slice(0,80))+'"':''}</span><button class="btn btn-sm btn-primary" onclick="acceptCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Accept</button><button class="btn btn-sm" onclick="declineCoachingRequest('${coachRel.id}','${coachRel.coachee_id}')">Decline</button></div>`;
   }else if(isPending&&isRecipient){
     document.getElementById('chat-request-banner').innerHTML=`<div class="msg-request-banner">This is a message request. <button class="btn btn-sm btn-primary" style="margin-left:8px" onclick="acceptConversation('${conversationId}')">Accept</button> <button class="btn btn-sm" style="margin-left:4px" onclick="declineConversation('${conversationId}')">Decline</button></div>`;
   }else{
