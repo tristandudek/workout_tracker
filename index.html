@@ -1162,21 +1162,15 @@ select.input{appearance:none;cursor:pointer;
     <div class="aw-row2">
       <div class="aw-row2-left">
         <div class="aw-timer" id="aw-timer">0:00</div>
-        <div class="unit-toggle" id="unit-toggle">
-          <span class="active" data-unit="lbs" onclick="setUnit('lbs')">LBS</span>
-          <span data-unit="kg" onclick="setUnit('kg')">KG</span>
-        </div>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:.68rem;color:var(--fg3);white-space:nowrap">
+          <input type="checkbox" id="aw-autofill-toggle" checked onchange="toggleAutoFill(this.checked)"> Auto-fill
+        </label>
       </div>
       <div class="aw-row2-right">
         <button class="aw-discard-btn" onclick="discardWorkout()">Discard</button>
         <button class="aw-finish-btn" onclick="finishWorkout()">Finish</button>
       </div>
     </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:6px;padding:8px 0 0">
-    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.72rem;color:var(--fg3)">
-      <input type="checkbox" id="aw-autofill-toggle" onchange="toggleAutoFill(this.checked)"> Auto-fill weight down
-    </label>
   </div>
   <div id="aw-exercises" class="mt-sm"></div>
   <button class="btn btn-block mt-sm" onclick="openExercisePicker('active')">+ Add Exercise</button>
@@ -3769,8 +3763,6 @@ function findPreviousSets(exerciseId,logs,exerciseName){
 }
 
 function beginActiveWorkout(){
-  const unit=getUnit();
-  document.querySelectorAll('#unit-toggle span').forEach(s=>s.classList.toggle('active',s.dataset.unit===unit));
   nav('active');
   document.getElementById('aw-name').textContent=activeWorkout.workoutName;
   startTimer();
@@ -4104,7 +4096,7 @@ function awTouchEnd(e){
   _touchActive=false;
 }
 
-let awAutoFill=false;
+let awAutoFill=true;
 function toggleAutoFill(on){awAutoFill=on}
 
 function updateSet(ei,si,field,val){
@@ -4112,18 +4104,17 @@ function updateSet(ei,si,field,val){
   const s=ae.sets[si];
   s[field]=val;
   if(field==='weight')s._unit=ae._unit||getUnit();
-  if(field==='weight'&&awAutoFill){
+  if(awAutoFill&&(field==='weight'||field==='reps')){
     s._manual=true;
     if(val){
       const sets=activeWorkout.exercises[ei].sets;
       for(let i=si+1;i<sets.length;i++){
         if(sets[i]._manual)break;
-        sets[i].weight=val;
+        sets[i][field]=val;
       }
-      renderActiveWorkout();
     }
   }
-  // Auto-complete when reps are entered
+  // Auto-complete when reps are entered (only the edited set, not auto-filled ones)
   if(field==='reps'&&val&&!s.completed){
     s.completed=true;
     const allDone=ae.sets.every(s=>s.completed);
@@ -4134,6 +4125,7 @@ function updateSet(ei,si,field,val){
     return;
   }
   saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 function toggleSet(ei,si){
@@ -4174,18 +4166,17 @@ function updateSupersetSet(ei,si,ssi,field,val){
   const s=se.sets[ssi];
   s[field]=val;
   if(field==='weight')s._unit=se._unit||getUnit();
-  if(field==='weight'&&awAutoFill){
+  if(awAutoFill&&(field==='weight'||field==='reps')){
     s._manual=true;
     if(val){
       const sets=activeWorkout.exercises[ei].supersetExercises[si].sets;
       for(let i=ssi+1;i<sets.length;i++){
         if(sets[i]._manual)break;
-        sets[i].weight=val;
+        sets[i][field]=val;
       }
-      renderActiveWorkout();
     }
   }
-  // Auto-complete when reps are entered
+  // Auto-complete when reps are entered (only the edited set)
   if(field==='reps'&&val&&!s.completed){
     s.completed=true;
     saveActiveWO(activeWorkout);
@@ -4194,6 +4185,7 @@ function updateSupersetSet(ei,si,ssi,field,val){
     return;
   }
   saveActiveWO(activeWorkout);
+  renderActiveWorkout();
 }
 
 function toggleSupersetSet(ei,si,ssi){
