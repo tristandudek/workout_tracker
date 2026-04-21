@@ -933,18 +933,33 @@ select.input{appearance:none;cursor:pointer;
 
   <!-- LOGIN FORM -->
   <div id="auth-login" class="auth-form">
-    <input class="input" id="login-email" type="email" placeholder="Email">
-    <input class="input" id="login-password" type="password" placeholder="Password">
-    <button class="btn btn-primary btn-block" onclick="handleLogin()">Log In</button>
+    <div id="login-error" style="display:none;background:var(--red);color:#fff;padding:10px 14px;border-radius:var(--radius);font-size:.82rem;margin-bottom:10px;line-height:1.4"></div>
+    <input class="input" id="login-email" type="email" placeholder="Email" onkeydown="if(event.key==='Enter')handleLogin()">
+    <div style="position:relative">
+      <input class="input" id="login-password" type="password" placeholder="Password" style="padding-right:40px" onkeydown="if(event.key==='Enter')handleLogin()">
+      <button type="button" onclick="togglePasswordVis('login-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:4px">Show</button>
+    </div>
+    <button class="btn btn-primary btn-block" id="login-btn" onclick="handleLogin()">Log In</button>
+    <div style="text-align:center;margin-top:10px">
+      <a onclick="showForgotPassword()" style="cursor:pointer;font-size:.82rem;color:var(--accent)">Forgot password?</a>
+    </div>
     <div class="auth-toggle">Don't have an account? <a onclick="showSignup()">Sign Up</a></div>
   </div>
 
   <!-- SIGNUP FORM -->
   <div id="auth-signup" class="auth-form" style="display:none">
-    <input class="input" id="signup-name" placeholder="Full Name">
-    <input class="input" id="signup-username" placeholder="Username">
-    <input class="input" id="signup-email" type="email" placeholder="Email">
-    <input class="input" id="signup-password" type="password" placeholder="Password (min 6 characters)">
+    <div id="signup-error" style="display:none;background:var(--red);color:#fff;padding:10px 14px;border-radius:var(--radius);font-size:.82rem;margin-bottom:10px;line-height:1.4"></div>
+    <input class="input" id="signup-name" placeholder="Full Name" onkeydown="if(event.key==='Enter')handleSignup()">
+    <input class="input" id="signup-username" placeholder="Username" onkeydown="if(event.key==='Enter')handleSignup()">
+    <input class="input" id="signup-email" type="email" placeholder="Email" onkeydown="if(event.key==='Enter')handleSignup()">
+    <div style="position:relative">
+      <input class="input" id="signup-password" type="password" placeholder="Password (min 6 characters)" style="padding-right:40px" oninput="updatePasswordStrength(this.value)" onkeydown="if(event.key==='Enter')handleSignup()">
+      <button type="button" onclick="togglePasswordVis('signup-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:4px">Show</button>
+    </div>
+    <div id="pw-strength-bar" style="display:none;margin:-4px 0 10px">
+      <div style="height:3px;background:var(--bg4);border-radius:2px;overflow:hidden"><div id="pw-strength-fill" style="height:100%;width:0;transition:width .2s,background .2s;border-radius:2px"></div></div>
+      <div id="pw-strength-label" style="font-size:.68rem;margin-top:3px;color:var(--fg3)"></div>
+    </div>
     <select class="input" id="signup-gender">
       <option value="">Gender</option>
       <option value="male">Male</option>
@@ -960,8 +975,39 @@ select.input{appearance:none;cursor:pointer;
       </div>
     </div>
     <input class="input" id="signup-bodyfat" type="number" placeholder="Body Fat % (optional)" min="0" max="100" step="0.1">
-    <button class="btn btn-primary btn-block" onclick="handleSignup()">Create Account</button>
+    <button class="btn btn-primary btn-block" id="signup-btn" onclick="handleSignup()">Create Account</button>
     <div class="auth-toggle">Already have an account? <a onclick="showLogin()">Log In</a></div>
+  </div>
+
+  <!-- FORGOT PASSWORD FORM -->
+  <div id="auth-forgot" class="auth-form" style="display:none">
+    <h2 style="font-size:1.3rem;margin-bottom:6px;text-align:center">Reset Password</h2>
+    <p style="color:var(--fg2);font-size:.84rem;text-align:center;margin-bottom:16px;line-height:1.5">Enter your email and we'll send you a link to reset your password.</p>
+    <div id="forgot-error" style="display:none;background:var(--red);color:#fff;padding:10px 14px;border-radius:var(--radius);font-size:.82rem;margin-bottom:10px;line-height:1.4"></div>
+    <div id="forgot-success" style="display:none;background:var(--success);color:#fff;padding:10px 14px;border-radius:var(--radius);font-size:.82rem;margin-bottom:10px;line-height:1.4"></div>
+    <input class="input" id="forgot-email" type="email" placeholder="Email" onkeydown="if(event.key==='Enter')handleForgotPassword()">
+    <button class="btn btn-primary btn-block" id="forgot-btn" onclick="handleForgotPassword()">Send Reset Link</button>
+    <div class="auth-toggle"><a onclick="showLogin()" style="cursor:pointer">Back to Login</a></div>
+  </div>
+
+  <!-- RESET PASSWORD FORM (shown after clicking email link) -->
+  <div id="auth-reset" class="auth-form" style="display:none">
+    <h2 style="font-size:1.3rem;margin-bottom:6px;text-align:center">Set New Password</h2>
+    <p style="color:var(--fg2);font-size:.84rem;text-align:center;margin-bottom:16px;line-height:1.5">Enter your new password below.</p>
+    <div id="reset-error" style="display:none;background:var(--red);color:#fff;padding:10px 14px;border-radius:var(--radius);font-size:.82rem;margin-bottom:10px;line-height:1.4"></div>
+    <div style="position:relative">
+      <input class="input" id="reset-password" type="password" placeholder="New password (min 6 characters)" style="padding-right:40px" oninput="updateResetPasswordStrength(this.value)" onkeydown="if(event.key==='Enter')handleResetPassword()">
+      <button type="button" onclick="togglePasswordVis('reset-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:4px">Show</button>
+    </div>
+    <div id="reset-pw-strength-bar" style="display:none;margin:-4px 0 10px">
+      <div style="height:3px;background:var(--bg4);border-radius:2px;overflow:hidden"><div id="reset-pw-strength-fill" style="height:100%;width:0;transition:width .2s,background .2s;border-radius:2px"></div></div>
+      <div id="reset-pw-strength-label" style="font-size:.68rem;margin-top:3px;color:var(--fg3)"></div>
+    </div>
+    <div style="position:relative">
+      <input class="input" id="reset-password-confirm" type="password" placeholder="Confirm new password" style="padding-right:40px" onkeydown="if(event.key==='Enter')handleResetPassword()">
+      <button type="button" onclick="togglePasswordVis('reset-password-confirm',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--fg3);cursor:pointer;font-size:.7rem;padding:4px">Show</button>
+    </div>
+    <button class="btn btn-primary btn-block" id="reset-btn" onclick="handleResetPassword()">Update Password</button>
   </div>
 
   <!-- EMAIL CONFIRMATION SCREEN -->
@@ -2355,15 +2401,90 @@ async function seedExercisesIfNeeded(){
 /* =============================================================
    AUTH
    ============================================================= */
-function showLogin(){
-  document.getElementById('auth-login').style.display='block';
-  document.getElementById('auth-signup').style.display='none';
-  document.getElementById('auth-confirm').style.display='none';
+function hideAllAuthForms(){
+  ['auth-login','auth-signup','auth-confirm','auth-forgot','auth-reset'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  ['login-error','signup-error','forgot-error','forgot-success','reset-error'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
 }
-function showSignup(){
-  document.getElementById('auth-login').style.display='none';
-  document.getElementById('auth-signup').style.display='block';
-  document.getElementById('auth-confirm').style.display='none';
+function showLogin(){hideAllAuthForms();document.getElementById('auth-login').style.display='block'}
+function showSignup(){hideAllAuthForms();document.getElementById('auth-signup').style.display='block'}
+function showForgotPassword(){hideAllAuthForms();document.getElementById('auth-forgot').style.display='block';
+  const loginEmail=document.getElementById('login-email').value.trim();
+  if(loginEmail)document.getElementById('forgot-email').value=loginEmail;
+}
+
+function togglePasswordVis(inputId,btn){
+  const inp=document.getElementById(inputId);
+  if(inp.type==='password'){inp.type='text';btn.textContent='Hide'}
+  else{inp.type='password';btn.textContent='Show'}
+}
+
+function getPasswordStrength(pw){
+  if(!pw)return{score:0,label:'',color:''};
+  let score=0;
+  if(pw.length>=6)score++;
+  if(pw.length>=10)score++;
+  if(/[A-Z]/.test(pw))score++;
+  if(/[0-9]/.test(pw))score++;
+  if(/[^A-Za-z0-9]/.test(pw))score++;
+  const levels=[
+    {label:'Too short',color:'var(--red)'},
+    {label:'Weak',color:'var(--red)'},
+    {label:'Fair',color:'var(--warning)'},
+    {label:'Good',color:'var(--accent)'},
+    {label:'Strong',color:'var(--success)'},
+    {label:'Very strong',color:'var(--success)'}
+  ];
+  return{score,label:levels[score].label,color:levels[score].color};
+}
+function updatePasswordStrength(pw){
+  const bar=document.getElementById('pw-strength-bar');
+  const fill=document.getElementById('pw-strength-fill');
+  const label=document.getElementById('pw-strength-label');
+  if(!pw){bar.style.display='none';return}
+  bar.style.display='block';
+  const s=getPasswordStrength(pw);
+  fill.style.width=(s.score/5*100)+'%';fill.style.background=s.color;
+  label.textContent=s.label;label.style.color=s.color;
+}
+function updateResetPasswordStrength(pw){
+  const bar=document.getElementById('reset-pw-strength-bar');
+  const fill=document.getElementById('reset-pw-strength-fill');
+  const label=document.getElementById('reset-pw-strength-label');
+  if(!pw){bar.style.display='none';return}
+  bar.style.display='block';
+  const s=getPasswordStrength(pw);
+  fill.style.width=(s.score/5*100)+'%';fill.style.background=s.color;
+  label.textContent=s.label;label.style.color=s.color;
+}
+
+function showAuthError(id,msg){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.style.display='block';
+  setTimeout(()=>{el.style.display='none'},8000);
+}
+
+function friendlyAuthError(error){
+  const msg=(error.message||'').toLowerCase();
+  if(msg.includes('invalid login credentials'))return'Incorrect email or password. Please try again.';
+  if(msg.includes('email not confirmed'))return'Your email hasn\'t been confirmed yet. Check your inbox for the confirmation link.';
+  if(msg.includes('user not found'))return'No account found with that email address.';
+  if(msg.includes('too many requests')||msg.includes('rate limit'))return'Too many attempts. Please wait a moment and try again.';
+  if(msg.includes('already registered'))return'An account with this email already exists. Try logging in instead.';
+  if(msg.includes('invalid email'))return'Please enter a valid email address.';
+  if(msg.includes('weak password')||msg.includes('should be at least'))return'Password is too weak. Use at least 6 characters.';
+  if(msg.includes('network'))return'Network error. Check your connection and try again.';
+  return error.message||'Something went wrong. Please try again.';
+}
+
+function setButtonLoading(btnId,loading){
+  const btn=document.getElementById(btnId);
+  if(!btn)return;
+  if(loading){btn._origText=btn.textContent;btn.textContent='...';btn.disabled=true;btn.style.opacity='.6'}
+  else{btn.textContent=btn._origText||btn.textContent;btn.disabled=false;btn.style.opacity='1'}
 }
 
 let signupWeightUnit='lbs';
@@ -2375,9 +2496,12 @@ function toggleSignupUnit(el){
 async function handleLogin(){
   const email=document.getElementById('login-email').value.trim();
   const password=document.getElementById('login-password').value;
-  if(!email||!password){toast('Enter email and password');return}
+  document.getElementById('login-error').style.display='none';
+  if(!email||!password){showAuthError('login-error','Please enter both email and password.');return}
+  setButtonLoading('login-btn',true);
   const{data,error}=await sb.auth.signInWithPassword({email,password});
-  if(error){toast(error.message);return}
+  setButtonLoading('login-btn',false);
+  if(error){showAuthError('login-error',friendlyAuthError(error));return}
   await initApp(data.user);
 }
 
@@ -2389,14 +2513,17 @@ async function handleSignup(){
   const gender=document.getElementById('signup-gender').value;
   const weight=parseFloat(document.getElementById('signup-weight').value)||null;
   const bodyfat=parseFloat(document.getElementById('signup-bodyfat').value)||null;
-  if(!name||!username||!email||!password||!gender){toast('Fill in all required fields');return}
-  if(password.length<6){toast('Password must be at least 6 characters');return}
+  document.getElementById('signup-error').style.display='none';
+  if(!name||!username||!email||!password||!gender){showAuthError('signup-error','Please fill in all required fields.');return}
+  if(password.length<6){showAuthError('signup-error','Password must be at least 6 characters.');return}
 
+  setButtonLoading('signup-btn',true);
   const{data,error}=await sb.auth.signUp({
     email,password,
     options:{data:{name,username,gender},emailRedirectTo:'https://tristandudek.github.io/workout_tracker'}
   });
-  if(error){toast(error.message);return}
+  setButtonLoading('signup-btn',false);
+  if(error){showAuthError('signup-error',friendlyAuthError(error));return}
 
   // Store signup body metrics locally to save after email confirmation
   if(weight||bodyfat){
@@ -2408,10 +2535,40 @@ async function handleSignup(){
   if(weight)localStorage.setItem('wt_unit',signupWeightUnit);
 
   // Show confirmation screen — don't log in until email is confirmed
-  document.getElementById('auth-login').style.display='none';
-  document.getElementById('auth-signup').style.display='none';
+  hideAllAuthForms();
   document.getElementById('auth-confirm').style.display='block';
   document.getElementById('confirm-email-display').textContent=email;
+}
+
+async function handleForgotPassword(){
+  const email=document.getElementById('forgot-email').value.trim();
+  document.getElementById('forgot-error').style.display='none';
+  document.getElementById('forgot-success').style.display='none';
+  if(!email){showAuthError('forgot-error','Please enter your email address.');return}
+  setButtonLoading('forgot-btn',true);
+  const{error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:'https://tristandudek.github.io/workout_tracker'
+  });
+  setButtonLoading('forgot-btn',false);
+  if(error){showAuthError('forgot-error',friendlyAuthError(error));return}
+  const el=document.getElementById('forgot-success');
+  el.textContent='Password reset link sent! Check your email inbox (and spam folder).';
+  el.style.display='block';
+}
+
+async function handleResetPassword(){
+  const pw=document.getElementById('reset-password').value;
+  const pw2=document.getElementById('reset-password-confirm').value;
+  document.getElementById('reset-error').style.display='none';
+  if(!pw){showAuthError('reset-error','Please enter a new password.');return}
+  if(pw.length<6){showAuthError('reset-error','Password must be at least 6 characters.');return}
+  if(pw!==pw2){showAuthError('reset-error','Passwords do not match.');return}
+  setButtonLoading('reset-btn',true);
+  const{error}=await sb.auth.updateUser({password:pw});
+  setButtonLoading('reset-btn',false);
+  if(error){showAuthError('reset-error',friendlyAuthError(error));return}
+  toast('Password updated successfully!');
+  showLogin();
 }
 
 async function handleLogout(){
@@ -10104,6 +10261,14 @@ async function submitReel(){
   }
 
   sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='PASSWORD_RECOVERY'){
+      // User clicked password reset link — show the reset form
+      document.getElementById('app-wrapper').style.display='none';
+      document.getElementById('auth-view').style.display='flex';
+      hideAllAuthForms();
+      document.getElementById('auth-reset').style.display='block';
+      return;
+    }
     if(event==='SIGNED_OUT'){
       currentUser=null;currentProfile=null;
       invalidateCache();
