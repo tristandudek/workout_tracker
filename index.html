@@ -7821,10 +7821,13 @@ async function showShareWorkoutModalV2(dur,totalSets,totalVol){
       </div>`:''}
     </div>
     ${!wo?.fromTemplate?`<div class="divider"></div>
-      <div class="small fg2 mb-sm" style="font-weight:600">Save as reusable workout?</div>
-      <input class="input mb-sm" id="save-template-name" placeholder="Workout name" value="${esc(wo?.workoutName||'')}">
-      <input class="input mb-sm" id="save-template-desc" placeholder="Description (optional)">
-      <button class="btn btn-sm btn-block mb-sm" id="save-template-btn" style="border:1.5px solid var(--accent);color:var(--accent);background:transparent" onclick="saveAsTemplate()"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save as Template</button>
+      <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:var(--radius2);padding:14px;margin-bottom:8px">
+        <div style="font-weight:600;font-size:.88rem;margin-bottom:8px;color:var(--accent)">Save as reusable workout</div>
+        <p class="small fg2" style="margin-bottom:10px">Save this workout so you can use it again next time.</p>
+        <input class="input mb-sm" id="save-template-name" placeholder="Workout name" value="${esc(wo?.workoutName||'')}">
+        <input class="input mb-sm" id="save-template-desc" placeholder="Description (optional)">
+        <button class="btn btn-sm btn-block" id="save-template-btn" style="background:var(--accent);color:#fff;border-color:var(--accent)" onclick="saveAsTemplate()"><i data-lucide="bookmark" style="width:12px;height:12px"></i> Save as Template</button>
+      </div>
     `:''}
     <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:8px">
       <button class="btn btn-primary btn-block" onclick="submitPostV2()">Post & Finish</button>
