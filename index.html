@@ -2390,11 +2390,21 @@ async function seedExercisesIfNeeded(){
   const{data:dbExs}=await sb.from('exercises').select('id,name,tracking_type').is('created_by_user_id',null);
   if(dbExs){
     const toFix=dbExs.filter(e=>trackingFixes[e.name]&&trackingFixes[e.name]!==e.tracking_type);
-    for(const e of toFix){
-      await sb.from('exercises').update({tracking_type:trackingFixes[e.name]}).eq('id',e.id);
-      console.log('[Seed] Fixed tracking_type for',e.name,':',e.tracking_type,'→',trackingFixes[e.name]);
+    // Also force-fix known misclassified exercises by name pattern
+    const forceFixes=dbExs.filter(e=>{
+      const n=e.name.toLowerCase().trim();
+      if(n==='dragon flag'&&e.tracking_type!=='reps')return true;
+      if(n==='ab wheel rollout'&&e.tracking_type!=='reps')return true;
+      if(n==='mountain climber'&&e.tracking_type!=='reps')return true;
+      return false;
+    });
+    const allFixes=[...toFix,...forceFixes.filter(f=>!toFix.find(t=>t.id===f.id))];
+    for(const e of allFixes){
+      const correct=trackingFixes[e.name]||(forceFixes.includes(e)?'reps':e.tracking_type);
+      await sb.from('exercises').update({tracking_type:correct}).eq('id',e.id);
+      console.log('[Seed] Fixed tracking_type for',e.name,':',e.tracking_type,'→',correct);
     }
-    if(toFix.length)invalidateCache('exercises');
+    if(allFixes.length)invalidateCache('exercises');
   }
 }
 
@@ -3023,6 +3033,11 @@ function openAddCustomExercise(){
         <option value="">Equipment / Type</option>
         ${ALL_EQUIP.map(e=>`<option value="${e}">${e.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
       </select>
+      <select class="input mb-sm" id="custom-tracking">
+        <option value="reps">Weight &amp; Reps (sets)</option>
+        <option value="time">Time-based (hold / duration)</option>
+        <option value="distance">Distance-based</option>
+      </select>
       <textarea class="input mb-sm" id="custom-instr" placeholder="Instructions (optional)"></textarea>
       <div class="profile-field">
         <label>Demo Photo (optional)</label>
@@ -3084,9 +3099,11 @@ async function saveCustomExercise(){
   }
 
   const svg=`<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="25" r="10" fill="none" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="72" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="48" x2="40" y2="55" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="48" x2="80" y2="55" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="72" x2="45" y2="105" stroke="#38bdf8" stroke-width="2"/><line x1="60" y1="72" x2="75" y2="105" stroke="#38bdf8" stroke-width="2"/><text x="60" y="115" text-anchor="middle" font-size="10" fill="#38bdf8">CUSTOM</text></svg>`;
+  const trackType=document.getElementById('custom-tracking')?.value||'reps';
   const{error}=await sb.from('exercises').insert({
     name,muscle_groups:[muscle],equipment:equip,instructions:instr||'Custom exercise.',
     diagram:svg,photo_url:photoUrl,video_url:videoUrl,video_type:videoType,
+    tracking_type:trackType,workout_type:getWorkoutType(equip,name),
     is_custom:true,created_by_user_id:currentUser.id
   });
   if(error){toast('Error saving exercise');console.error(error);return}
@@ -3890,33 +3907,66 @@ async function startFromTemplate(id){
   beginActiveWorkout();
 }
 
+function _hasLoggedData(sets){
+  return sets&&sets.some(s=>s.completed&&(s.weight>0||s.reps>0||s.reps==='0:00'||typeof s.reps==='string'&&s.reps.length>0));
+}
+
 function findPreviousSets(exerciseId,logs,exerciseName){
   for(let i=logs.length-1;i>=0;i--){
     const exs=logs[i].exercises||[];
     // Search top-level exercises by ID
     const le=exs.find(e=>e.exerciseId===exerciseId);
-    if(le&&le.sets)return le.sets.filter(s=>s.completed);
+    if(le&&le.sets){const filtered=le.sets.filter(s=>s.completed);if(_hasLoggedData(filtered))return filtered}
     // Search inside superset secondary exercises by ID
     for(const e of exs){
       if(e.supersetExercises){
         const se=e.supersetExercises.find(se=>se.exerciseId===exerciseId);
-        if(se&&se.sets)return se.sets.filter(s=>s.completed);
+        if(se&&se.sets){const filtered=se.sets.filter(s=>s.completed);if(_hasLoggedData(filtered))return filtered}
       }
     }
     // Fallback: match by exercise name (handles ID mismatches between workouts)
     if(exerciseName){
       const nameNorm=exerciseName.toLowerCase().trim();
       const byName=exs.find(e=>(e.exerciseName||'').toLowerCase().trim()===nameNorm);
-      if(byName&&byName.sets)return byName.sets.filter(s=>s.completed);
+      if(byName&&byName.sets){const filtered=byName.sets.filter(s=>s.completed);if(_hasLoggedData(filtered))return filtered}
       for(const e of exs){
         if(e.supersetExercises){
           const se=e.supersetExercises.find(se=>(se.exerciseName||'').toLowerCase().trim()===nameNorm);
-          if(se&&se.sets)return se.sets.filter(s=>s.completed);
+          if(se&&se.sets){const filtered=se.sets.filter(s=>s.completed);if(_hasLoggedData(filtered))return filtered}
         }
       }
     }
   }
   return[];
+}
+
+// Determine if an exercise should show 1RM (weight-based lifting exercises only)
+function isWeightExercise(ae){
+  const tt=ae.tracking_type||'reps';
+  if(tt==='time'||tt==='distance')return false;
+  // Check equipment if available (from DB exercise objects)
+  const equip=(ae.equipment||'').toLowerCase();
+  if(equip&&['yoga','cardio_machine','jump_rope','basketball','football','baseball','tennis','golf','soccer','other_sports'].includes(equip))return false;
+  // Check workout_type if available
+  const wt=(ae.workout_type||'').toLowerCase();
+  if(wt&&['yoga','cardio','sport'].includes(wt))return false;
+  return true;
+}
+
+// Calculate estimated 1RM from a set (Epley formula)
+function calcE1rm(weight,reps){
+  if(!weight||weight<=0||!reps||reps<=0)return 0;
+  const r=typeof reps==='string'?parseInt(reps):reps;
+  if(isNaN(r)||r<=0)return 0;
+  if(r===1)return Math.round(weight);
+  return Math.round(weight*(1+r/30));
+}
+
+// Get best 1RM from a set of sets
+function bestE1rmFromSets(sets){
+  let best=0;
+  (sets||[]).forEach(s=>{if(s.completed&&s.weight>0){const e=calcE1rm(s.weight,s.reps);if(e>best)best=e}});
+  return best;
 }
 
 function beginActiveWorkout(){
@@ -4093,10 +4143,15 @@ async function renderActiveWorkout(){
     const exUnit=ae._unit||getUnit();
     const doneSummary=allDone?`<span class="small fg3" style="margin-left:8px">${ae.sets.length} sets done</span>`:'';
     const unitToggle=`<span class="unit-toggle" style="display:inline-flex;font-size:.6rem;margin-left:6px;vertical-align:middle"><span style="padding:2px 6px;cursor:pointer;${exUnit==='lbs'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleExUnit(${ei},'lbs')">LBS</span><span style="padding:2px 6px;cursor:pointer;${exUnit==='kg'?'background:var(--accent);color:#fff':''}" onclick="event.stopPropagation();toggleExUnit(${ei},'kg')">KG</span></span>`;
+    const showE1rm=isWeightExercise(ae);
+    const liveE1rm=showE1rm?bestE1rmFromSets(ae.sets):0;
+    const prevE1rm=showE1rm?bestE1rmFromSets(prev):0;
+    const e1rmBadge=showE1rm&&liveE1rm?`<span style="font-size:.65rem;font-family:var(--font-mono);color:var(--accent);margin-left:6px;white-space:nowrap">1RM: ${liveE1rm} ${exUnit}</span>`:'';
+    const prevE1rmBadge=showE1rm&&prevE1rm&&!liveE1rm?`<span style="font-size:.65rem;font-family:var(--font-mono);color:var(--fg3);margin-left:6px;white-space:nowrap">Prev 1RM: ${prevE1rm}</span>`:'';
     return `<div class="aw-ex-header" ${allDone?`onclick="toggleExCollapse(${ei})" style="cursor:pointer"`:''}>
         <span class="drag">&#x2630;</span>
         <span class="ex-title" onclick="event.stopPropagation();openExerciseHistory('${ae.exerciseId}')">${esc(ae.exerciseName)}${stBadge}${exInfoIcon(ae)}</span>
-        ${unitToggle}
+        ${unitToggle}${e1rmBadge}${prevE1rmBadge}
         ${allDone?`<span style="color:var(--success);font-size:.7rem;font-weight:600;margin-left:auto">&#10003;</span>${doneSummary}`:''}
         ${targetSetsNum?`<span class="target">${targetSetsNum} sets</span>`:''}
         <button class="btn btn-sm btn-danger" style="padding:4px 8px;font-size:.7rem" onclick="event.stopPropagation();activeWorkout.exercises.splice(${ei},1);renderActiveWorkout()">&times;</button>
@@ -4110,7 +4165,7 @@ async function renderActiveWorkout(){
           <tbody>
             ${ae.sets.map((s,si)=>`<tr>
               <td>${setLabel(si)}</td>
-              <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]?prev[si].weight+'×'+prev[si].reps+(prev[si]._unit?' '+prev[si]._unit:''):'—'}</td>
+              <td class="prev" onclick="event.stopPropagation();openExHistoryModal('${ae.exerciseId}')">${prev[si]&&prev[si].weight?prev[si].weight+'×'+prev[si].reps+(prev[si]._unit?' '+prev[si]._unit:''):'—'}</td>
               <td><input type="text" inputmode="numeric" pattern="[0-9.]*" value="${s.weight||''}" onchange="updateSet(${ei},${si},'weight',this.value?+this.value:'')" placeholder="${ae.tracking_type==='distance'?'—':'0'}"></td>
               <td><input type="text" inputmode="${ae.tracking_type==='time'?'text':'numeric'}" value="${s.reps||''}" onchange="updateSet(${ei},${si},'reps',this.value)" placeholder="${ae.tracking_type==='time'?'0:00':ae.tracking_type==='distance'?'dist':targetRep||'reps'}"></td>
               <td><div class="set-check ${s.completed?'done':''}" onclick="toggleSet(${ei},${si})">&#10003;</div></td>
@@ -4118,6 +4173,7 @@ async function renderActiveWorkout(){
             </tr>`).join('')}
           </tbody>
         </table>
+        ${showE1rm&&prevE1rm?`<div style="font-size:.68rem;color:var(--fg3);padding:4px 0 0;font-family:var(--font-mono)">Previous best 1RM: ${prevE1rm} ${exUnit}</div>`:''}
         <div class="flex gap-sm mt-sm">
           <button class="btn btn-sm btn-ghost grow" onclick="addSet(${ei})">+ Add Set</button>
         </div>`}
@@ -4598,22 +4654,23 @@ async function openExHistoryModal(exId){
       }
     }
     if(le){
-      const completed=(le.sets||[]).filter(s=>s.completed&&s.weight>0);
+      const completed=(le.sets||[]).filter(s=>s.completed&&(s.weight>0||s.reps>0));
       if(completed.length){
-        const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
-        const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+        const best=completed.reduce((a,b)=>(a.weight||0)*(a.reps||0)>(b.weight||0)*(b.reps||0)?a:b);
+        const e1rm=calcE1rm(best.weight,best.reps);
         const exUnit=le._unit||best._unit||getUnit();
         sessions.push({date:logs[i].startTime,woName:logs[i].workoutName,sets:le.sets,best,e1rm,unit:exUnit});
       }
     }
   }
+  const showE1rm=ex?isWeightExercise(ex):true;
   let bestE1rm=0,bestSet=null,bestUnit=getUnit();
   sessions.forEach(s=>{if(s.e1rm>bestE1rm){bestE1rm=s.e1rm;bestSet=s.best;bestUnit=s.unit||getUnit()}});
   let html=`<div class="modal-header"><h2>${esc(exName)} — History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body" style="max-height:70vh;overflow-y:auto">`;
   if(!sessions.length){
     html+='<p class="fg3">No history yet — this will populate after your first logged session.</p>';
   }else{
-    html+=`<p class="small fg2 mb-md">Last ${sessions.length} session${sessions.length>1?'s':''} · Best 1RM: ${bestE1rm} ${bestUnit} · Best set: ${bestSet?bestSet.weight+'×'+bestSet.reps:'—'}</p>`;
+    html+=`<p class="small fg2 mb-md">Last ${sessions.length} session${sessions.length>1?'s':''}${showE1rm&&bestE1rm?' · Best 1RM: '+bestE1rm+' '+bestUnit:''} · Best set: ${bestSet?bestSet.weight+'×'+bestSet.reps:'—'}</p>`;
     html+=sessions.map((s,si)=>{
       const d=new Date(s.date);
       const sUnit=s.unit||getUnit();
@@ -4630,7 +4687,7 @@ async function openExHistoryModal(exId){
       }).join('');
       return `${si>0?'<div class="divider"></div>':''}
         <div class="mb-md">
-          <div class="flex between mb-sm"><div><div style="font-family:var(--font-display);font-weight:700;font-size:.85rem">${d.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'})}</div><div class="small fg3">${esc(s.woName)}</div></div><div class="small"><span class="accent mono">1RM: ${s.e1rm} ${sUnit}</span></div></div>
+          <div class="flex between mb-sm"><div><div style="font-family:var(--font-display);font-weight:700;font-size:.85rem">${d.toLocaleDateString([],{month:'long',day:'numeric',year:'numeric'})}</div><div class="small fg3">${esc(s.woName)}</div></div>${showE1rm&&s.e1rm?`<div class="small"><span class="accent mono">1RM: ${s.e1rm} ${sUnit}</span></div>`:''}</div>
           <table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Set</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Weight</th><th style="text-align:left;padding:4px;font-size:.65rem;color:var(--fg3)">Reps</th></tr></thead><tbody>${setRows}</tbody></table>
           <div class="small fg2 mt-sm">Best: <span class="accent mono">${s.best.weight}×${s.best.reps} ${sUnit}</span></div>
         </div>`;
@@ -4660,10 +4717,10 @@ async function openExerciseHistory(exId){
       }
     }
     if(found){
-      const completed=(found.sets||[]).filter(s=>s.completed&&s.weight>0);
+      const completed=(found.sets||[]).filter(s=>s.completed&&(s.weight>0||s.reps>0));
       if(completed.length){
-        const best=completed.reduce((a,b)=>a.weight*a.reps>b.weight*b.reps?a:b);
-        const e1rm=best.reps>0?Math.round(best.weight*(1+best.reps/30)):best.weight;
+        const best=completed.reduce((a,b)=>(a.weight||0)*(a.reps||0)>(b.weight||0)*(b.reps||0)?a:b);
+        const e1rm=calcE1rm(best.weight,best.reps);
         const exUnit=found._unit||best._unit||getUnit();
         history.push({date:new Date(l.startTime).toLocaleDateString(),best:`${best.weight}x${best.reps}`,e1rm,sets:completed,unit:exUnit});
       }
@@ -4672,10 +4729,11 @@ async function openExerciseHistory(exId){
   history=history.slice(-5).reverse();
   const exs=await getExercises();
   const ex=exs.find(e=>e.id===exId);
+  const showE1rm=ex?isWeightExercise(ex):true;
   openModal(`
     <div class="modal-header"><h2>${ex?esc(ex.name):'Exercise'} History</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
-      ${history.length?history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best} ${h.unit||getUnit()}</span><span class="accent mono small">E1RM: ${h.e1rm} ${h.unit||getUnit()}</span></div>`).join(''):'<p class="fg3 small">No previous history for this exercise.</p>'}
+      ${history.length?history.map(h=>`<div class="hist-item"><span class="fg2">${h.date}</span><span class="mono small">${h.best} ${h.unit||getUnit()}</span>${showE1rm&&h.e1rm?`<span class="accent mono small">1RM: ${h.e1rm} ${h.unit||getUnit()}</span>`:''}</div>`).join(''):'<p class="fg3 small">No previous history for this exercise.</p>'}
     </div>
   `);
 }
